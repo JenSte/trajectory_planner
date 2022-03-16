@@ -1,0 +1,342 @@
+#include "trajectory_planner/trajectory_planner.hpp"
+
+#include "trajectory_planner/convolution.hpp"
+
+#include <boost/asio/post.hpp>
+#include <boost/asio/thread_pool.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+
+#include <cmath>
+#include <iomanip>
+
+namespace trajectory_planner
+{
+
+TrajectoryPlanner::TrajectoryPlanner(
+    std::string hash,
+    Buffer<double> occupancy_map,
+    Buffer<double> cost_map,
+    Costs costs)
+    : hash_(std::move(hash))
+    , original_occupancy_map_(std::move(occupancy_map))
+    , original_cost_map_(std::move(cost_map))
+    , costs_(std::move(costs))
+{
+}
+
+std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
+    std::string hash,
+    unsigned int angle_granularity,
+    double resolution,
+    const Polygon& footprint,
+    Buffer<double> occupancy_map,
+    Buffer<double> cost_map)
+{
+    // The occupancy and cost maps should be derived from the same
+    // original map, and therefore need to have the same size.
+    if (occupancy_map.width() != cost_map.width()) {
+        throw std::runtime_error("Input maps do not have the same width.");
+    }
+
+    if (occupancy_map.height() != cost_map.height()) {
+        throw std::runtime_error("Input maps do not have the same height.");
+    }
+
+    // The size of the canvas we'll draw the footprint on.
+    const unsigned int footprint_pixel_size =
+        calculate_footprint_size(footprint, resolution);
+
+    // Buffers are extended to this size, so that the circular convolution
+    // does not distort the result.
+    const size_t padded_width = occupancy_map.width() + footprint_pixel_size - 1;
+    const size_t padded_height = occupancy_map.height() + footprint_pixel_size - 1;
+
+    //
+    // Process input map.
+    //
+
+    // Because the FFT planning function (using FFTW_MEASURE) may destroy
+    // the input buffer, we use a temporary buffer for this.
+    Buffer<double> dummy_buffer(padded_width, padded_height);
+    FFTPlan plan_forward = FFTPlan::plan_forward(dummy_buffer);
+    FFTPlan plan_backward = FFTPlan::plan_backward(dummy_buffer);
+
+    Buffer<double> occupancy_map_padded =
+        zero_pad(occupancy_map, padded_width, padded_height);
+    Buffer<fftw_complex> occupancy_map_spectrum(
+        plan_forward.frequency_domain_width(),
+        plan_forward.frequency_domain_height());
+
+    Buffer<double> cost_map_padded =
+        zero_pad(cost_map, padded_width, padded_height);
+    Buffer<fftw_complex> cost_map_spectrum(
+        plan_forward.frequency_domain_width(),
+        plan_forward.frequency_domain_height());
+
+    plan_forward.execute(occupancy_map_padded, occupancy_map_spectrum);
+    plan_forward.execute(cost_map_padded, cost_map_spectrum);
+
+    // The "calculated" costs are accumulated in this object.
+    Costs costs(angle_granularity);
+    std::mutex costs_mutex;
+
+    //
+    // Process footprint.
+    //
+    auto process_footprint = [&](unsigned int angle_index) {
+        // Draw the footprint. Because the convolution mirrors one of it's inputs,
+        // we draw the robot's footprint rotated by 180 degrees to compensate.
+        Buffer<double> footprint_image(padded_width, padded_height);
+        unsigned int covered_pixels = draw_footprint(
+            footprint_image,
+            footprint,
+            resolution,
+            footprint_pixel_size,
+            M_PI + angle_index * 2 * M_PI / angle_granularity);
+
+        Buffer<fftw_complex> footprint_image_spectrum_1(
+            plan_forward.frequency_domain_width(),
+            plan_forward.frequency_domain_height());
+
+        plan_forward.execute(footprint_image, footprint_image_spectrum_1);
+
+        Buffer<fftw_complex> footprint_image_spectrum_2(footprint_image_spectrum_1);
+
+        // Multiply the corresponding spectrum buffers.
+        multiply_buffers(footprint_image_spectrum_1, occupancy_map_spectrum);
+        multiply_buffers(footprint_image_spectrum_2, cost_map_spectrum);
+
+        Buffer<double> result_buffer_1(padded_width, padded_height);
+        Buffer<double> result_buffer_2(padded_width, padded_height);
+        plan_backward.execute(footprint_image_spectrum_1, result_buffer_1);
+        plan_backward.execute(footprint_image_spectrum_2, result_buffer_2);
+
+        std::lock_guard<std::mutex> lock(costs_mutex);
+        update_costs(
+            costs,
+            occupancy_map.width(),
+            occupancy_map.height(),
+            footprint_pixel_size / 2,
+            covered_pixels,
+            result_buffer_1,
+            result_buffer_2,
+            angle_index);
+    };
+
+    boost::asio::thread_pool pool;
+    for (unsigned int ai = 0; ai < angle_granularity; ai++) {
+        boost::asio::post(
+            pool,
+            [process_footprint, ai]{ process_footprint(ai); }
+        );
+    }
+    pool.join();
+
+    std::unique_ptr<TrajectoryPlanner> planner;
+    planner.reset(new TrajectoryPlanner(
+        std::move(hash),
+        std::move(occupancy_map),
+        std::move(cost_map),
+        std::move(costs)));
+    return planner;
+}
+
+const Buffer<double>& TrajectoryPlanner::original_occupancy_map() const
+{
+    return original_occupancy_map_;
+}
+
+const Buffer<double>& TrajectoryPlanner::original_cost_map() const
+{
+    return original_cost_map_;
+}
+
+const std::string& TrajectoryPlanner::hash() const
+{
+    return hash_;
+}
+
+void TrajectoryPlanner::update_costs(
+    Costs& costs,
+    size_t map_width,
+    size_t map_height,
+    size_t offset,
+    unsigned int footprint_covered_pixels,
+    const Buffer<double>& convoluted_occupancy_map,
+    const Buffer<double>& convoluted_cost_map,
+    unsigned int angle_index)
+{
+    if (convoluted_occupancy_map.width() != map_width + 2 * offset - 1) {
+        throw std::runtime_error("Convoluted occupancy map has wrong width.");
+    }
+
+    if (convoluted_occupancy_map.height() != map_height + 2 * offset - 1) {
+        throw std::runtime_error("Convoluted occupancy map has wrong height.");
+    }
+
+    // Factor to scale the costs down and compenstate for different map sizes (FFTW
+    // computes an unnormalized transform) and for different footprint sizes. Also,
+    // the number of pixels covered by the footprint is taken into account, to compensate
+    // for a slightly different number of pixels used by different orientations.
+    const double scale_factor =
+        (map_width + 2 * offset - 1) * (map_height + 2 * offset - 1) * footprint_covered_pixels;
+
+    for (size_t y = 0; y < map_height; y++) {
+        for (size_t x = 0; x < map_width; x++) {
+            // Where the "functions" of the footprint and the occupancy map
+            // overlapped (a value of "1.0" meant that the cell was occupied, while a
+            // value of "0.0" meant it was not obstructed), the convoluted location
+            // containes a non-zero value. So for cells that have a value close to
+            // zero we store the cost value from the convoluted cost map, while other
+            // cells are left with the default value in the cost data structure.
+            if (convoluted_occupancy_map.at(x + offset, y + offset) < 0.5) {
+                double cost = convoluted_cost_map.at(x + offset, y + offset);
+                costs.set_cost(x, y, angle_index, cost / scale_factor);
+            }
+        }
+    }
+}
+
+void TrajectoryPlanner::dump_orientation_maps(
+    const std::string& prefix) const
+{
+    size_t width = original_occupancy_map_.width();
+    size_t height = original_occupancy_map_.height();
+
+    auto output_orientation = [&](unsigned int angle_index) {
+        cv::Mat canvas = cv::Mat::zeros(height, width, CV_8UC1);
+
+        for (size_t y = 0; y < height; y++) {
+            for (size_t x = 0; x < width; x++) {
+                size_t row = height - 1 - y;
+                size_t column = x;
+
+                double cost = costs_.get_cost(x, y, angle_index);
+                if (cost < (0.5 * Costs::invalid_cost)) {
+                    // Non-occupied pose.
+                    canvas.at<unsigned char>(row, column) = 0;
+                } else {
+                    // Valid location, create a tone that corresponds to the cost.
+                    unsigned int grey = 255 * cost;
+                    grey = std::max(0u, std::min(255u, grey));
+                    canvas.at<unsigned char>(row, column) = grey;
+                }
+            }
+        }
+
+        // Convert the grayscale values to colors.
+        cv::Mat color_image;
+        cv::applyColorMap(canvas, color_image, cv::COLORMAP_JET);
+
+        // Do another pass over the colored image and tidy it up a bit.
+        for (size_t y = 0; y < height; y++) {
+            for (size_t x = 0; x < width; x++) {
+                size_t row = height - 1 - y;
+                size_t column = x;
+
+                // Color non-occupied cells black.
+                double cost = costs_.get_cost(x, y, angle_index);
+                if (cost < (0.5 * Costs::invalid_cost)) {
+                    color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(0, 0, 0);
+                }
+
+                // Draw the obstacles in white.
+                if (original_occupancy_map_.at(x, y) > 0.5) {
+                    color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(255, 255, 255);
+                }
+            }
+        }
+
+        std::stringstream ss;
+        ss << prefix << "map_" << std::setw(3) << std::setfill('0') << angle_index << ".png";
+        cv::imwrite(ss.str(), color_image);
+    };
+
+    boost::asio::thread_pool pool;
+    for (unsigned int ai = 0; ai < costs_.angle_granularity(); ai++) {
+        boost::asio::post(
+            pool,
+            [output_orientation, ai]{ output_orientation(ai); }
+        );
+    }
+    pool.join();
+}
+
+unsigned int TrajectoryPlanner::calculate_footprint_size(
+    const Polygon& footprint_polygon,
+    double resolution)
+{
+    int size = 2;
+
+    for (const auto& p: footprint_polygon) {
+        // The distance of the point from the center.
+        double dist_meter =
+            sqrt(pow(std::get<0>(p), 2.0) + pow(std::get<1>(p), 2.0));
+
+        // Multiply the distance with a value that is a little bit bigger
+        // than sqrt(2), so that even if the footprint is rotated by
+        // 45 degrees it will still fit.
+        dist_meter *= 1.5;
+
+        // The distance in pixels.
+        int dist_pixels = dist_meter / resolution;
+
+        size = std::max(size, 2 * dist_pixels);
+    }
+
+    return size;
+}
+
+unsigned int TrajectoryPlanner::draw_footprint(
+    Buffer<double>& buffer,
+    const Polygon& footprint_polygon,
+    double resolution,
+    int footprint_size,
+    double theta)
+{
+    // Convert footprint to OpenCV polygon type.
+    std::vector<cv::Point> polygon;
+    for (const auto& p: footprint_polygon) {
+        // Convert meter to pixel coordinates.
+        double x = std::get<0>(p) / resolution;
+        double y = std::get<1>(p) / resolution;
+
+        // Rotate the point according to the argument.
+        double rx = x * cos(theta) - y * sin(theta);
+        double ry = x * sin(theta) + y * cos(theta);
+
+        // Shift the points so that the origin of the drawn polygon
+        // is in the center of the canvas.
+        rx += footprint_size / 2;
+        ry += footprint_size / 2;
+
+        // OpenCV treats the coordinates in the opposite order, note that
+        // the X and Y arguments are swapped when creating the cv::Point.
+        double column = rx;
+        double row = ry;
+        polygon.push_back(cv::Point(row, column));
+    }
+
+    // Draw the filled polygon.
+    const cv::Point* ppt[1] = { polygon.data() };
+    int npt[] = { static_cast<int>(polygon.size()) };
+
+    cv::Mat canvas = cv::Mat::zeros(footprint_size, footprint_size, CV_8UC1);
+    cv::fillPoly(canvas, ppt, npt, 1, cv::Scalar(255));
+
+    unsigned int black = 0;
+    for (int y = 0; y < footprint_size; y ++) {
+        for (int x = 0; x < footprint_size; x ++) {
+            if (canvas.at<unsigned char>(y, x) != 0) {
+                buffer.at(y, x) = 1.0;
+                black++;
+            }
+        }
+    }
+
+    return std::max(1u, black);
+}
+
+}

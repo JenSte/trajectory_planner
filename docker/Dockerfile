@@ -7,6 +7,8 @@ RUN \
     apt-get upgrade --yes && \
     apt-get install --yes \
         curl \
+        geeqie \
+        graphicsmagick-imagemagick-compat \
         htop \
         less \
         libfftw3-dev \

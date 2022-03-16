@@ -1,0 +1,9 @@
+<library
+    path="trajectory_planner_plugin">
+    <class
+        name="trajectory_planner/TrajectoryPlanner"
+        type="trajectory_planner::TrajectoryPlannerPlugin"
+        base_class_type="nav2_core::GlobalPlanner">
+        <description>A global planner for mobile robots that takes the vehicle's motion model into account.</description>
+    </class>
+</library>

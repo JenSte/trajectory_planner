@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+    <name>trajectory_planner</name>
+    <version>0.0.1</version>
+    <description>A global planner for mobile robots that takes the vehicle's motion model into account.</description>
+    <maintainer email="jens.steinhauser@gmail.com">Jens Steinhauser</maintainer>
+    <license>MIT</license>
+
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+    <depend>rclpy</depend>
+    <depend>rclcpp</depend>
+    <depend>rclcpp_lifecycle</depend>
+    <depend>tf2_ros</depend>
+    <depend>nav_msgs</depend>
+    <depend>pluginlib</depend>
+
+    <test_depend>ament_cmake_gtest</test_depend>
+    <test_depend>ament_lint_auto</test_depend>
+    <test_depend>ament_lint_common</test_depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>
