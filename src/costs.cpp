@@ -45,6 +45,12 @@ double Costs::get_cost(
     return it->second.at(angle_index);
 }
 
+double Costs::get_cost(
+    const Pose& pose) const
+{
+    return get_cost(pose.x, pose.y, pose.angle_index);
+}
+
 unsigned int Costs::angle_granularity() const
 {
     return angle_granularity_;

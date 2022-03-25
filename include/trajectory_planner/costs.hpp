@@ -1,9 +1,9 @@
 #ifndef TRAJECTORY_PLANNER_COSTS_HPP
 #define TRAJECTORY_PLANNER_COSTS_HPP
 
+#include "trajectory_planner/types.hpp"
+
 #include <map>
-#include <tuple>
-#include <vector>
 
 namespace trajectory_planner
 {
@@ -36,6 +36,10 @@ public:
         unsigned int x,
         unsigned int y,
         unsigned int angle_index) const;
+
+    // Convenience overload.
+    double get_cost(
+        const Pose& pose) const;
 
     // Return the number of steps the whole circle is divided in.
     unsigned int angle_granularity() const;

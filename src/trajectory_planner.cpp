@@ -158,6 +158,11 @@ const std::string& TrajectoryPlanner::hash() const
     return hash_;
 }
 
+unsigned int TrajectoryPlanner::angle_granularity() const
+{
+    return costs_.angle_granularity();
+}
+
 void TrajectoryPlanner::update_costs(
     Costs& costs,
     size_t map_width,
@@ -262,6 +267,26 @@ void TrajectoryPlanner::dump_orientation_maps(
         );
     }
     pool.join();
+}
+
+Path TrajectoryPlanner::plan(
+    const Pose& start,
+    const Pose& goal) const
+{
+    if (costs_.get_cost(start) < (0.5 * Costs::invalid_cost)) {
+        throw std::invalid_argument("Start pose is not valid.");
+    }
+
+    if (costs_.get_cost(goal) < (0.5 * Costs::invalid_cost)) {
+        throw std::invalid_argument("Goal pose is not valid.");
+    }
+
+    Path plan;
+
+    plan.push_back(start);
+    plan.push_back(goal);
+
+    return plan;
 }
 
 unsigned int TrajectoryPlanner::calculate_footprint_size(

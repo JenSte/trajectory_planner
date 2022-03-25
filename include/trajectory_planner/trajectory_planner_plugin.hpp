@@ -29,8 +29,8 @@ public:
     void deactivate() override;
 
     nav_msgs::msg::Path createPlan(
-        const geometry_msgs::msg::PoseStamped& start,
-        const geometry_msgs::msg::PoseStamped& goal) override;
+        const geometry_msgs::msg::PoseStamped& start_msg,
+        const geometry_msgs::msg::PoseStamped& goal_msg) override;
 
 private:
 
@@ -63,6 +63,10 @@ private:
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
         pub_original_cost_map_;
 
+    // Publishes the created plan for debug purposes.
+    rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr
+        pub_path_;
+
     // Background thread that periodically checks for changes of the costmap
     // and updates the planner if necessary.
     std::thread planner_update_thread_;
@@ -78,6 +82,19 @@ private:
 
     // Convert a polygon message to the planer's internal representation.
     Polygon convert_polygon_msg(const geometry_msgs::msg::Polygon& polygon) const;
+
+    // Convert a ROS pose message to the pose structure used by the planner.
+    Pose convert_pose_msg(
+        const nav2_costmap_2d::Costmap2D* costmap,
+        const geometry_msgs::msg::PoseStamped& pose_msg,
+        unsigned int angle_granularity) const;
+
+    // Convert a pose structure as used by the planner to a ROS pose message.
+    geometry_msgs::msg::PoseStamped convert_pose(
+        const nav2_costmap_2d::Costmap2D* costmap,
+        const std::string& frame_id,
+        const Pose& pose,
+        unsigned int angle_granularity) const;
 
     // Create a buffer that contains the value "1.0" where there are objects
     // in the given costmap.
@@ -100,6 +117,13 @@ private:
     // Create a hash used to identify the costmap.
     std::string hash_costmap(
         nav2_costmap_2d::Costmap2D* costmap) const;
+
+    // Create a plan using the given planner.
+    nav_msgs::msg::Path plan(
+        nav2_costmap_2d::Costmap2D* costmap,
+        TrajectoryPlanner* planner,
+        const geometry_msgs::msg::PoseStamped& start_msg,
+        const geometry_msgs::msg::PoseStamped& goal_msg) const;
 
     // Function that implements the planner update.
     void planner_update_thread_function();

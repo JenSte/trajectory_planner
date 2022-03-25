@@ -16,16 +16,21 @@ class ComputePathActionClient(Node):
         goal_msg = ComputePathToPose.Goal()
 
         goal_msg.start.header.frame_id = "map"
-        goal_msg.start.pose.position.x = 0.5
-        goal_msg.start.pose.position.y = 0.6
+        goal_msg.start.pose.position.x = 1.5
+        goal_msg.start.pose.position.y = 1.5
         goal_msg.start.pose.position.z = 0.0
 
         goal_msg.goal.header.frame_id = "map"
         goal_msg.goal.pose.position.x = 1.5
-        goal_msg.goal.pose.position.y = 1.6
+        goal_msg.goal.pose.position.y = 4.5
         goal_msg.goal.pose.position.z = 0.0
 
-        goal_msg.planner_id = "MultidimensionPlanner"
+        goal_msg.goal.pose.orientation.x = 0.0
+        goal_msg.goal.pose.orientation.y = 0.0
+        goal_msg.goal.pose.orientation.z = 1.0
+        goal_msg.goal.pose.orientation.w = 0.0
+
+        goal_msg.planner_id = "trajectory_planner"
         goal_msg.use_start = True
 
         self._action_client.wait_for_server()
@@ -46,7 +51,11 @@ class ComputePathActionClient(Node):
 
     def get_result_callback(self, future):
         result = future.result().result
-        self.get_logger().info('Result: {0}'.format(result.path.poses))
+
+        self.get_logger().info("Result:")
+        for p in result.path.poses:
+            self.get_logger().info(f"  {p.pose.position}  {p.pose.orientation}")
+
         rclpy.shutdown()
 
 

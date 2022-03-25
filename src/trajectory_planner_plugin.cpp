@@ -3,6 +3,9 @@
 #include "geometry_msgs/msg/point32.hpp"
 #include "nav2_util/costmap.hpp"
 #include "nav2_util/node_utils.hpp"
+#include "tf2/convert.h"
+#include "tf2/LinearMath/Matrix3x3.h"
+#include "tf2/LinearMath/Quaternion.h"
 
 #include <boost/crc.hpp>
 
@@ -58,6 +61,11 @@ void TrajectoryPlannerPlugin::configure(
         node_->create_publisher<nav_msgs::msg::OccupancyGrid>(
             "~/" + name + "/original_occupancy_map",
             rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+
+    pub_path_ =
+        node_->create_publisher<nav_msgs::msg::Path>(
+            "~/" + name + "/path",
+            rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
 }
 
 std::string TrajectoryPlannerPlugin::hash_costmap(
@@ -97,6 +105,65 @@ Polygon TrajectoryPlannerPlugin::convert_polygon_msg(
         {
             return Point(point.x, point.y);
         });
+
+    return result;
+}
+
+Pose TrajectoryPlannerPlugin::convert_pose_msg(
+    const nav2_costmap_2d::Costmap2D* costmap,
+    const geometry_msgs::msg::PoseStamped& pose_msg,
+    unsigned int angle_granularity) const
+{
+    Pose result;
+
+    if (!costmap->worldToMap(
+        pose_msg.pose.position.x,
+        pose_msg.pose.position.y,
+        result.x,
+        result.y)) {
+        throw std::runtime_error("Unable to convert world coordinate to map.");
+    }
+
+    tf2::Quaternion q;
+    tf2::fromMsg(pose_msg.pose.orientation, q);
+
+    const tf2::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+
+    if (yaw < 0.0) {
+        yaw += 2 * M_PI;
+    }
+
+    result.angle_index = static_cast<int>(std::round(yaw / (2 * M_PI / angle_granularity)));
+    result.angle_index %= angle_granularity;
+
+    return result;
+}
+
+geometry_msgs::msg::PoseStamped TrajectoryPlannerPlugin::convert_pose(
+    const nav2_costmap_2d::Costmap2D* costmap,
+    const std::string& frame_id,
+    const Pose& pose,
+    unsigned int angle_granularity) const
+{
+    geometry_msgs::msg::PoseStamped result;
+
+    result.header.frame_id = frame_id;
+
+    costmap->mapToWorld(
+        pose.x,
+        pose.y,
+        result.pose.position.x,
+        result.pose.position.y);
+    result.pose.position.z = 0.0;
+
+    const double yaw = pose.angle_index * (2 * M_PI) / angle_granularity;
+
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, yaw);
+
+    result.pose.orientation = tf2::toMsg(q);
 
     return result;
 }
@@ -171,6 +238,7 @@ void TrajectoryPlannerPlugin::activate()
 
     pub_original_occupancy_map_->on_activate();
     pub_original_cost_map_->on_activate();
+    pub_path_->on_activate();
 
     // (Re-)Start the thread that creates the planner and keeps it up-to-date.
     planner_update_thread_quit_ = false;
@@ -184,6 +252,7 @@ void TrajectoryPlannerPlugin::deactivate()
 
     pub_original_occupancy_map_->on_deactivate();
     pub_original_cost_map_->on_deactivate();
+    pub_path_->on_deactivate();
 
     // Stop the background thread and wait for it to finish.
     std::unique_lock lock(planner_update_thread_mutex_);
@@ -194,22 +263,64 @@ void TrajectoryPlannerPlugin::deactivate()
 }
 
 nav_msgs::msg::Path TrajectoryPlannerPlugin::createPlan(
-    const geometry_msgs::msg::PoseStamped& start,
-    const geometry_msgs::msg::PoseStamped& goal)
+    const geometry_msgs::msg::PoseStamped& start_msg,
+    const geometry_msgs::msg::PoseStamped& goal_msg)
 {
     RCLCPP_DEBUG((*logger_), "createPlan()");
 
-    RCLCPP_INFO_STREAM(node_->get_logger(),
-        "start: (" << start.pose.position.x << " / " << start.pose.position.y << ")");
-    RCLCPP_INFO_STREAM(node_->get_logger(),
-        "goal: (" << goal.pose.position.x << " / " << goal.pose.position.y << ")");
+    nav2_costmap_2d::Costmap2D* costmap = costmap_ros_->getCostmap();
+    const std::lock_guard<std::recursive_mutex> costmap_lock(*costmap->getMutex());
 
-    nav_msgs::msg::Path path;
+    const std::lock_guard<std::mutex> planner_lock(planner_mutex_);
+    if (!planner_) {
+        RCLCPP_DEBUG((*logger_), "Planner is not yet ready.");
+        nav_msgs::msg::Path();
+    }
 
-    path.poses.push_back(start);
-    path.poses.push_back(goal);
+    try {
+        nav_msgs::msg::Path path_msg =
+            plan(costmap, planner_.get(), start_msg, goal_msg);
 
-    return path;
+        pub_path_->publish(path_msg);
+
+        return path_msg;
+    } catch (const std::exception& e) {
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "Error creating plan: " << e.what());
+        return nav_msgs::msg::Path();
+    }
+}
+
+nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
+    nav2_costmap_2d::Costmap2D* costmap,
+    TrajectoryPlanner* planner,
+    const geometry_msgs::msg::PoseStamped& start_msg,
+    const geometry_msgs::msg::PoseStamped& goal_msg) const
+{
+    Pose start = convert_pose_msg(costmap, start_msg, planner_->angle_granularity());
+    Pose goal = convert_pose_msg(costmap, goal_msg, planner_->angle_granularity());
+
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "Start: " << start.x << "/" << start.y << "/" << start.angle_index);
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "Goal: " << goal.x << "/" << goal.y << "/" << goal.angle_index);
+
+    Path path = planner->plan(start, goal);
+
+    nav_msgs::msg::Path path_msg;
+    path_msg.header.frame_id = costmap_ros_->getGlobalFrameID();
+
+    for (const Pose& p: path) {
+        const geometry_msgs::msg::PoseStamped pose_msg = convert_pose(
+            costmap, costmap_ros_->getGlobalFrameID(), p, planner_->angle_granularity());
+
+        path_msg.poses.push_back(pose_msg);
+    }
+
+    return path_msg;
 }
 
 void TrajectoryPlannerPlugin::planner_update_thread_function()

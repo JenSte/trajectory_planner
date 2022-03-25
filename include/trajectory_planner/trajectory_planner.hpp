@@ -3,18 +3,10 @@
 
 #include "trajectory_planner/buffer.hpp"
 #include "trajectory_planner/costs.hpp"
-
-#include <tuple>
-#include <vector>
+#include "trajectory_planner/types.hpp"
 
 namespace trajectory_planner
 {
-
-// A point, consisting of a X and Y coordinate, in meter.
-using Point = std::tuple<double, double>;
-
-// A (closed, first and last point are considered to be connected) polygon.
-using Polygon = std::vector<Point>;
 
 // A global planner that takes the robot's movement into account.
 class TrajectoryPlanner
@@ -41,9 +33,17 @@ public:
     // object was created from.
     const std::string& hash() const;
 
+    // Return the angle granularity used to create this planner object.
+    unsigned int angle_granularity() const;
+
     // Write debug images that show the stored costs (one image for each orientation).
     void dump_orientation_maps(
         const std::string& prefix) const;
+
+    // Plan a route from 'start' to 'goal'.
+    Path plan(
+        const Pose& start,
+        const Pose& goal) const;
 
 private:
 

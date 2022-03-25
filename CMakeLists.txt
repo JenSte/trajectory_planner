@@ -44,6 +44,7 @@ set(DEPENDENCIES
     rclcpp_action
     rclcpp_lifecycle
     std_msgs
+    tf2
     tf2_ros
     visualization_msgs
 )
@@ -54,6 +55,7 @@ add_library(${PROJECT_NAME}_plugin SHARED
     "include/trajectory_planner/costs.hpp"
     "include/trajectory_planner/trajectory_planner.hpp"
     "include/trajectory_planner/trajectory_planner_plugin.hpp"
+    "include/trajectory_planner/types.hpp"
     "src/buffer.cpp"
     "src/convolution.cpp"
     "src/costs.cpp"
