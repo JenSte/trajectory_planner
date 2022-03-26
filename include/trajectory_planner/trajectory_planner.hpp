@@ -82,15 +82,13 @@ private:
         double theta);
 
     // Update the cost object with the values read from the given maps.
-    static void update_costs(
-        Costs& costs,
+    static std::vector<std::tuple<size_t, size_t, double>> extract_costs(
         size_t map_width,
         size_t map_height,
         size_t offset,
         unsigned int footprint_covered_pixels,
         const Buffer<double>& convoluted_occupancy_map,
-        const Buffer<double>& convoluted_cost_map,
-        unsigned int angle_index);
+        const Buffer<double>& convoluted_cost_map);
 };
 
 }

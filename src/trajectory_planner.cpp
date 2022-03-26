@@ -78,13 +78,16 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     plan_forward.execute(occupancy_map_padded, occupancy_map_spectrum);
     plan_forward.execute(cost_map_padded, cost_map_spectrum);
 
-    // The "calculated" costs are accumulated in this object.
-    Costs costs(angle_granularity);
-    std::mutex costs_mutex;
+    // The "calculated" costs are accumulated in this object. The map key is the angle
+    // index, the values in the map are (x, y, cell-cost) tuples for this orientation.
+    std::map<unsigned int, std::vector<std::tuple<size_t, size_t, double>>> angle_costs;
+    std::mutex angle_costs_mutex;
 
-    //
-    // Process footprint.
-    //
+    // Process the footprint: For a given orientation, the robot's footprint is drawn
+    // and then FFT transformed. Then, both spectrums of the maps (occupancy map and
+    // cost map) are multiplied with the footprint's spectrum. After transforming the
+    // multiplied buffers back, the resulting buffers contain the collisions and the
+    // costs for each cell.
     auto process_footprint = [&](unsigned int angle_index) {
         // Draw the footprint. Because the convolution mirrors one of it's inputs,
         // we draw the robot's footprint rotated by 180 degrees to compensate.
@@ -96,33 +99,40 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
             footprint_pixel_size,
             M_PI + angle_index * 2 * M_PI / angle_granularity);
 
+        // Calculate the spectrum of the footprint.
         Buffer<fftw_complex> footprint_image_spectrum_1(
             plan_forward.frequency_domain_width(),
             plan_forward.frequency_domain_height());
 
         plan_forward.execute(footprint_image, footprint_image_spectrum_1);
 
+        // We need the footprint's spectrum two times, so we make a copy
+        // instead of transforming it again.
         Buffer<fftw_complex> footprint_image_spectrum_2(footprint_image_spectrum_1);
 
         // Multiply the corresponding spectrum buffers.
         multiply_buffers(footprint_image_spectrum_1, occupancy_map_spectrum);
         multiply_buffers(footprint_image_spectrum_2, cost_map_spectrum);
 
+        // Calculate the inverse FFT, thereby completing the convolution.
         Buffer<double> result_buffer_1(padded_width, padded_height);
         Buffer<double> result_buffer_2(padded_width, padded_height);
         plan_backward.execute(footprint_image_spectrum_1, result_buffer_1);
         plan_backward.execute(footprint_image_spectrum_2, result_buffer_2);
 
-        std::lock_guard<std::mutex> lock(costs_mutex);
-        update_costs(
-            costs,
-            occupancy_map.width(),
-            occupancy_map.height(),
-            footprint_pixel_size / 2,
-            covered_pixels,
-            result_buffer_1,
-            result_buffer_2,
-            angle_index);
+        // Get the costs for the cells where no collision happens.
+        std::vector<std::tuple<size_t, size_t, double>> costs =
+            extract_costs(
+                occupancy_map.width(),
+                occupancy_map.height(),
+                footprint_pixel_size / 2,
+                covered_pixels,
+                result_buffer_1,
+                result_buffer_2);
+
+        // Store the costs for this orientation for further processing in the main thread.
+        std::lock_guard<std::mutex> lock(angle_costs_mutex);
+        angle_costs.emplace(angle_index, std::move(costs));
     };
 
     boost::asio::thread_pool pool;
@@ -133,6 +143,18 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
         );
     }
     pool.join();
+
+    // Take all the costs and put them in one data structure.
+    Costs costs(angle_granularity);
+    for (const auto& it: angle_costs) {
+        for (const auto& v: it.second) {
+            costs.set_cost(
+                std::get<0>(v),
+                std::get<1>(v),
+                it.first,
+                std::get<2>(v));
+        }
+    }
 
     std::unique_ptr<TrajectoryPlanner> planner;
     planner.reset(new TrajectoryPlanner(
@@ -163,15 +185,13 @@ unsigned int TrajectoryPlanner::angle_granularity() const
     return costs_.angle_granularity();
 }
 
-void TrajectoryPlanner::update_costs(
-    Costs& costs,
+std::vector<std::tuple<size_t, size_t, double>> TrajectoryPlanner::extract_costs(
     size_t map_width,
     size_t map_height,
     size_t offset,
     unsigned int footprint_covered_pixels,
     const Buffer<double>& convoluted_occupancy_map,
-    const Buffer<double>& convoluted_cost_map,
-    unsigned int angle_index)
+    const Buffer<double>& convoluted_cost_map)
 {
     if (convoluted_occupancy_map.width() != map_width + 2 * offset - 1) {
         throw std::runtime_error("Convoluted occupancy map has wrong width.");
@@ -188,6 +208,8 @@ void TrajectoryPlanner::update_costs(
     const double scale_factor =
         (map_width + 2 * offset - 1) * (map_height + 2 * offset - 1) * footprint_covered_pixels;
 
+    std::vector<std::tuple<size_t, size_t, double>> result;
+
     for (size_t y = 0; y < map_height; y++) {
         for (size_t x = 0; x < map_width; x++) {
             // Where the "functions" of the footprint and the occupancy map
@@ -198,10 +220,12 @@ void TrajectoryPlanner::update_costs(
             // cells are left with the default value in the cost data structure.
             if (convoluted_occupancy_map.at(x + offset, y + offset) < 0.5) {
                 double cost = convoluted_cost_map.at(x + offset, y + offset);
-                costs.set_cost(x, y, angle_index, cost / scale_factor);
+                result.emplace_back(std::make_tuple(x, y, cost / scale_factor));
             }
         }
     }
+
+    return result;
 }
 
 void TrajectoryPlanner::dump_orientation_maps(
