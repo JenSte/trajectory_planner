@@ -401,7 +401,7 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
             RCLCPP_INFO((*logger_), "Writing debug images...");
 
             timestamp_start = std::chrono::steady_clock::now();
-            planner->dump_orientation_maps(debug_directory_ + "/orientation_x_");
+            planner->dump_orientation_maps(debug_directory_ + "/orientation_");
             timestamp_end = std::chrono::steady_clock::now();
 
             duration = timestamp_end - timestamp_start;

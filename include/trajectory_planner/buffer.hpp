@@ -22,7 +22,7 @@ public:
     Buffer(size_t width, size_t height)
         : width_(width)
         , height_(height)
-        , data_(fftw_malloc(width_ * height_ * sizeof(T)), &fftw_free)
+        , data_(fftw_malloc(byte_size()), &fftw_free)
     {
         set_zero();
     }
@@ -31,9 +31,9 @@ public:
     Buffer(const Buffer& buffer)
         : width_(buffer.width())
         , height_(buffer.height())
-        , data_(fftw_malloc(width_ * height_ * sizeof(T)), &fftw_free)
+        , data_(fftw_malloc(byte_size()), &fftw_free)
     {
-        memcpy(raw(), buffer.raw(), width_ * height_ * sizeof(T));
+        memcpy(raw(), buffer.raw(), byte_size());
     }
 
     // Return the width of the buffer.
@@ -53,7 +53,7 @@ public:
     {
         // In the internal representation of '0.0' all bits are set to zero,
         // so using memset to set all values back to zero like this works.
-        memset(data_.get(), 0, width_ * height_ * sizeof(T));
+        memset(data_.get(), 0, byte_size());
     }
 
     // Returns a 'const' pointer to the internal memory.
@@ -100,6 +100,12 @@ private:
 
     // A pointer to the actual buffer memory.
     pointer_type data_;
+
+    // Return the size of the data pointed to by 'data_'.
+    size_t byte_size() const
+    {
+        return width_ * height_ * sizeof(T);
+    }
 };
 
 // Create a buffer of the requested size and copy over the content of the

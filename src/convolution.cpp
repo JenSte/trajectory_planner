@@ -33,8 +33,8 @@ FFTPlan FFTPlan::plan_forward(
     size_t time_domain_width = time_domain_buffer.width();
     size_t time_domain_height = time_domain_buffer.height();
 
-    size_t frequency_domain_width = time_domain_width;
-    size_t frequency_domain_height = time_domain_height / 2 + 1;
+    size_t frequency_domain_width = time_domain_width / 2 + 1;
+    size_t frequency_domain_height = time_domain_height;
 
     Buffer<fftw_complex> output(frequency_domain_width, frequency_domain_height);
 
@@ -64,8 +64,8 @@ FFTPlan FFTPlan::plan_backward(
     size_t time_domain_width = time_domain_buffer.width();
     size_t time_domain_height = time_domain_buffer.height();
 
-    size_t frequency_domain_width = time_domain_width;
-    size_t frequency_domain_height = time_domain_height / 2 + 1;
+    size_t frequency_domain_width = time_domain_width / 2 + 1;
+    size_t frequency_domain_height = time_domain_height;
 
     Buffer<fftw_complex> input(frequency_domain_width, frequency_domain_height);
 

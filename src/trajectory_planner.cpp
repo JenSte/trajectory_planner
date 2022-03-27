@@ -201,26 +201,42 @@ std::vector<std::tuple<size_t, size_t, double>> TrajectoryPlanner::extract_costs
         throw std::runtime_error("Convoluted occupancy map has wrong height.");
     }
 
-    // Factor to scale the costs down and compenstate for different map sizes (FFTW
-    // computes an unnormalized transform) and for different footprint sizes. Also,
-    // the number of pixels covered by the footprint is taken into account, to compensate
-    // for a slightly different number of pixels used by different orientations.
-    const double scale_factor =
-        (map_width + 2 * offset - 1) * (map_height + 2 * offset - 1) * footprint_covered_pixels;
+    if (convoluted_occupancy_map.width() != convoluted_cost_map.width()) {
+        throw std::runtime_error("Cost and occupancy map do not have the same width.");
+    }
+
+    if (convoluted_occupancy_map.height() != convoluted_cost_map.height()) {
+        throw std::runtime_error("Cost and occupancy map do not have the same height.");
+    }
+
+    // FFTW computes an unnormalized transform, i.e. the values of IFFT(FFT(...)) are
+    // multiplied by the size of the input.
+    const double fft_factor = (map_width + 2 * offset - 1) * (map_height + 2 * offset - 1);
 
     std::vector<std::tuple<size_t, size_t, double>> result;
 
     for (size_t y = 0; y < map_height; y++) {
         for (size_t x = 0; x < map_width; x++) {
-            // Where the "functions" of the footprint and the occupancy map
-            // overlapped (a value of "1.0" meant that the cell was occupied, while a
-            // value of "0.0" meant it was not obstructed), the convoluted location
-            // containes a non-zero value. So for cells that have a value close to
-            // zero we store the cost value from the convoluted cost map, while other
-            // cells are left with the default value in the cost data structure.
+            // Where the "functions" of the footprint and the occupancy map overlap,
+            // the result of the convolution has a non-zero value, while a value of
+            // zero means that the footprint can be placed on this position without
+            // colliding with the map.
+            //
+            // There is no need to remove the FFT bias from the values of the convoluted
+            // occupancy map, as we only care about zero/non-zero values here.
             if (convoluted_occupancy_map.at(x + offset, y + offset) < 0.5) {
+                // A valid position, store the cost of this position in the result.
+
                 double cost = convoluted_cost_map.at(x + offset, y + offset);
-                result.emplace_back(std::make_tuple(x, y, cost / scale_factor));
+
+                // Remove the FFT bias.
+                cost /= fft_factor;
+
+                // Also normalize for the fact that the footprint image might cover
+                // a different number of pixels for different orientations.
+                cost /= footprint_covered_pixels;
+
+                result.emplace_back(std::make_tuple(x, y, cost));
             }
         }
     }
