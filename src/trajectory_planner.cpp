@@ -1,5 +1,6 @@
 #include "trajectory_planner/trajectory_planner.hpp"
 
+#include "trajectory_planner/planning_3d.hpp"
 #include "trajectory_planner/convolution.hpp"
 
 #include <boost/asio/post.hpp>
@@ -309,7 +310,7 @@ void TrajectoryPlanner::dump_orientation_maps(
     pool.join();
 }
 
-Path TrajectoryPlanner::plan(
+TrajectoryPlanner::Result TrajectoryPlanner::plan(
     const Pose& start,
     const Pose& goal) const
 {
@@ -321,12 +322,9 @@ Path TrajectoryPlanner::plan(
         throw std::invalid_argument("Goal pose is not valid.");
     }
 
-    Path plan;
+    three::SearchResult3D search_result_3d = three::plan(costs_, start, goal);
 
-    plan.push_back(start);
-    plan.push_back(goal);
-
-    return plan;
+    return Result{search_result_3d.path, search_result_3d};
 }
 
 unsigned int TrajectoryPlanner::calculate_footprint_size(

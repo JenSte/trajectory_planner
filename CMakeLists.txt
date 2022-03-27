@@ -30,12 +30,12 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 pkg_search_module(FFTW REQUIRED fftw3 IMPORTED_TARGET)
-
 
 set(DEPENDENCIES
     builtin_interfaces
@@ -49,6 +49,7 @@ set(DEPENDENCIES
     rclcpp
     rclcpp_action
     rclcpp_lifecycle
+    rosidl_default_runtime
     std_msgs
     tf2
     tf2_ros
@@ -56,15 +57,18 @@ set(DEPENDENCIES
 )
 
 add_library(${PROJECT_NAME}_plugin SHARED
+    "include/trajectory_planner/a_star.hpp"
     "include/trajectory_planner/buffer.hpp"
     "include/trajectory_planner/convolution.hpp"
     "include/trajectory_planner/costs.hpp"
+    "include/trajectory_planner/planning_3d.hpp"
     "include/trajectory_planner/trajectory_planner.hpp"
     "include/trajectory_planner/trajectory_planner_plugin.hpp"
     "include/trajectory_planner/types.hpp"
     "src/buffer.cpp"
     "src/convolution.cpp"
     "src/costs.cpp"
+    "src/planning_3d.cpp"
     "src/trajectory_planner.cpp"
     "src/trajectory_planner_plugin.cpp"
 )
@@ -112,6 +116,7 @@ install(FILES ${PROJECT_NAME}_plugin.xml
 
 install(PROGRAMS
     script/client.py
+    script/plot_augmented_path.py
     DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -120,29 +125,54 @@ install(DIRECTORY include DESTINATION include)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY map DESTINATION share/${PROJECT_NAME})
 
-#if(BUILD_TESTING)
-#    find_package(ament_lint_auto REQUIRED)
-#    ament_lint_auto_find_test_dependencies()
-#
-#    find_package(ament_cmake_gtest REQUIRED)
-#    ament_add_gtest(${PROJECT_NAME}_test
-#        include/trajectory_planner/buffer.hpp
-#        include/trajectory_planner/convolution.hpp
-#        src/convolution.cpp
-#        test/test_buffer.cpp
-#        test/test_convolution.cpp
-#    )
-#
-#    target_include_directories(${PROJECT_NAME}_test
-#        PRIVATE
-#            "include"
-#            PkgConfig::FFTW
-#    )
-#
-#    target_link_libraries(${PROJECT_NAME}_test
-#        PkgConfig::FFTW
-#    )
-#endif()
+rosidl_generate_interfaces(${PROJECT_NAME}
+    "msg/AugmentedPose.msg"
+    "msg/AugmentedPath.msg"
+    DEPENDENCIES
+        geometry_msgs
+)
+
+rosidl_target_interfaces(${PROJECT_NAME}_plugin
+    ${PROJECT_NAME} "rosidl_typesupport_cpp"
+)
+
+if(BUILD_TESTING)
+    find_package(ament_lint_auto REQUIRED)
+    ament_lint_auto_find_test_dependencies()
+
+    find_package(ament_cmake_gtest REQUIRED)
+    ament_add_gtest(${PROJECT_NAME}_test
+        "include/trajectory_planner/a_star.hpp"
+        "include/trajectory_planner/buffer.hpp"
+        "include/trajectory_planner/convolution.hpp"
+        "include/trajectory_planner/costs.hpp"
+        "include/trajectory_planner/planning_3d.hpp"
+        "include/trajectory_planner/trajectory_planner.hpp"
+        "include/trajectory_planner/trajectory_planner_plugin.hpp"
+        "include/trajectory_planner/types.hpp"
+        "src/buffer.cpp"
+        "src/convolution.cpp"
+        "src/costs.cpp"
+        "src/planning_3d.cpp"
+        "src/trajectory_planner.cpp"
+        "test/test_a_star.cpp"
+        "test/test_planning_3d.cpp"
+    )
+
+    target_include_directories(${PROJECT_NAME}_test
+        PRIVATE
+            "include"
+            ${Boost_INCLUDE_DIR}
+            ${OpenCV_INCLUDE_DIRS}
+            PkgConfig::FFTW
+    )
+
+    target_link_libraries(${PROJECT_NAME}_test
+        ${OpenCV_LIBS}
+        Boost::system
+        PkgConfig::FFTW
+    )
+endif()
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME}_plugin)

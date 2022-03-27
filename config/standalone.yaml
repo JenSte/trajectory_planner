@@ -7,7 +7,7 @@ planner_server:
     planner_plugins: ["trajectory_planner"]
     trajectory_planner:
       plugin: "trajectory_planner/TrajectoryPlanner"
-      angle_granularity: 512
+      angle_granularity: 360
       debug_directory: "/tmp"
 
 global_costmap:

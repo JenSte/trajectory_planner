@@ -1,6 +1,7 @@
 #ifndef TRAJECTORY_PLANNER_TRAJECTORY_PLANNER_PLUGIN_HPP
 #define TRAJECTORY_PLANNER_TRAJECTORY_PLANNER_PLUGIN_HPP
 
+#include "trajectory_planner/msg/augmented_path.hpp"
 #include "trajectory_planner/trajectory_planner.hpp"
 
 #include "nav2_core/global_planner.hpp"
@@ -67,6 +68,16 @@ private:
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr
         pub_path_;
 
+    // Publish a map showing the space visited by the 3-dimensional planner,
+    // published for debug purposes.
+    rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
+        pub_3d_debug_map_;
+
+    // Publish the result of the search with additional information
+    // to debug the planner.
+    rclcpp_lifecycle::LifecyclePublisher<trajectory_planner::msg::AugmentedPath>::SharedPtr
+        pub_augmented_path_;
+
     // Background thread that periodically checks for changes of the costmap
     // and updates the planner if necessary.
     std::thread planner_update_thread_;
@@ -114,6 +125,23 @@ private:
         double origin_x,
         double origin_y) const;
 
+    // Convert the map containing the opened nodes to an occupancy grid ROS message.
+    nav_msgs::msg::OccupancyGrid convert_opened_nodes(
+        const std::map<three::Pose2D, unsigned int> opened_nodes,
+        size_t width,
+        size_t height,
+        const std::string& frame_id,
+        double resolution,
+        double origin_x,
+        double origin_y) const;
+
+    // Create an augmented path message.
+    msg::AugmentedPath create_augmented_path_message(
+        const nav2_costmap_2d::Costmap2D* costmap,
+        const std::string& frame_id,
+        unsigned int angle_granularity,
+        const three::SearchResult3D& search_result) const;
+
     // Create a hash used to identify the costmap.
     std::string hash_costmap(
         nav2_costmap_2d::Costmap2D* costmap) const;
@@ -121,6 +149,7 @@ private:
     // Create a plan using the given planner.
     nav_msgs::msg::Path plan(
         nav2_costmap_2d::Costmap2D* costmap,
+        const std::string& costmap_frame_id,
         TrajectoryPlanner* planner,
         const geometry_msgs::msg::PoseStamped& start_msg,
         const geometry_msgs::msg::PoseStamped& goal_msg) const;

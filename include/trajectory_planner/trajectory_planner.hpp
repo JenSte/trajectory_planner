@@ -3,6 +3,7 @@
 
 #include "trajectory_planner/buffer.hpp"
 #include "trajectory_planner/costs.hpp"
+#include "trajectory_planner/planning_3d.hpp"
 #include "trajectory_planner/types.hpp"
 
 namespace trajectory_planner
@@ -12,6 +13,17 @@ namespace trajectory_planner
 class TrajectoryPlanner
 {
 public:
+
+    // The result returned by a call to 'plan()'.
+    struct Result
+    {
+        // The path (if found, otherwise empty).
+        Path path;
+
+        // The search result of the three dimensional planner
+        // used to get a rough estimate for the final path.
+        three::SearchResult3D search_result_3d;
+    };
 
     // Create a new planner.
     static std::unique_ptr<TrajectoryPlanner> create_planner(
@@ -41,7 +53,7 @@ public:
         const std::string& prefix) const;
 
     // Plan a route from 'start' to 'goal'.
-    Path plan(
+    Result plan(
         const Pose& start,
         const Pose& goal) const;
 
@@ -81,7 +93,7 @@ private:
         int footprint_size,
         double theta);
 
-    // Update the cost object with the values read from the given maps.
+    // Get the cost values from the given maps.
     static std::vector<std::tuple<size_t, size_t, double>> extract_costs(
         size_t map_width,
         size_t map_height,

@@ -66,6 +66,16 @@ void TrajectoryPlannerPlugin::configure(
         node_->create_publisher<nav_msgs::msg::Path>(
             "~/" + name + "/path",
             rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+
+    pub_3d_debug_map_ =
+        node_->create_publisher<nav_msgs::msg::OccupancyGrid>(
+            "~/" + name + "/three_dimension_planner_search_space",
+            rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+
+    pub_augmented_path_ =
+        node_->create_publisher<trajectory_planner::msg::AugmentedPath>(
+            "~/" + name + "/augmented_path",
+            10);
 }
 
 std::string TrajectoryPlannerPlugin::hash_costmap(
@@ -227,6 +237,74 @@ nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_buffer(
     return result;
 }
 
+nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_opened_nodes(
+    const std::map<three::Pose2D, unsigned int> opened_nodes,
+    size_t width,
+    size_t height,
+    const std::string& frame_id,
+    double resolution,
+    double origin_x,
+    double origin_y) const
+{
+    nav_msgs::msg::OccupancyGrid result;
+
+    result.header.frame_id = frame_id;
+    result.info.resolution = resolution;
+    result.info.origin.position.x = origin_x;
+    result.info.origin.position.y = origin_y;
+    result.info.width = width;
+    result.info.height = height;
+
+    for (size_t y = 0; y < height; y++) {
+        for (size_t x = 0; x < width; x++) {
+            const auto it = opened_nodes.find(
+                {static_cast<unsigned int>(x), static_cast<unsigned int>(y)});
+            if (it == opened_nodes.end()) {
+                // This coordinate was not visited.
+                result.data.push_back(0);
+            } else {
+                // Add a negative value so that rviz colors this cell yellow-ish.
+                result.data.push_back(-1 - it->second);
+            }
+        }
+    }
+
+    return result;
+}
+
+msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
+    const nav2_costmap_2d::Costmap2D* costmap,
+    const std::string& frame_id,
+    unsigned int angle_granularity,
+    const three::SearchResult3D& search_result) const
+{
+    if (search_result.path.size() != search_result.heuristic.size()) {
+        throw std::runtime_error("Search result heuristic vector has wrong size.");
+    }
+    if (search_result.path.size() != search_result.cost.size()) {
+        throw std::runtime_error("Search result cost vector has wrong size.");
+    }
+
+    msg::AugmentedPath result;
+
+    for (size_t i = 0; i < search_result.path.size(); ++i) {
+        msg::AugmentedPose pose_message;
+
+        pose_message.pose = convert_pose(
+            costmap,
+            frame_id,
+            search_result.path.at(i),
+            angle_granularity);
+
+        pose_message.cost = search_result.cost.at(i);
+        pose_message.heuristic = search_result.heuristic.at(i);
+
+        result.poses.push_back(pose_message);
+    }
+
+    return result;
+}
+
 void TrajectoryPlannerPlugin::cleanup()
 {
     RCLCPP_DEBUG((*logger_), "cleanup()");
@@ -239,6 +317,8 @@ void TrajectoryPlannerPlugin::activate()
     pub_original_occupancy_map_->on_activate();
     pub_original_cost_map_->on_activate();
     pub_path_->on_activate();
+    pub_3d_debug_map_->on_activate();
+    pub_augmented_path_->on_activate();
 
     // (Re-)Start the thread that creates the planner and keeps it up-to-date.
     planner_update_thread_quit_ = false;
@@ -253,6 +333,8 @@ void TrajectoryPlannerPlugin::deactivate()
     pub_original_occupancy_map_->on_deactivate();
     pub_original_cost_map_->on_deactivate();
     pub_path_->on_deactivate();
+    pub_3d_debug_map_->on_deactivate();
+    pub_augmented_path_->on_deactivate();
 
     // Stop the background thread and wait for it to finish.
     std::unique_lock lock(planner_update_thread_mutex_);
@@ -279,7 +361,12 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::createPlan(
 
     try {
         nav_msgs::msg::Path path_msg =
-            plan(costmap, planner_.get(), start_msg, goal_msg);
+            plan(
+                costmap,
+                costmap_ros_->getBaseFrameID(),
+                planner_.get(),
+                start_msg,
+                goal_msg);
 
         pub_path_->publish(path_msg);
 
@@ -294,6 +381,7 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::createPlan(
 
 nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
     nav2_costmap_2d::Costmap2D* costmap,
+    const std::string& costmap_frame_id,
     TrajectoryPlanner* planner,
     const geometry_msgs::msg::PoseStamped& start_msg,
     const geometry_msgs::msg::PoseStamped& goal_msg) const
@@ -308,12 +396,38 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
         (*logger_),
         "Goal: " << goal.x << "/" << goal.y << "/" << goal.angle_index);
 
-    Path path = planner->plan(start, goal);
+    auto timestamp_start = std::chrono::steady_clock::now();
+    TrajectoryPlanner::Result result = planner->plan(start, goal);
+    auto timestamp_end = std::chrono::steady_clock::now();
 
+    std::chrono::duration<double> duration = timestamp_end - timestamp_start;
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "Planning took " << std::setprecision(3) << duration.count() << " sec.");
+
+    // Publish a map showing the nodes touched by the 3D planner.
+    pub_3d_debug_map_->publish(
+        convert_opened_nodes(
+            result.search_result_3d.opened_nodes,
+            planner->original_occupancy_map().width(),
+            planner->original_occupancy_map().height(),
+            costmap_frame_id,
+            costmap->getResolution(),
+            costmap->getOriginX(),
+            costmap->getOriginY()));
+
+    pub_augmented_path_->publish(
+        create_augmented_path_message(
+            costmap,
+            costmap_frame_id,
+            planner_->angle_granularity(),
+            result.search_result_3d));
+
+    // Convert the resulting path back to a ROS message.
     nav_msgs::msg::Path path_msg;
     path_msg.header.frame_id = costmap_ros_->getGlobalFrameID();
 
-    for (const Pose& p: path) {
+    for (const Pose& p: result.path) {
         const geometry_msgs::msg::PoseStamped pose_msg = convert_pose(
             costmap, costmap_ros_->getGlobalFrameID(), p, planner_->angle_granularity());
 
