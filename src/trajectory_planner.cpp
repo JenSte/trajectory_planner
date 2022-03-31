@@ -282,15 +282,15 @@ void TrajectoryPlanner::dump_orientation_maps(
                 size_t row = height - 1 - y;
                 size_t column = x;
 
-                // Color non-occupied cells black.
+                // Color non-occupied cells white.
                 double cost = costs_.get_cost(x, y, angle_index);
                 if (cost < (0.5 * Costs::invalid_cost)) {
-                    color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(0, 0, 0);
+                    color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(255, 255, 255);
                 }
 
-                // Draw the obstacles in white.
+                // Draw the obstacles in black.
                 if (original_occupancy_map_.at(x, y) > 0.5) {
-                    color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(255, 255, 255);
+                    color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(0, 0, 0);
                 }
             }
         }
