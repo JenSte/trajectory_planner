@@ -6,19 +6,25 @@ set -eu
 
 TAG=trajectory-planner-build-image
 
+if command -v podman &> /dev/null; then
+    DOCKER=podman
+else
+    DOCKER=docker
+fi
+
 SCRIPT_PATH=$(dirname "$0")
 
 # Update base image.
-podman pull ubuntu:focal
+$DOCKER pull ubuntu:focal
 
 # Create backup of old image.
-podman image tag "$TAG" "$TAG:old" || true
+$DOCKER image tag "$TAG" "$TAG:old" || true
 
 # Build the new image.
-podman build \
+$DOCKER build \
     --tag "$TAG" \
     --file "$SCRIPT_PATH/Dockerfile" \
     "$SCRIPT_PATH"
 
 # Remove the backup image.
-podman image rm "$TAG:old" || true
+$DOCKER image rm "$TAG:old" || true
