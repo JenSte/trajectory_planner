@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# This script connects to the action interface of planner server and
+# requests a path between two poses.
+
 import math
 
 import rclpy
@@ -7,6 +10,7 @@ import rclpy.action
 import rclpy.node
 import transforms3d
 
+from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import ComputePathToPose
 
 
@@ -20,20 +24,8 @@ class ComputePathActionClient(rclpy.node.Node):
     def send_goal(self):
         goal_msg = ComputePathToPose.Goal()
 
-        goal_msg.start.header.frame_id = "map"
-        goal_msg.start.pose.position.x = 1.5
-        goal_msg.start.pose.position.y = 1.5
-        goal_msg.start.pose.position.z = 0.0
-
-        goal_msg.goal.header.frame_id = "map"
-        goal_msg.goal.pose.position.x = 1.5
-        goal_msg.goal.pose.position.y = 4.5
-        goal_msg.goal.pose.position.z = 0.0
-
-        goal_msg.goal.pose.orientation.x = 0.0
-        goal_msg.goal.pose.orientation.y = 0.0
-        goal_msg.goal.pose.orientation.z = 1.0
-        goal_msg.goal.pose.orientation.w = 0.0
+        goal_msg.start = self.make_pose("map", 1.5, 1.5, math.radians(-5.0))
+        goal_msg.goal = self.make_pose("map", 1.5, 4.5, math.radians(0.0))
 
         goal_msg.planner_id = "trajectory_planner"
         goal_msg.use_start = True
@@ -64,6 +56,23 @@ class ComputePathActionClient(rclpy.node.Node):
             self.log_path(result.path)
 
         rclpy.shutdown()
+
+    def make_pose(self, frame_id, x, y, yaw):
+        """Create a ROS PoseStamped message."""
+
+        q = transforms3d.euler.euler2quat(0, 0, yaw)
+
+        pose = PoseStamped()
+        pose.header.frame_id = frame_id
+        pose.pose.position.x = x
+        pose.pose.position.y = y
+        pose.pose.position.z = 0.0
+        pose.pose.orientation.w = q[0]
+        pose.pose.orientation.x = q[1]
+        pose.pose.orientation.y = q[2]
+        pose.pose.orientation.z = q[3]
+
+        return pose
 
     def log_path(self, path):
         """Log the path."""
@@ -97,4 +106,7 @@ def main(args=None):
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

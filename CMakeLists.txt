@@ -115,6 +115,7 @@ install(FILES ${PROJECT_NAME}_plugin.xml
 )
 
 install(PROGRAMS
+    script/animate_path.py
     script/client.py
     script/plot_augmented_path.py
     DESTINATION lib/${PROJECT_NAME}
