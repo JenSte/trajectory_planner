@@ -7,6 +7,6 @@ set -eu
 SCRIPT_PATH=$(dirname "$0")
 
 rm -rf \
-    "$SCRIPT_PATH/build" \
-    "$SCRIPT_PATH/install" \
-    "$SCRIPT_PATH/log"
+    "$SCRIPT_PATH/workspace/build" \
+    "$SCRIPT_PATH/workspace/install" \
+    "$SCRIPT_PATH/workspace/log"
