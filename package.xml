@@ -23,8 +23,14 @@
     <depend>geometry_msgs</depend>
 
     <test_depend>ament_cmake_gtest</test_depend>
+<!--
+    Since the addition of the message files to this package, building it causes
+    a huge number of "Cyclic recursion detected while globbing for..." warnings when
+    the linter runs, so these dependencies are commented out for now.
+
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>
+-->
 
     <export>
         <build_type>ament_cmake</build_type>
