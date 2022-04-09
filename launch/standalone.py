@@ -57,7 +57,7 @@ def generate_launch_description():
                 output="screen",
                 # arguments=["--ros-args", "--log-level", "debug"],
                 parameters=[
-                    {"yaml_filename": os.path.join(map_dir, "office.yaml")},
+                    {"yaml_filename": os.path.join(map_dir, "map.yaml")},
                 ],
             ),
         ]
