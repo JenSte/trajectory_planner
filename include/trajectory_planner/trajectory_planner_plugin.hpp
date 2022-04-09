@@ -51,7 +51,10 @@ private:
     // cost map.
     double inflation_radius_;
 
-    // The name of a directroy to dump debug information to.
+    // The name of a directory to cache planners.
+    std::string cache_directory_;
+
+    // The name of a directory to dump debug information to.
     std::string debug_directory_;
 
     // A pointer to the planner. Protected by 'planner_mutex_'.
@@ -155,6 +158,10 @@ private:
 
     // Function that implements the planner update.
     void planner_update_thread_function();
+
+    // Return the file name that shall be used to cache a planner's cost object.
+    std::string cache_file_name(
+        const std::string& hash) const;
 };
 
 }

@@ -17,13 +17,13 @@ void Costs::set_cost(
     unsigned int angle_index,
     double cost)
 {
-    auto it = costs_.find(std::make_tuple(x, y));
+    auto it = costs_.find(std::make_pair(x, y));
     if (it == costs_.end()) {
         // There is no entry for this X/Y location. Add a vector with all
         // orientations, except the given one, set to the invalid value.
         CostVector cv = CostVector(angle_granularity_, invalid_cost);
         cv.at(angle_index) = cost;
-        costs_[std::make_tuple(x, y)] = cv;
+        costs_[std::make_pair(x, y)] = cv;
     } else {
         // There is already a cost vector for this X/Y location, update it.
         it->second.at(angle_index) = cost;
@@ -35,7 +35,7 @@ double Costs::get_cost(
     unsigned int y,
     unsigned int angle_index) const
 {
-    auto it = costs_.find(std::make_tuple(x, y));
+    auto it = costs_.find(std::make_pair(x, y));
     if (it == costs_.end()) {
         // No entry for this X/Y location.
         return invalid_cost;

@@ -9,6 +9,7 @@ planner_server:
       plugin: "trajectory_planner/TrajectoryPlanner"
       angle_granularity: 360
       inflation_radius: 5.0
+      cache_directory: "/tmp"
       debug_directory: "/tmp"
 
 global_costmap:

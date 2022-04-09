@@ -3,6 +3,11 @@
 
 #include "trajectory_planner/types.hpp"
 
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include <map>
 
 namespace trajectory_planner
@@ -55,13 +60,22 @@ private:
     using CostVector = std::vector<double>;
 
     // Data type to hold the X and Y coordinates.
-    using Location = std::tuple<unsigned int, unsigned int>;
+    using Location = std::pair<unsigned int, unsigned int>;
 
     // Number of steps to divide the whole circle with.
     unsigned int angle_granularity_;
 
     // Stores the cost values.
     std::map<Location, CostVector> costs_;
+
+    // Serialization support.
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int /*version*/)
+    {
+        ar & angle_granularity_;
+        ar & costs_;
+    }
 };
 
 }

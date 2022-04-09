@@ -52,12 +52,24 @@ void TrajectoryPlannerPlugin::configure(
     }
 
     nav2_util::declare_parameter_if_not_declared(
+        node_, name + ".cache_directory", rclcpp::ParameterValue(""));
+    node_->get_parameter(name + ".cache_directory", cache_directory_);
+
+    nav2_util::declare_parameter_if_not_declared(
         node_, name + ".debug_directory", rclcpp::ParameterValue(""));
     node_->get_parameter(name + ".debug_directory", debug_directory_);
 
     RCLCPP_INFO_STREAM(
         (*logger_),
         "angle_granularity: " << angle_granularity_);
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "inflation_radius: " <<
+        std::setprecision(3) << std::fixed <<
+        inflation_radius_ << " m");
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "cache_directory: '" << cache_directory_ << "'");
     RCLCPP_INFO_STREAM(
         (*logger_),
         "debug_directory: '" << debug_directory_ << "'");
@@ -473,20 +485,84 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
             (*logger_),
             "Costmap change detected, updating planner...");
 
-        auto timestamp_start = std::chrono::steady_clock::now();
-        std::unique_ptr<TrajectoryPlanner> planner = TrajectoryPlanner::create_planner(
-            new_hash,
-            angle_granularity_,
-            costmap->getResolution(),
-            inflation_radius_,
-            convert_polygon_msg(costmap_ros_->getRobotFootprintPolygon()),
-            create_occupancy_map(costmap));
-        auto timestamp_end = std::chrono::steady_clock::now();
+        std::unique_ptr<TrajectoryPlanner> planner;
 
-        std::chrono::duration<double> duration = timestamp_end - timestamp_start;
-        RCLCPP_INFO_STREAM(
-            (*logger_),
-            "Planner created in " << std::setprecision(3) << duration.count() << " sec.");
+        std::chrono::time_point<std::chrono::steady_clock> timestamp_start;
+        std::chrono::time_point<std::chrono::steady_clock> timestamp_end;
+        std::chrono::duration<double> duration;
+
+        bool planner_loaded = false;
+
+        // Try to load the planner from a file.
+        if (!cache_directory_.empty()) {
+            std::ifstream ifs(cache_file_name(new_hash));
+            if (ifs.good()) {
+                RCLCPP_INFO((*logger_), "Loading planner from cache...");
+
+                timestamp_start = std::chrono::steady_clock::now();
+                planner = TrajectoryPlanner::load_planner(
+                    new_hash, create_occupancy_map(costmap), ifs);
+                timestamp_end = std::chrono::steady_clock::now();
+
+                if (planner) {
+                    planner_loaded = true;
+
+                    // Only log if loading was successful.
+                    duration = timestamp_end - timestamp_start;
+                    RCLCPP_INFO_STREAM(
+                        (*logger_),
+                        "Planner loaded in " <<
+                        std::setprecision(3) << duration.count() << " sec.");
+                }
+            }
+        }
+
+        if (!planner) {
+            // Either there was no planner to load or the loading failed,
+            // re-create the whole planner.
+            RCLCPP_INFO((*logger_), "Creating planner...");
+
+            timestamp_start = std::chrono::steady_clock::now();
+            planner = TrajectoryPlanner::create_planner(
+                new_hash,
+                angle_granularity_,
+                costmap->getResolution(),
+                inflation_radius_,
+                convert_polygon_msg(costmap_ros_->getRobotFootprintPolygon()),
+                create_occupancy_map(costmap));
+            timestamp_end = std::chrono::steady_clock::now();
+
+            duration = timestamp_end - timestamp_start;
+            RCLCPP_INFO_STREAM(
+                (*logger_),
+                "Planner created in " <<
+                std::setprecision(3) << duration.count() << " sec.");
+        }
+
+        if (!planner_loaded && !cache_directory_.empty()) {
+            RCLCPP_INFO((*logger_), "Writing planner to cache...");
+
+            std::ofstream ofs(cache_file_name(new_hash));
+            if (!ofs.good()) {
+                RCLCPP_ERROR_STREAM(
+                    (*logger_),
+                    "Unable to open cache file '" <<
+                    cache_file_name(new_hash) <<
+                    "' for writing.");
+            } else {
+                timestamp_start = std::chrono::steady_clock::now();
+                planner->store(ofs);
+                timestamp_end = std::chrono::steady_clock::now();
+
+                duration = timestamp_end - timestamp_start;
+                RCLCPP_INFO_STREAM(
+                    (*logger_),
+                    "Planner written to '" <<
+                    cache_file_name(new_hash) <<
+                    "' in " <<
+                    std::setprecision(3) << duration.count() << " sec.");
+            }
+        }
 
         pub_original_occupancy_map_->publish(
             convert_buffer(
@@ -503,7 +579,7 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
                 costmap->getOriginX(),
                 costmap->getOriginY()));
 
-        if (!debug_directory_.empty()) {
+        if (!planner_loaded && !debug_directory_.empty()) {
             RCLCPP_INFO((*logger_), "Writing debug images...");
 
             timestamp_start = std::chrono::steady_clock::now();
@@ -523,6 +599,12 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
     }
 
     RCLCPP_INFO((*logger_), "Planner update thread done.");
+}
+
+std::string TrajectoryPlannerPlugin::cache_file_name(
+    const std::string& hash) const
+{
+    return cache_directory_ + "/stored_trajectory_planner_" + hash + ".bin";
 }
 
 }

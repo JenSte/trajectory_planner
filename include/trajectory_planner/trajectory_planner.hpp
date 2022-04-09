@@ -6,6 +6,8 @@
 #include "trajectory_planner/planning_3d.hpp"
 #include "trajectory_planner/types.hpp"
 
+#include <fstream>
+
 namespace trajectory_planner
 {
 
@@ -35,6 +37,12 @@ public:
         Buffer<double> occupancy_map
     );
 
+    // Load a planner from a file created by 'store()'.
+    static std::unique_ptr<TrajectoryPlanner> load_planner(
+        std::string hash,
+        Buffer<double> occupancy_map,
+        std::ifstream& ifs);
+
     // Return the original occupancy map this planner was created from.
     const Buffer<double>& original_occupancy_map() const;
 
@@ -55,6 +63,10 @@ public:
     Result plan(
         const Pose& start,
         const Pose& goal) const;
+
+    // Store what is necessary to restore the planner to a given file stream.
+    void store(
+        std::ofstream& ofs) const;
 
 private:
 
@@ -110,6 +122,11 @@ private:
     static unsigned int calculate_footprint_size(
         const Polygon& footprint_polygon,
         double resolution);
+
+    // Write a notification text on a buffer.
+    static void draw_text(
+        Buffer<double>& buffer,
+        const std::string& text);
 
     // Draw a circle on a buffer. The center of the circle is placed at half the
     // canvas size.

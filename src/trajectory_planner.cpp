@@ -47,6 +47,34 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     return planner;
 }
 
+std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
+    std::string hash,
+    Buffer<double> occupancy_map,
+    std::ifstream& ifs)
+{
+    // Create a dummy cost map when loading the planner from a file,
+    // as the cost map is only used for debugging purposes.
+    Buffer<double> cost_map(occupancy_map);
+    draw_text(cost_map, "Cost map not available for planners loaded from cache.");
+
+    Costs costs(0);
+    try {
+        // Load the costs object.
+        boost::archive::binary_iarchive ia(ifs);
+        ia >> costs;
+    } catch (...) {
+        return nullptr;
+    }
+
+    std::unique_ptr<TrajectoryPlanner> planner;
+    planner.reset(new TrajectoryPlanner(
+        std::move(hash),
+        std::move(occupancy_map),
+        std::move(cost_map),
+        std::move(costs)));
+    return planner;
+}
+
 Buffer<double> TrajectoryPlanner::create_cost_map(
     const double resolution,
     const double inflation_radius,
@@ -254,6 +282,51 @@ Costs TrajectoryPlanner::create_costs(
     return costs;
 }
 
+void TrajectoryPlanner::draw_text(
+    Buffer<double>& buffer,
+    const std::string& text)
+{
+    const int face = cv::FONT_HERSHEY_PLAIN;
+    const double scale = 1.0;
+    const int thickness = 1;
+
+    int baseline = 0;
+    cv::Size size = cv::getTextSize(text, face, scale, thickness, &baseline);
+    size += cv::Size(0, baseline);
+    const cv::Point org(0, size.height + 2 - baseline);
+
+    const cv::Scalar color(255);
+    cv::Mat canvas(cv::Mat::zeros(size, CV_8UC1));
+    cv::putText(canvas, text, org, face, scale, color, thickness);
+    cv::line(canvas, org + cv::Point(0, thickness), org + cv::Point(size.width, thickness), color);
+
+    for (size_t column = 0; column < static_cast<size_t>(canvas.cols); column++) {
+        for (size_t row = 0; row < static_cast<size_t>(canvas.rows); row++) {
+            const bool pixel = canvas.at<unsigned char>(row, column) != 0;
+
+            {
+                // Copy text horizontally.
+                const size_t x = size.height + column;
+                const size_t y = canvas.rows - 1 - row;
+
+                if ((x < buffer.width()) && (y < buffer.height())) {
+                    buffer.at(x, y) = pixel ? 1.0 : 0.0;
+                }
+            }
+
+            {
+                // Copy text vertically.
+                const size_t x = row;
+                const size_t y = size.height + column;
+
+                if ((x < buffer.width()) && (y < buffer.height())) {
+                    buffer.at(x, y) = pixel ? 1.0 : 0.0;
+                }
+            }
+        }
+    }
+}
+
 void TrajectoryPlanner::draw_circle(
     Buffer<double>& buffer,
     int canvas_size,
@@ -431,6 +504,13 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     three::SearchResult3D search_result_3d = three::plan(costs_, start, goal);
 
     return Result{search_result_3d.path, search_result_3d};
+}
+
+void TrajectoryPlanner::store(
+    std::ofstream& ofs) const
+{
+    boost::archive::binary_oarchive oa(ofs);
+    oa << costs_;
 }
 
 unsigned int TrajectoryPlanner::calculate_footprint_size(
