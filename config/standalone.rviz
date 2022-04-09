@@ -123,13 +123,13 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /planner_server/trajectory_planner/original_cost_map
+        Value: /planner_server/trajectory_planner/cost_map
       Update Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /planner_server/trajectory_planner/original_cost_map_updates
+        Value: /planner_server/trajectory_planner/cost_map_updates
       Use Timestamp: false
       Value: false
     - Alpha: 0.699999988079071

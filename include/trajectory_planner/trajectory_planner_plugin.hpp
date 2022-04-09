@@ -47,6 +47,10 @@ private:
     // The number of steps to divide the whole circle.
     int angle_granularity_;
 
+    // The distance for up to which obstacles are inflated when calculating the
+    // cost map.
+    double inflation_radius_;
+
     // The name of a directroy to dump debug information to.
     std::string debug_directory_;
 
@@ -60,9 +64,9 @@ private:
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
         pub_original_occupancy_map_;
 
-    // Publisher for the origin cost map, published for debug purposes.
+    // Publisher for the cost map, published for debug purposes.
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
-        pub_original_cost_map_;
+        pub_cost_map_;
 
     // Publishes the created plan for debug purposes.
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr
@@ -110,11 +114,6 @@ private:
     // Create a buffer that contains the value "1.0" where there are objects
     // in the given costmap.
     Buffer<double> create_occupancy_map(
-        const nav2_costmap_2d::Costmap2D* costmap) const;
-
-    // Create a buffer that contains values from "0.0" (low cost) to "1.0" (high cost)
-    // from the given costmap.
-    Buffer<double> create_cost_map(
         const nav2_costmap_2d::Costmap2D* costmap) const;
 
     // Convert a buffer object back to an occupancy grid ROS message.

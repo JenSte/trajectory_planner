@@ -22,7 +22,7 @@ TrajectoryPlanner::TrajectoryPlanner(
     Costs costs)
     : hash_(std::move(hash))
     , original_occupancy_map_(std::move(occupancy_map))
-    , original_cost_map_(std::move(cost_map))
+    , cost_map_(std::move(cost_map))
     , costs_(std::move(costs))
 {
 }
@@ -31,20 +31,114 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     std::string hash,
     unsigned int angle_granularity,
     double resolution,
+    double inflation_radius,
     const Polygon& footprint,
-    Buffer<double> occupancy_map,
-    Buffer<double> cost_map)
+    Buffer<double> occupancy_map)
 {
-    // The occupancy and cost maps should be derived from the same
-    // original map, and therefore need to have the same size.
-    if (occupancy_map.width() != cost_map.width()) {
-        throw std::runtime_error("Input maps do not have the same width.");
+    Buffer<double> cost_map = create_cost_map(resolution, inflation_radius, occupancy_map);
+    Costs costs = create_costs(angle_granularity, resolution, footprint, occupancy_map, cost_map);
+
+    std::unique_ptr<TrajectoryPlanner> planner;
+    planner.reset(new TrajectoryPlanner(
+        std::move(hash),
+        std::move(occupancy_map),
+        std::move(cost_map),
+        std::move(costs)));
+    return planner;
+}
+
+Buffer<double> TrajectoryPlanner::create_cost_map(
+    const double resolution,
+    const double inflation_radius,
+    const Buffer<double>& occupancy_map)
+{
+    // The radius of the biggest circle we draw, in pixels.
+    const unsigned int pixel_radius =
+        std::max(2u, static_cast<unsigned int>(inflation_radius / resolution));
+
+    // The height and width of the canvas we draw the circles on.
+    const unsigned int mask_pixel_size = 2 * pixel_radius;
+
+    const size_t padded_width = occupancy_map.width() + mask_pixel_size - 1;
+    const size_t padded_height = occupancy_map.height() + mask_pixel_size - 1;
+
+    Buffer<double> dummy_buffer(padded_width, padded_height);
+    FFTPlan plan_forward = FFTPlan::plan_forward(dummy_buffer);
+    FFTPlan plan_backward = FFTPlan::plan_backward(dummy_buffer);
+
+    Buffer<double> occupancy_map_padded =
+        zero_pad(occupancy_map, padded_width, padded_height);
+
+    Buffer<fftw_complex> occupancy_map_spectrum(
+        plan_forward.frequency_domain_width(),
+        plan_forward.frequency_domain_height());
+    plan_forward.execute(occupancy_map_padded, occupancy_map_spectrum);
+
+    // Stores the cost calculated for a given radius.
+    std::map<unsigned int, Buffer<double>> cost_images;
+    std::mutex cost_images_mutex;
+
+    // Create a buffer that contains a non-zero value at positions that are within
+    // a range of 'radius' pixels around obstacles in the occupancy map. This is
+    // done by doing a convolution between the occupancy map and a circle of the
+    // given size. The resulting buffer is stored in 'cost_images'.
+    auto calculate_cost = [&](unsigned int radius) {
+        Buffer<double> mask_image(padded_width, padded_height);
+        draw_circle(mask_image, mask_pixel_size, radius);
+
+        Buffer<fftw_complex> mask_image_spectrum(
+            plan_forward.frequency_domain_width(),
+            plan_forward.frequency_domain_height());
+        plan_forward.execute(mask_image, mask_image_spectrum);
+
+        multiply_buffers(mask_image_spectrum, occupancy_map_spectrum);
+
+        Buffer<double> result(padded_width, padded_height);
+        plan_backward.execute(mask_image_spectrum, result);
+
+        std::lock_guard<std::mutex> lock(cost_images_mutex);
+        cost_images.emplace(radius, std::move(result));
+    };
+
+    boost::asio::thread_pool pool;
+    for (unsigned int r = 0; r < pixel_radius; r++) {
+        boost::asio::post(pool, [calculate_cost, r]{ calculate_cost(r); });
+    }
+    pool.join();
+
+    // Combine the buffers containing the costs.
+    Buffer<double> cost_map(occupancy_map.width(), occupancy_map.height());
+
+    // Combine all the resulting cost images into one.
+    for (const auto& it: cost_images) {
+        const unsigned int radius = std::get<0>(it);
+        const Buffer<double>& buffer = std::get<1>(it);
+
+        // The cost falls off from 1.0 next to an obstalce to nearly 0.0.
+        const double cost = exp((-5.0 * radius) / pixel_radius);
+
+        for (size_t y = 0; y < cost_map.height(); y ++) {
+            for (size_t x = 0; x < cost_map.width(); x ++) {
+                // Get the value that is offset by the center coordinate of the circle.
+                const double pixel_value = buffer.at(x + pixel_radius, y + pixel_radius);
+
+                if (pixel_value > 0.5) {
+                    cost_map.at(x, y) = std::max(cost_map.at(x, y), cost);
+                }
+            }
+        }
     }
 
-    if (occupancy_map.height() != cost_map.height()) {
-        throw std::runtime_error("Input maps do not have the same height.");
-    }
+    return cost_map;
+}
 
+Costs TrajectoryPlanner::create_costs(
+    const unsigned int angle_granularity,
+    const double resolution,
+    const Polygon& footprint,
+    const Buffer<double>& occupancy_map,
+    const Buffer<double>& cost_map)
+{
     // The size of the canvas we'll draw the footprint on.
     const unsigned int footprint_pixel_size =
         calculate_footprint_size(footprint, resolution);
@@ -157,13 +251,25 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
         }
     }
 
-    std::unique_ptr<TrajectoryPlanner> planner;
-    planner.reset(new TrajectoryPlanner(
-        std::move(hash),
-        std::move(occupancy_map),
-        std::move(cost_map),
-        std::move(costs)));
-    return planner;
+    return costs;
+}
+
+void TrajectoryPlanner::draw_circle(
+    Buffer<double>& buffer,
+    int canvas_size,
+    int radius)
+{
+    cv::Point center(canvas_size / 2, canvas_size / 2);
+    cv::Mat canvas = cv::Mat::zeros(canvas_size, canvas_size, CV_8UC1);
+    cv::circle(canvas, center, radius, cv::Scalar(255), cv::FILLED);
+
+    for (int y = 0; y < canvas_size; y ++) {
+        for (int x = 0; x < canvas_size; x ++) {
+            if (canvas.at<unsigned char>(y, x) != 0) {
+                buffer.at(y, x) = 1.0;
+            }
+        }
+    }
 }
 
 const Buffer<double>& TrajectoryPlanner::original_occupancy_map() const
@@ -171,9 +277,9 @@ const Buffer<double>& TrajectoryPlanner::original_occupancy_map() const
     return original_occupancy_map_;
 }
 
-const Buffer<double>& TrajectoryPlanner::original_cost_map() const
+const Buffer<double>& TrajectoryPlanner::cost_map() const
 {
-    return original_cost_map_;
+    return cost_map_;
 }
 
 const std::string& TrajectoryPlanner::hash() const

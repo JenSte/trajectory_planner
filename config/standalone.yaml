@@ -8,6 +8,7 @@ planner_server:
     trajectory_planner:
       plugin: "trajectory_planner/TrajectoryPlanner"
       angle_granularity: 360
+      inflation_radius: 5.0
       debug_directory: "/tmp"
 
 global_costmap:
@@ -15,5 +16,3 @@ global_costmap:
     ros__parameters:
       footprint_padding: 0.05
       footprint: "[[0.4, 0.2], [-0.2, 0.2], [-0.2, -0.2], [0.4, -0.2]]"
-      inflation_layer:
-        inflation_radius: 5.0

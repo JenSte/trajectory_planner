@@ -42,6 +42,16 @@ void TrajectoryPlannerPlugin::configure(
     }
 
     nav2_util::declare_parameter_if_not_declared(
+        node_, name + ".inflation_radius", rclcpp::ParameterValue(2.0));
+    node_->get_parameter(name + ".inflation_radius", inflation_radius_);
+    if (inflation_radius_ <= 0.01) {
+        inflation_radius_ = 2.0;
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "invalid 'inflation_radius' value, using " << inflation_radius_);
+    }
+
+    nav2_util::declare_parameter_if_not_declared(
         node_, name + ".debug_directory", rclcpp::ParameterValue(""));
     node_->get_parameter(name + ".debug_directory", debug_directory_);
 
@@ -52,9 +62,9 @@ void TrajectoryPlannerPlugin::configure(
         (*logger_),
         "debug_directory: '" << debug_directory_ << "'");
 
-    pub_original_cost_map_ =
+    pub_cost_map_ =
         node_->create_publisher<nav_msgs::msg::OccupancyGrid>(
-            "~/" + name + "/original_cost_map",
+            "~/" + name + "/cost_map",
             rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
 
     pub_original_occupancy_map_ =
@@ -194,24 +204,6 @@ Buffer<double> TrajectoryPlannerPlugin::create_occupancy_map(
     return result;
 }
 
-Buffer<double> TrajectoryPlannerPlugin::create_cost_map(
-    const nav2_costmap_2d::Costmap2D* costmap) const
-{
-    Buffer<double> result(costmap->getSizeInCellsX(), costmap->getSizeInCellsY());
-
-    for (unsigned int y = 0; y < costmap->getSizeInCellsY(); y++) {
-        for (unsigned int x = 0; x < costmap->getSizeInCellsX(); x++) {
-            unsigned char cost = costmap->getCost(x, y);
-            if (cost <= nav2_util::Costmap::lethal_obstacle) {
-                // Normalize the value to be between 0.0 and 1.0.
-                result.at(x, y) = static_cast<double>(cost) / nav2_util::Costmap::lethal_obstacle;
-            }
-        }
-    }
-
-    return result;
-}
-
 nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_buffer(
     const Buffer<double>& buffer,
     const std::string& frame_id,
@@ -315,7 +307,7 @@ void TrajectoryPlannerPlugin::activate()
     RCLCPP_DEBUG((*logger_), "activate()");
 
     pub_original_occupancy_map_->on_activate();
-    pub_original_cost_map_->on_activate();
+    pub_cost_map_->on_activate();
     pub_path_->on_activate();
     pub_3d_debug_map_->on_activate();
     pub_augmented_path_->on_activate();
@@ -331,7 +323,7 @@ void TrajectoryPlannerPlugin::deactivate()
     RCLCPP_DEBUG((*logger_), "deactivate()");
 
     pub_original_occupancy_map_->on_deactivate();
-    pub_original_cost_map_->on_deactivate();
+    pub_cost_map_->on_deactivate();
     pub_path_->on_deactivate();
     pub_3d_debug_map_->on_deactivate();
     pub_augmented_path_->on_deactivate();
@@ -486,9 +478,9 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
             new_hash,
             angle_granularity_,
             costmap->getResolution(),
+            inflation_radius_,
             convert_polygon_msg(costmap_ros_->getRobotFootprintPolygon()),
-            create_occupancy_map(costmap),
-            create_cost_map(costmap));
+            create_occupancy_map(costmap));
         auto timestamp_end = std::chrono::steady_clock::now();
 
         std::chrono::duration<double> duration = timestamp_end - timestamp_start;
@@ -503,9 +495,9 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
                 costmap->getResolution(),
                 costmap->getOriginX(),
                 costmap->getOriginY()));
-        pub_original_cost_map_->publish(
+        pub_cost_map_->publish(
             convert_buffer(
-                planner->original_cost_map(),
+                planner->cost_map(),
                 costmap_ros_->getBaseFrameID(),
                 costmap->getResolution(),
                 costmap->getOriginX(),
