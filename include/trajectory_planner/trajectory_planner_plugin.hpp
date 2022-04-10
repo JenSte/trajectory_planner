@@ -146,6 +146,7 @@ private:
 
     // Create a hash used to identify the costmap.
     std::string hash_costmap(
+        const Polygon& footprint,
         nav2_costmap_2d::Costmap2D* costmap) const;
 
     // Create a plan using the given planner.

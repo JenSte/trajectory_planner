@@ -101,15 +101,36 @@ void TrajectoryPlannerPlugin::configure(
 }
 
 std::string TrajectoryPlannerPlugin::hash_costmap(
+    const Polygon& footprint,
     nav2_costmap_2d::Costmap2D* costmap) const
 {
-    unsigned int size_in_cells_x = costmap->getSizeInCellsX();
-    unsigned int size_in_cells_y = costmap->getSizeInCellsY();
-    double origin_x = costmap->getOriginX();
-    double origin_y = costmap->getOriginY();
-    double resolution = costmap->getResolution();
+    // Convert a length value to millimeters and return it as an integer.
+    auto to_mm = [](double d) {
+        return static_cast<long int>(std::round(1000.0 * d));
+    };
 
     boost::crc_32_type crc;
+
+    // Include additional things that are not parameters to this function but
+    // will include the calculated costs of the planner.
+    unsigned int inflation_radius = to_mm(inflation_radius_);
+    crc.process_bytes(&inflation_radius, sizeof(inflation_radius));
+    crc.process_bytes(&angle_granularity_, sizeof(angle_granularity_));
+
+    for (const Point& point: footprint) {
+        long int x = to_mm(std::get<0>(point));
+        long int y = to_mm(std::get<1>(point));
+
+        crc.process_bytes(&x, sizeof(x));
+        crc.process_bytes(&y, sizeof(y));
+    }
+
+    unsigned int size_in_cells_x = costmap->getSizeInCellsX();
+    unsigned int size_in_cells_y = costmap->getSizeInCellsY();
+    long int origin_x = to_mm(costmap->getOriginX());
+    long int origin_y = to_mm(costmap->getOriginY());
+    long int resolution = to_mm(costmap->getResolution());
+
     crc.process_bytes(&size_in_cells_x, sizeof(size_in_cells_x));
     crc.process_bytes(&size_in_cells_y, sizeof(size_in_cells_y));
     crc.process_bytes(&origin_x, sizeof(origin_x));
@@ -465,7 +486,8 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
         // Hash the current costmap.
         nav2_costmap_2d::Costmap2D* costmap = costmap_ros_->getCostmap();
         const std::lock_guard<std::recursive_mutex> costmap_lock(*costmap->getMutex());
-        std::string new_hash = hash_costmap(costmap);
+        Polygon footprint = convert_polygon_msg(costmap_ros_->getRobotFootprintPolygon());
+        std::string new_hash = hash_costmap(footprint, costmap);
 
         // Get the old hash value, if there is currently a planner.
         std::string old_hash;
@@ -528,7 +550,7 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
                 angle_granularity_,
                 costmap->getResolution(),
                 inflation_radius_,
-                convert_polygon_msg(costmap_ros_->getRobotFootprintPolygon()),
+                footprint,
                 create_occupancy_map(costmap));
             timestamp_end = std::chrono::steady_clock::now();
 
