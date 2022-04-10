@@ -8,6 +8,7 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
 
+#include <cstdint>
 #include <map>
 
 namespace trajectory_planner
@@ -54,19 +55,33 @@ public:
 
 private:
 
+    // The data type to store the cost values internally.
+    using CostType = uint16_t;
+
     // Data type to hold the costs for a location on the map. The length of this
     // vector is 'angle_granularity_', for orientations that can not be occupied
-    // the value is set to 'invalid_cost'.
-    using CostVector = std::vector<double>;
+    // the value is set to 'internal_invalid_cost'.
+    using CostVector = std::vector<CostType>;
 
     // Data type to hold the X and Y coordinates.
     using Location = std::pair<unsigned int, unsigned int>;
+
+    // The value for marking an invalid orientation in a 'CostVector'.
+    static const CostType internal_invalid_cost;
 
     // Number of steps to divide the whole circle with.
     unsigned int angle_granularity_;
 
     // Stores the cost values.
     std::map<Location, CostVector> costs_;
+
+    // Convert the internal cost type to a double value.
+    double internal_cost_to_double_cost(
+        CostType c) const;
+
+    // Convert a double value to the internal cost type.
+    CostType double_cost_to_internal_cost(
+        double c) const;
 
     // Serialization support.
     friend class boost::serialization::access;

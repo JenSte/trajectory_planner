@@ -1,9 +1,14 @@
 #include "trajectory_planner/costs.hpp"
 
+#include <limits>
+
 namespace trajectory_planner
 {
 
 const double Costs::invalid_cost = -1.0;
+
+const Costs::CostType Costs::internal_invalid_cost =
+    std::numeric_limits<Costs::CostType>::max();
 
 Costs::Costs(
     unsigned int angle_granularity)
@@ -21,12 +26,12 @@ void Costs::set_cost(
     if (it == costs_.end()) {
         // There is no entry for this X/Y location. Add a vector with all
         // orientations, except the given one, set to the invalid value.
-        CostVector cv = CostVector(angle_granularity_, invalid_cost);
-        cv.at(angle_index) = cost;
+        CostVector cv = CostVector(angle_granularity_, internal_invalid_cost);
+        cv.at(angle_index) = double_cost_to_internal_cost(cost);
         costs_[std::make_pair(x, y)] = cv;
     } else {
         // There is already a cost vector for this X/Y location, update it.
-        it->second.at(angle_index) = cost;
+        it->second.at(angle_index) = double_cost_to_internal_cost(cost);
     }
 }
 
@@ -42,7 +47,7 @@ double Costs::get_cost(
     }
 
     // Return the cost value for the given orientation.
-    return it->second.at(angle_index);
+    return internal_cost_to_double_cost(it->second.at(angle_index));
 }
 
 double Costs::get_cost(
@@ -54,6 +59,22 @@ double Costs::get_cost(
 unsigned int Costs::angle_granularity() const
 {
     return angle_granularity_;
+}
+
+double Costs::internal_cost_to_double_cost(
+    const CostType c) const
+{
+    if (c == internal_invalid_cost) {
+        return invalid_cost;
+    }
+
+    return static_cast<double>(c) / static_cast<double>(internal_invalid_cost - 1);
+}
+
+Costs::CostType Costs::double_cost_to_internal_cost(
+    const double c) const
+{
+    return (internal_invalid_cost - 1) * c;
 }
 
 }
