@@ -1,5 +1,3 @@
-# colcon build; ros2 launch trajectory_planner standalone.py
-
 # Launch only the planner, not the complete navigation stack.
 
 import os
