@@ -263,7 +263,7 @@ nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_buffer(
 }
 
 nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_opened_nodes(
-    const std::map<three::Pose2D, unsigned int> opened_nodes,
+    const std::map<three::Pose2D, unsigned int>& opened_nodes,
     size_t width,
     size_t height,
     const std::string& frame_id,

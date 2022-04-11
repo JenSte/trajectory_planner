@@ -157,7 +157,7 @@ private:
     }
 
     std::vector<Node> reconstruct_path(
-        const std::map<Node, Node> predecessors,
+        const std::map<Node, Node>& predecessors,
         const Node& end_node)
     {
         std::vector<Node> result;
