@@ -112,7 +112,7 @@ std::string TrajectoryPlannerPlugin::hash_costmap(
     boost::crc_32_type crc;
 
     // Include additional things that are not parameters to this function but
-    // will include the calculated costs of the planner.
+    // will influence the calculated costs of the planner.
     unsigned int inflation_radius = to_mm(inflation_radius_);
     crc.process_bytes(&inflation_radius, sizeof(inflation_radius));
     crc.process_bytes(&angle_granularity_, sizeof(angle_granularity_));

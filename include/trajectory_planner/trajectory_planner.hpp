@@ -76,7 +76,7 @@ public:
 
 private:
 
-    // Private constructure, use the factory function to create a new object.
+    // Private constructor, use the factory function to create a new object.
     TrajectoryPlanner(
         LogCallback log_callback,
         std::string hash,
