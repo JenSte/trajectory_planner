@@ -7,6 +7,7 @@
 #include "trajectory_planner/types.hpp"
 
 #include <fstream>
+#include <functional>
 
 namespace trajectory_planner
 {
@@ -15,6 +16,9 @@ namespace trajectory_planner
 class TrajectoryPlanner
 {
 public:
+
+    // Type of a callback function used to output log messages.
+    using LogCallback = std::function<void(const std::string&)>;
 
     // The result returned by a call to 'plan()'.
     struct Result
@@ -29,6 +33,7 @@ public:
 
     // Create a new planner.
     static std::unique_ptr<TrajectoryPlanner> create_planner(
+        LogCallback log_callback,
         std::string hash,
         unsigned int angle_granularity,
         double resolution,
@@ -39,6 +44,7 @@ public:
 
     // Load a planner from a file created by 'store()'.
     static std::unique_ptr<TrajectoryPlanner> load_planner(
+        LogCallback log_callback,
         std::string hash,
         Buffer<double> occupancy_map,
         std::ifstream& ifs);
@@ -72,6 +78,7 @@ private:
 
     // Private constructure, use the factory function to create a new object.
     TrajectoryPlanner(
+        LogCallback log_callback,
         std::string hash,
         Buffer<double> occupancy_map,
         Buffer<double> cost_map,
@@ -92,6 +99,7 @@ private:
     // calculation without an inscribed radius, starting the inflation directly around
     // obstacles on the occupancy map.
     static Buffer<double> create_cost_map(
+        const LogCallback& log_callback,
         double resolution,
         double inflation_radius,
         const Buffer<double>& occupancy_map);
@@ -99,11 +107,15 @@ private:
     // Create an objects holding the costs of placing the robot's footprint
     // on the map in any direction.
     static Costs create_costs(
+        const LogCallback& log_callback,
         unsigned int angle_granularity,
         double resolution,
         const Polygon& footprint,
         const Buffer<double>& occupancy_map,
         const Buffer<double>& cost_map);
+
+    // Callback to do logging.
+    const LogCallback log_callback_;
 
     // The hash of the costmap this planner was created from.
     const std::string hash_;

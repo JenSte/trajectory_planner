@@ -16,11 +16,13 @@ namespace trajectory_planner
 {
 
 TrajectoryPlanner::TrajectoryPlanner(
+    LogCallback log_callback,
     std::string hash,
     Buffer<double> occupancy_map,
     Buffer<double> cost_map,
     Costs costs)
-    : hash_(std::move(hash))
+    : log_callback_(std::move(log_callback))
+    , hash_(std::move(hash))
     , original_occupancy_map_(std::move(occupancy_map))
     , cost_map_(std::move(cost_map))
     , costs_(std::move(costs))
@@ -28,6 +30,7 @@ TrajectoryPlanner::TrajectoryPlanner(
 }
 
 std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
+    LogCallback log_callback,
     std::string hash,
     unsigned int angle_granularity,
     double resolution,
@@ -35,11 +38,14 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     const Polygon& footprint,
     Buffer<double> occupancy_map)
 {
-    Buffer<double> cost_map = create_cost_map(resolution, inflation_radius, occupancy_map);
-    Costs costs = create_costs(angle_granularity, resolution, footprint, occupancy_map, cost_map);
+    Buffer<double> cost_map = create_cost_map(
+        log_callback, resolution, inflation_radius, occupancy_map);
+    Costs costs = create_costs(
+        log_callback, angle_granularity, resolution, footprint, occupancy_map, cost_map);
 
     std::unique_ptr<TrajectoryPlanner> planner;
     planner.reset(new TrajectoryPlanner(
+        std::move(log_callback),
         std::move(hash),
         std::move(occupancy_map),
         std::move(cost_map),
@@ -48,6 +54,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
 }
 
 std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
+    LogCallback log_callback,
     std::string hash,
     Buffer<double> occupancy_map,
     std::ifstream& ifs)
@@ -62,12 +69,14 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
         // Load the costs object.
         boost::archive::binary_iarchive ia(ifs);
         ia >> costs;
-    } catch (...) {
+    } catch (const std::exception& e) {
+        log_callback(std::string("Error loading planner: ") + e.what());
         return nullptr;
     }
 
     std::unique_ptr<TrajectoryPlanner> planner;
     planner.reset(new TrajectoryPlanner(
+        std::move(log_callback),
         std::move(hash),
         std::move(occupancy_map),
         std::move(cost_map),
@@ -76,6 +85,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
 }
 
 Buffer<double> TrajectoryPlanner::create_cost_map(
+    const LogCallback& log_callback,
     const double resolution,
     const double inflation_radius,
     const Buffer<double>& occupancy_map)
@@ -128,11 +138,15 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
         cost_images.emplace(radius, std::move(result));
     };
 
+    log_callback("Creating inflation layers...");
+
     boost::asio::thread_pool pool;
     for (unsigned int r = 0; r < pixel_radius; r++) {
         boost::asio::post(pool, [calculate_cost, r]{ calculate_cost(r); });
     }
     pool.join();
+
+    log_callback("Combining inflation layers...");
 
     // Combine the buffers containing the costs.
     Buffer<double> cost_map(occupancy_map.width(), occupancy_map.height());
@@ -161,6 +175,7 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
 }
 
 Costs TrajectoryPlanner::create_costs(
+    const LogCallback& log_callback,
     const unsigned int angle_granularity,
     const double resolution,
     const Polygon& footprint,
@@ -258,6 +273,8 @@ Costs TrajectoryPlanner::create_costs(
         angle_costs.emplace(angle_index, std::move(costs));
     };
 
+    log_callback("Creating cost layers...");
+
     boost::asio::thread_pool pool;
     for (unsigned int ai = 0; ai < angle_granularity; ai++) {
         boost::asio::post(
@@ -266,6 +283,8 @@ Costs TrajectoryPlanner::create_costs(
         );
     }
     pool.join();
+
+    log_callback("Combining cost layers...");
 
     // Take all the costs and put them in one data structure.
     Costs costs(angle_granularity);

@@ -513,6 +513,10 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
         std::chrono::time_point<std::chrono::steady_clock> timestamp_end;
         std::chrono::duration<double> duration;
 
+        auto log_callback = [this](const std::string msg) {
+            RCLCPP_INFO((*this->logger_), msg.c_str());
+        };
+
         bool planner_loaded = false;
 
         // Try to load the planner from a file.
@@ -523,7 +527,7 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
 
                 timestamp_start = std::chrono::steady_clock::now();
                 planner = TrajectoryPlanner::load_planner(
-                    new_hash, create_occupancy_map(costmap), ifs);
+                    log_callback, new_hash, create_occupancy_map(costmap), ifs);
                 timestamp_end = std::chrono::steady_clock::now();
 
                 if (planner) {
@@ -546,6 +550,7 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
 
             timestamp_start = std::chrono::steady_clock::now();
             planner = TrajectoryPlanner::create_planner(
+                log_callback,
                 new_hash,
                 angle_granularity_,
                 costmap->getResolution(),
