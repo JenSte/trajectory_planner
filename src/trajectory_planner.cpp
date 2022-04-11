@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <iomanip>
+#include <thread>
 
 namespace trajectory_planner
 {
@@ -140,7 +141,7 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
 
     log_callback("Creating inflation layers...");
 
-    boost::asio::thread_pool pool;
+    boost::asio::thread_pool pool(std::thread::hardware_concurrency());
     for (unsigned int r = 0; r < pixel_radius; r++) {
         boost::asio::post(pool, [calculate_cost, r]{ calculate_cost(r); });
     }
@@ -275,7 +276,7 @@ Costs TrajectoryPlanner::create_costs(
 
     log_callback("Creating cost layers...");
 
-    boost::asio::thread_pool pool;
+    boost::asio::thread_pool pool(std::thread::hardware_concurrency());
     for (unsigned int ai = 0; ai < angle_granularity; ai++) {
         boost::asio::post(
             pool,
@@ -498,7 +499,7 @@ void TrajectoryPlanner::dump_orientation_maps(
         cv::imwrite(ss.str(), color_image);
     };
 
-    boost::asio::thread_pool pool;
+    boost::asio::thread_pool pool(std::thread::hardware_concurrency());
     for (unsigned int ai = 0; ai < costs_.angle_granularity(); ai++) {
         boost::asio::post(
             pool,
