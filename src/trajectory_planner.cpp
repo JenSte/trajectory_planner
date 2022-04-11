@@ -32,6 +32,7 @@ TrajectoryPlanner::TrajectoryPlanner(
 
 std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     LogCallback log_callback,
+    const bool multi_threaded,
     std::string hash,
     unsigned int angle_granularity,
     double resolution,
@@ -40,9 +41,19 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     Buffer<double> occupancy_map)
 {
     Buffer<double> cost_map = create_cost_map(
-        log_callback, resolution, inflation_radius, occupancy_map);
+        log_callback,
+        multi_threaded,
+        resolution,
+        inflation_radius,
+        occupancy_map);
     Costs costs = create_costs(
-        log_callback, angle_granularity, resolution, footprint, occupancy_map, cost_map);
+        log_callback,
+        multi_threaded,
+        angle_granularity,
+        resolution,
+        footprint,
+        occupancy_map,
+        cost_map);
 
     std::unique_ptr<TrajectoryPlanner> planner;
     planner.reset(new TrajectoryPlanner(
@@ -87,6 +98,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
 
 Buffer<double> TrajectoryPlanner::create_cost_map(
     const LogCallback& log_callback,
+    const bool multi_threaded,
     const double resolution,
     const double inflation_radius,
     const Buffer<double>& occupancy_map)
@@ -141,11 +153,24 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
 
     log_callback("Creating inflation layers...");
 
-    boost::asio::thread_pool pool(std::thread::hardware_concurrency());
-    for (unsigned int r = 0; r < pixel_radius; r++) {
-        boost::asio::post(pool, [calculate_cost, r]{ calculate_cost(r); });
+    std::unique_ptr<boost::asio::thread_pool> pool;
+    if (multi_threaded) {
+        pool = std::make_unique<boost::asio::thread_pool>(
+            std::thread::hardware_concurrency());
     }
-    pool.join();
+
+    for (unsigned int r = 0; r < pixel_radius; r++) {
+        if (multi_threaded) {
+            boost::asio::post(
+                *pool, [calculate_cost, r]{ calculate_cost(r); });
+        } else {
+            calculate_cost(r);
+        }
+    }
+
+    if (multi_threaded) {
+        pool->join();
+    }
 
     log_callback("Combining inflation layers...");
 
@@ -177,6 +202,7 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
 
 Costs TrajectoryPlanner::create_costs(
     const LogCallback& log_callback,
+    const bool multi_threaded,
     const unsigned int angle_granularity,
     const double resolution,
     const Polygon& footprint,
@@ -276,14 +302,24 @@ Costs TrajectoryPlanner::create_costs(
 
     log_callback("Creating cost layers...");
 
-    boost::asio::thread_pool pool(std::thread::hardware_concurrency());
-    for (unsigned int ai = 0; ai < angle_granularity; ai++) {
-        boost::asio::post(
-            pool,
-            [process_footprint, ai]{ process_footprint(ai); }
-        );
+    std::unique_ptr<boost::asio::thread_pool> pool;
+    if (multi_threaded) {
+        pool = std::make_unique<boost::asio::thread_pool>(
+            std::thread::hardware_concurrency());
     }
-    pool.join();
+
+    for (unsigned int ai = 0; ai < angle_granularity; ai++) {
+        if (multi_threaded) {
+            boost::asio::post(
+                *pool, [process_footprint, ai]{ process_footprint(ai); });
+        } else {
+            process_footprint(ai);
+        }
+    }
+
+    if (multi_threaded) {
+        pool->join();
+    }
 
     log_callback("Combining cost layers...");
 

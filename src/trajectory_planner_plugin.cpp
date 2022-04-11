@@ -551,6 +551,7 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
             timestamp_start = std::chrono::steady_clock::now();
             planner = TrajectoryPlanner::create_planner(
                 log_callback,
+                true,
                 new_hash,
                 angle_granularity_,
                 costmap->getResolution(),

@@ -34,6 +34,7 @@ public:
     // Create a new planner.
     static std::unique_ptr<TrajectoryPlanner> create_planner(
         LogCallback log_callback,
+        bool multi_threaded,
         std::string hash,
         unsigned int angle_granularity,
         double resolution,
@@ -100,6 +101,7 @@ private:
     // obstacles on the occupancy map.
     static Buffer<double> create_cost_map(
         const LogCallback& log_callback,
+        bool multi_threaded,
         double resolution,
         double inflation_radius,
         const Buffer<double>& occupancy_map);
@@ -108,6 +110,7 @@ private:
     // on the map in any direction.
     static Costs create_costs(
         const LogCallback& log_callback,
+        bool multi_threaded,
         unsigned int angle_granularity,
         double resolution,
         const Polygon& footprint,
