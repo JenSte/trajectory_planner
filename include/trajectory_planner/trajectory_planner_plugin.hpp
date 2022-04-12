@@ -129,7 +129,7 @@ private:
 
     // Convert the map containing the opened nodes to an occupancy grid ROS message.
     nav_msgs::msg::OccupancyGrid convert_opened_nodes(
-        const std::map<three::Pose2D, unsigned int>& opened_nodes,
+        const three::SearchResult3D::OpenedNodesMap& opened_nodes,
         size_t width,
         size_t height,
         const std::string& frame_id,

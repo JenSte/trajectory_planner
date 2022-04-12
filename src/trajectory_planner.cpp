@@ -12,6 +12,7 @@
 #include <cmath>
 #include <iomanip>
 #include <thread>
+#include <unordered_map>
 
 namespace trajectory_planner
 {
@@ -126,7 +127,7 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
     plan_forward.execute(occupancy_map_padded, occupancy_map_spectrum);
 
     // Stores the cost calculated for a given radius.
-    std::map<unsigned int, Buffer<double>> cost_images;
+    std::unordered_map<unsigned int, Buffer<double>> cost_images;
     std::mutex cost_images_mutex;
 
     // Create a buffer that contains a non-zero value at positions that are within
@@ -245,7 +246,7 @@ Costs TrajectoryPlanner::create_costs(
 
     // The "calculated" costs are accumulated in this object. The map key is the angle
     // index, the values in the map are (x, y, cell-cost) tuples for this orientation.
-    std::map<unsigned int, std::vector<std::tuple<size_t, size_t, double>>> angle_costs;
+    std::unordered_map<unsigned int, std::vector<std::tuple<size_t, size_t, double>>> angle_costs;
     std::mutex angle_costs_mutex;
 
     // Process the footprint: For a given orientation, the robot's footprint is drawn

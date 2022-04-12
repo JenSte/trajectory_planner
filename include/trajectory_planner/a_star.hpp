@@ -1,13 +1,14 @@
 #ifndef TRAJECTORY_PLANNER_A_STAR_HPP
 #define TRAJECTORY_PLANNER_A_STAR_HPP
 
+#include <boost/container_hash/hash.hpp>
 #include <boost/heap/fibonacci_heap.hpp>
 
 #include <algorithm>
 #include <limits>
-#include <map>
-#include <set>
 #include <tuple>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace trajectory_planner
@@ -80,7 +81,7 @@ private:
     heap_type heap_;
 
     // Maps nodes to heap handles, so that items' priorities can be changed.
-    std::map<Node, typename heap_type::handle_type> map_;
+    std::unordered_map<Node, typename heap_type::handle_type, boost::hash<Node>> map_;
 };
 
 template<
@@ -93,10 +94,19 @@ template<
 {
 public:
 
+    // Set type to hold all the nodes that were "opened" during the search.
+    using OpenedNodesSet = std::unordered_set<Node, boost::hash<Node>>;
+
     // The type returned from the 'search()' function. The first element of the tuple
     // is the path (can be empty if no path is found), while the second element holds
     // all the nodes that the algorithm "opened".
-    using search_result = std::tuple<std::vector<Node>, std::set<Node>>;
+    using search_result = std::tuple<std::vector<Node>, OpenedNodesSet>;
+
+    // Map type to store the predecessors of nodes.
+    using PredecessorsMap = std::unordered_map<Node, Node, boost::hash<Node>>;
+
+    // Map type to store the costs of nodes.
+    using TotalCostsMap = std::unordered_map<Node, double, boost::hash<Node>>;
 
     search_result search(
         const GoalReached& goal_reached,
@@ -110,10 +120,10 @@ public:
         open_nodes.push(start, 0.0);
 
         // Maps nodes to their predecessor on the path back to the start node.
-        std::map<Node, Node> predecessors;
+        PredecessorsMap predecessors;
 
         // Maps a node to the cost of the best known path from the start to that node.
-        std::map<Node, double> total_costs;
+        TotalCostsMap total_costs;
         total_costs[start] = 0.0;
 
         while (!open_nodes.empty()) {
@@ -145,7 +155,7 @@ private:
 
     // Return the total cost in the map, or infinity if the node is not in the map.
     double get_total_cost(
-        const std::map<Node, double>& total_costs,
+        const TotalCostsMap& total_costs,
         const Node& node)
     {
         const auto it = total_costs.find(node);
@@ -157,7 +167,7 @@ private:
     }
 
     std::vector<Node> reconstruct_path(
-        const std::map<Node, Node>& predecessors,
+        const PredecessorsMap& predecessors,
         const Node& end_node)
     {
         std::vector<Node> result;
@@ -178,10 +188,10 @@ private:
     }
 
     // Create a set that contains all nodes that the algorithm looked at.
-    std::set<Node> opened_nodes(
-        const std::map<Node, double>& total_costs)
+    OpenedNodesSet opened_nodes(
+        const TotalCostsMap& total_costs)
     {
-        std::set<Node> result;
+        OpenedNodesSet result;
 
         std::transform(
             total_costs.begin(),

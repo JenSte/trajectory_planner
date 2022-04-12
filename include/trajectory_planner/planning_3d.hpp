@@ -4,8 +4,10 @@
 #include "trajectory_planner/costs.hpp"
 
 #include "boost/container/static_vector.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include <tuple>
+#include <unordered_map>
 
 // The functions in this name space implement a "three dimensional" search. This
 // means that the search happens in on cells (X, Y, Theta), i.e. taking the orientation
@@ -31,10 +33,26 @@ struct Pose2D
     // The Y coordinate of the cell.
     unsigned int y;
 
+    bool operator==(
+        const Pose2D& other) const
+    {
+        return (x == other.x) && (y == other.y);
+    }
+
     friend bool operator<(
         const Pose2D& lh, const Pose2D& rh)
     {
         return std::tie(lh.x, lh.y) < std::tie(rh.x, rh.y);
+    }
+
+    friend std::size_t hash_value(const Pose2D& p)
+    {
+        std::size_t seed = 0;
+
+        boost::hash_combine(seed, p.x);
+        boost::hash_combine(seed, p.y);
+
+        return seed;
     }
 };
 
@@ -60,6 +78,17 @@ struct Pose3D
         const Pose3D& lh, const Pose3D& rh)
     {
         return std::tie(lh.x, lh.y, lh.movement) < std::tie(rh.x, rh.y, rh.movement);
+    }
+
+    friend std::size_t hash_value(const Pose3D& p)
+    {
+        std::size_t seed = 0;
+
+        boost::hash_combine(seed, p.x);
+        boost::hash_combine(seed, p.y);
+        boost::hash_combine(seed, p.movement);
+
+        return seed;
     }
 };
 
@@ -93,7 +122,8 @@ struct SearchResult3D
     // that do not collide with the map) is 'movement_index_count', the maximum value
     // of a map value is also 'movement_index_count'. Coordinates that were not looked
     // at at all (in no orientation) are not included.
-    std::map<Pose2D, unsigned int> opened_nodes;
+    using OpenedNodesMap = std::unordered_map<Pose2D, unsigned int, boost::hash<Pose2D>>;
+    OpenedNodesMap opened_nodes;
 };
 
 // Create a lookup table for a given angle granularity.

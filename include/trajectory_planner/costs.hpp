@@ -5,11 +5,12 @@
 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/map.hpp>
+#include <boost/container_hash/hash.hpp>
+#include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/vector.hpp>
 
 #include <cstdint>
-#include <map>
+#include <unordered_map>
 
 namespace trajectory_planner
 {
@@ -73,7 +74,7 @@ private:
     unsigned int angle_granularity_;
 
     // Stores the cost values.
-    std::map<Location, CostVector> costs_;
+    std::unordered_map<Location, CostVector, boost::hash<Location>> costs_;
 
     // Convert the internal cost type to a double value.
     double internal_cost_to_double_cost(
