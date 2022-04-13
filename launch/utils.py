@@ -24,5 +24,11 @@ def generate_launch_description():
                 executable="plot_augmented_path.py",
                 output="screen",
             ),
+            launch.actions.ExecuteProcess(
+                name="echo_clicked_point",
+                cmd=["ros2", "topic", "echo", "--field", "point", "/clicked_point", "geometry_msgs/msg/PointStamped"],
+                output="screen",
+                additional_env={"PYTHONUNBUFFERED": "1"},
+            ),
         ]
     )
