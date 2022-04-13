@@ -21,3 +21,11 @@ apt-get install --yes \
 # After the 'exec ...' in our entrypoint script the bash completion is somehow broken,
 # restore it for the 'ros2' command.
 echo "source /opt/ros/galactic/share/ros2cli/environment/ros2-argcomplete.bash" >> ~/.bashrc
+
+# With the default DDS implementation, it was impossible to run more than about a dozen
+# ROS nodes. After that, new nodes would fail with the error "Failed to find a free
+# participant index for domain 0", even though the actual limit should be much higher [1].
+# Switching to Fast-DDS made this issue disappear.
+#
+# [1] https://docs.ros.org/en/galactic/Concepts/About-Domain-ID.html#participant-constraints
+echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc
