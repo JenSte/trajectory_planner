@@ -17,3 +17,7 @@ apt-get install --yes \
     ros-galactic-nav2-core \
     ros-galactic-nav2-costmap-2d \
     ros-galactic-nav2-util
+
+# After the 'exec ...' in our entrypoint script the bash completion is somehow broken,
+# restore it for the 'ros2' command.
+echo "source /opt/ros/galactic/share/ros2cli/environment/ros2-argcomplete.bash" >> ~/.bashrc
