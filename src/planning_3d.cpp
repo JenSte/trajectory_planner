@@ -248,15 +248,17 @@ SearchResult3D plan(
 
     // Create the costs vector in the result. This is done by iterating over
     // pairs in the found path and summing up the cost values along the way.
-    double cost = 0.0;
-    result.cost.push_back(0.0); // Cost of the goal.
-    for (size_t i = path.size() - 1; i > 0; --i) {
-        const Pose3D& node = path.at(i);
-        const Pose3D& predecessor = path.at(i - 1);
-        cost += movement_cost(predecessor, node);
-        result.cost.push_back(cost);
+    if (path.size() >= 2) {
+        double cost = 0.0;
+        result.cost.push_back(0.0); // Cost of the goal.
+        for (size_t i = path.size() - 1; i > 0; --i) {
+            const Pose3D& node = path.at(i);
+            const Pose3D& predecessor = path.at(i - 1);
+            cost += movement_cost(predecessor, node);
+            result.cost.push_back(cost);
+        }
+        std::reverse(result.cost.begin(), result.cost.end());
     }
-    std::reverse(result.cost.begin(), result.cost.end());
 
     // Count the orientations for all cells visited.
     for (const Pose3D& node: std::get<1>(a_star_result)) {
