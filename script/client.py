@@ -3,29 +3,53 @@
 # This script connects to the action interface of planner server and
 # requests a path between two poses.
 
+import argparse
 import math
+import sys
+import textwrap
 
 import rclpy
 import rclpy.action
 import rclpy.node
+import rclpy.utilities
 import transforms3d
 
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import ComputePathToPose
 
 
+# Some predefined routes for the test map.
+ROUTES = {
+    "big": ((1.5, 1.5, 0), (1.5, 4.5, 180)),
+    "big-reversed": ((1.5, 1.5, 0), (1.5, 4.5, 0)),
+    "straight": ((1.5, 1.5, 0), (5.4, 1.5, 0)),
+    "straight-reversed": ((1.5, 1.5, 0), (5.4, 1.5, 180)),
+    "zigzag": ((0.4, 6.5, 90), (4.0, 6.5, 90)),
+    "zigzag-reversed": ((4.0, 6.5, 90), (0.4, 6.5, 90)),
+    "uturn": ((7.3, 0.75, 0), (7.3, 2.35, 180)),
+    "uturn-reversed": ((7.3, 0.75, 0), (7.3, 2.35, 0)),
+    "pipes": ((9.0, 4.0, 180), (6.0, 7.8, 90)),
+    "nopath": ((1.5, 1.5, 0), (7.3, 0.75, 0)),
+}
+
+
 class ComputePathActionClient(rclpy.node.Node):
 
-    def __init__(self):
+    def __init__(self, start, goal):
         super().__init__("compute_path_action_client")
         self._action_client = rclpy.action.ActionClient(
             self, ComputePathToPose, "compute_path_to_pose")
 
+        self._start = start
+        self._goal = goal
+
     def send_goal(self):
         goal_msg = ComputePathToPose.Goal()
 
-        goal_msg.start = self.make_pose("map", 1.5, 1.5, math.radians(-5.0))
-        goal_msg.goal = self.make_pose("map", 1.5, 4.5, math.radians(0.0))
+        goal_msg.start = self.make_pose(
+            "map", self._start[0], self._start[1], math.radians(self._start[2]))
+        goal_msg.goal = self.make_pose(
+            "map", self._goal[0], self._goal[1], math.radians(self._goal[2]))
 
         goal_msg.planner_id = "trajectory_planner"
         goal_msg.use_start = True
@@ -95,10 +119,24 @@ class ComputePathActionClient(rclpy.node.Node):
             self.get_logger().info(f"{i:4}:  {x:5.2f} / {y:5.2f} / {yaw:5.1f}")
 
 
-def main(args=None):
-    rclpy.init(args=args)
+def main(argv=sys.argv[1:]):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("route", type=str, help="the predefined route to plan")
+    args = parser.parse_args(rclpy.utilities.remove_ros_args(args=argv))
 
-    action_client = ComputePathActionClient()
+    if args.route not in ROUTES:
+        message = textwrap.dedent("""\
+            Unknown route name. Predefined routes are:
+
+            {}
+        """).format("\n".join("  - " + k for k in ROUTES))
+        sys.exit(message)
+
+    start, goal = ROUTES[args.route]
+
+    rclpy.init(args=argv)
+
+    action_client = ComputePathActionClient(start, goal)
 
     action_client.send_goal()
 
