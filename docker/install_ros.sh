@@ -29,3 +29,11 @@ echo "source /opt/ros/galactic/share/ros2cli/environment/ros2-argcomplete.bash" 
 #
 # [1] https://docs.ros.org/en/galactic/Concepts/About-Domain-ID.html#participant-constraints
 echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc
+
+# Add some often used commands to the bash history.
+echo "colcon build" >> ~/.bash_history
+echo "colcon build && ./build/trajectory_planner/trajectory_planner_test" >> ~/.bash_history
+echo "ros2 launch trajectory_planner standalone.py" >> ~/.bash_history
+echo "ros2 launch trajectory_planner rviz.py" >> ~/.bash_history
+echo "ros2 launch trajectory_planner utils.py" >> ~/.bash_history
+echo "ros2 run trajectory_planner client.py big" >> ~/.bash_history
