@@ -66,9 +66,9 @@ class PlotAugmentedPath(rclpy.node.Node):
             )
 
         data = [extract_data_point(pose) for pose in path.poses]
-        self.plot(data, "path_3d.png")
+        self.plot(data, path.name)
 
-    def plot(self, data, filename):
+    def plot(self, data, name):
         """Create a plot and save it."""
 
         time = range(len(data))
@@ -76,6 +76,7 @@ class PlotAugmentedPath(rclpy.node.Node):
         subplots = 4
 
         fig = matplotlib.figure.Figure(figsize=(WIDTH / DPI, HEIGHT / DPI), dpi=DPI)
+        fig.suptitle(name, fontsize=20)
 
         axes_x = fig.add_subplot(subplots, 1, 1)
         axes_x.plot(time, [d.x for d in data])
@@ -104,7 +105,7 @@ class PlotAugmentedPath(rclpy.node.Node):
         matplotlib.pyplot.setp(axes_y.get_xticklabels(), visible=False)
         matplotlib.pyplot.setp(axes_t.get_xticklabels(), visible=False)
 
-        filepath = str(self._output_directory / filename)
+        filepath = str((self._output_directory / name).with_suffix(".png"))
         fig.savefig(filepath, bbox_inches="tight")
         self.get_logger().info(f"Plot saved to '{filepath}'.")
 

@@ -297,7 +297,33 @@ nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_opened_nodes(
     return result;
 }
 
+void TrajectoryPlannerPlugin::publish_augmented_path_messages(
+    nav2_costmap_2d::Costmap2D* costmap,
+    const std::string& frame_id,
+    unsigned int angle_granularity,
+    const Pose& start,
+    const Pose& goal,
+    const TrajectoryPlanner::Result result) const
+{
+    std::ostringstream ss;
+    ss
+        << std::setfill('0') << std::setw(5)
+        << "path_"
+        << start.x << "_" << start.y << "_" << start.angle_index
+        << "_to_"
+        << goal.x << "_" << goal.y << "_" << goal.angle_index;
+
+    pub_augmented_path_->publish(
+        create_augmented_path_message(
+            ss.str() + "_3d",
+            costmap,
+            frame_id,
+            angle_granularity,
+            result.search_result_3d));
+}
+
 msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
+    const std::string& name,
     const nav2_costmap_2d::Costmap2D* costmap,
     const std::string& frame_id,
     unsigned int angle_granularity,
@@ -311,6 +337,7 @@ msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
     }
 
     msg::AugmentedPath result;
+    result.name = name;
 
     for (size_t i = 0; i < search_result.path.size(); ++i) {
         msg::AugmentedPose pose_message;
@@ -441,12 +468,13 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
             costmap->getOriginX(),
             costmap->getOriginY()));
 
-    pub_augmented_path_->publish(
-        create_augmented_path_message(
-            costmap,
-            costmap_frame_id,
-            planner_->angle_granularity(),
-            result.search_result_3d));
+    publish_augmented_path_messages(
+        costmap,
+        costmap_frame_id,
+        planner_->angle_granularity(),
+        start,
+        goal,
+        result);
 
     // Convert the resulting path back to a ROS message.
     nav_msgs::msg::Path path_msg;

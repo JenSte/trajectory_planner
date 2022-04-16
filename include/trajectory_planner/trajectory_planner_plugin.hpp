@@ -137,8 +137,18 @@ private:
         double origin_x,
         double origin_y) const;
 
+    // Publish the augmented path messages for a planning result.
+    void publish_augmented_path_messages(
+        nav2_costmap_2d::Costmap2D* costmap,
+        const std::string& frame_id,
+        unsigned int angle_granularity,
+        const Pose& start,
+        const Pose& goal,
+        const TrajectoryPlanner::Result result) const;
+
     // Create an augmented path message.
     msg::AugmentedPath create_augmented_path_message(
+        const std::string& name,
         const nav2_costmap_2d::Costmap2D* costmap,
         const std::string& frame_id,
         unsigned int angle_granularity,
