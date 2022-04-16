@@ -1,5 +1,4 @@
 #include "trajectory_planner/planning_3d.hpp"
-
 #include "trajectory_planner/a_star.hpp"
 
 #include <cmath>
@@ -192,7 +191,7 @@ SearchResult3D plan(
         return neighbours(costs, lut, pose);
     };
 
-    auto movement_cost = [&costs, &lut](const Pose3D& pose, const Pose3D& neighbour) {
+    auto movement_cost = [&costs, &lut, &goal_pose](const Pose3D& pose, const Pose3D& neighbour) {
         const unsigned int angle_index = lut.at(neighbour.movement);
         const double cost = costs.get_cost(neighbour.x, neighbour.y, angle_index);
 
@@ -208,8 +207,21 @@ SearchResult3D plan(
             // so that edges that move diagonally do not have an advantage.
             return distance * (1.0 + cost);
         } else {
-            // Turning on the spot.
-            return 1.0 + cost;
+            // Turning on the spot. We calculate the distance to the goal, and apply
+            // a penalty for poses close to the goal. This is so that turns near the
+            // goal are discouraged as turning often causes the robot to deviate from
+            // the pose and makes it harder to hit the goal exactly.
+            const double dx =
+                static_cast<double>(goal_pose.x) - static_cast<double>(neighbour.x);
+            const double dy =
+                static_cast<double>(goal_pose.y) - static_cast<double>(neighbour.y);
+            const double distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+
+            double factor = 1.0 + exp(-distance / costs.goal_turn_penalty_distance());
+            if (distance < 1.0) {
+                factor = 2.0;
+            }
+            return factor * cost;
         }
     };
 

@@ -77,7 +77,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
     Buffer<double> cost_map(occupancy_map);
     draw_text(cost_map, "Cost map not available for planners loaded from cache.");
 
-    Costs costs(0);
+    Costs costs(0, 1);
     try {
         // Load the costs object.
         boost::archive::binary_iarchive ia(ifs);
@@ -322,10 +322,20 @@ Costs TrajectoryPlanner::create_costs(
         pool->join();
     }
 
+    // Use a value that is proportional to the size of the footprint to select
+    // poses close to the goal.
+    const unsigned int goal_turn_penalty_distance = footprint_pixel_size / 2;
+    std::ostringstream ss;
+    ss
+        << std::setprecision(2) << std::fixed
+        << "Goal turn penalty distance: "
+        << (goal_turn_penalty_distance * resolution) << " m";
+    log_callback(ss.str());
+
     log_callback("Combining cost layers...");
 
     // Take all the costs and put them in one data structure.
-    Costs costs(angle_granularity);
+    Costs costs(angle_granularity, goal_turn_penalty_distance);
     for (const auto& it: angle_costs) {
         for (const auto& v: it.second) {
             costs.set_cost(

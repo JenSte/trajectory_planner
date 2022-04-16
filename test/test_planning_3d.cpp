@@ -123,7 +123,7 @@ TEST(Planning3D, TurnNeighbours)
 
 TEST(Planning3D, RefinePose)
 {
-    trajectory_planner::Costs costs(256);
+    trajectory_planner::Costs costs(256, 10);
     AngleIndexLUT lut = create_lookup_table(costs.angle_granularity());
 
     // 29 * (360 deg / 256) is approx. 41 deg, this should be rounded

@@ -24,10 +24,12 @@ class Costs
 {
 public:
 
-    // Initialize a cost object, 'angle_granularity' is the number of steps
-    // the whole circle (2 * PI) is divided.
+    // Initialize a cost object. 'angle_granularity' is the number of steps the whole
+    // circle (2 * PI) is divided in. 'goal_turn_penalty_distance' is the distance to
+    // the goal (in cells) for which a penalty to turn shall be applied.
     Costs(
-        unsigned int angle_granularity);
+        unsigned int angle_granularity,
+        unsigned int goal_turn_penalty_distance);
 
     // Store the cost value of a pose.
     void set_cost(
@@ -51,6 +53,9 @@ public:
     // Return the number of steps the whole circle is divided in.
     unsigned int angle_granularity() const;
 
+    // Return a distance in cells to the goal to apply a turn penaltiy.
+    unsigned int goal_turn_penalty_distance() const;
+
     // Value used for positions that can not be occupied.
     static const double invalid_cost;
 
@@ -73,6 +78,9 @@ private:
     // Number of steps to divide the whole circle with.
     unsigned int angle_granularity_;
 
+    // Cell distance to the goal to apply a penalty on pure turns.
+    unsigned int goal_turn_penalty_distance_;
+
     // Stores the cost values.
     std::unordered_map<Location, CostVector, boost::hash<Location>> costs_;
 
@@ -90,6 +98,7 @@ private:
     void serialize(Archive& ar, const unsigned int /*version*/)
     {
         ar & angle_granularity_;
+        ar & goal_turn_penalty_distance_;
         ar & costs_;
     }
 };

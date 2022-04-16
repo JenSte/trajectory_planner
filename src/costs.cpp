@@ -11,9 +11,14 @@ const Costs::CostType Costs::internal_invalid_cost =
     std::numeric_limits<Costs::CostType>::max();
 
 Costs::Costs(
-    unsigned int angle_granularity)
+    unsigned int angle_granularity,
+    unsigned int goal_turn_penalty_distance)
     : angle_granularity_(angle_granularity)
+    , goal_turn_penalty_distance_(goal_turn_penalty_distance)
 {
+    if (0 == goal_turn_penalty_distance_) {
+        throw std::runtime_error("Goal turn penalty distance is zero.");
+    }
 }
 
 void Costs::set_cost(
@@ -59,6 +64,11 @@ double Costs::get_cost(
 unsigned int Costs::angle_granularity() const
 {
     return angle_granularity_;
+}
+
+unsigned int Costs::goal_turn_penalty_distance() const
+{
+    return goal_turn_penalty_distance_;
 }
 
 double Costs::internal_cost_to_double_cost(
