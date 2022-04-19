@@ -17,7 +17,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-find_package(Boost 1.65 REQUIRED COMPONENTS serialization system)
+find_package(Boost 1.65 REQUIRED COMPONENTS iostreams serialization system)
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc)
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
@@ -50,6 +50,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBS}
+    Boost::iostreams
     Boost::serialization
     Boost::system
     PkgConfig::FFTW

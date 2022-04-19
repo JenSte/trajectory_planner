@@ -6,7 +6,7 @@
 #include "trajectory_planner/planning_3d.hpp"
 #include "trajectory_planner/types.hpp"
 
-#include <fstream>
+#include <iostream>
 #include <functional>
 
 namespace trajectory_planner
@@ -48,7 +48,7 @@ public:
         LogCallback log_callback,
         std::string hash,
         Buffer<double> occupancy_map,
-        std::ifstream& ifs);
+        std::istream& istream);
 
     // Return the original occupancy map this planner was created from.
     const Buffer<double>& original_occupancy_map() const;
@@ -73,7 +73,7 @@ public:
 
     // Store what is necessary to restore the planner to a given file stream.
     void store(
-        std::ofstream& ofs) const;
+        std::ostream& ostream) const;
 
 private:
 

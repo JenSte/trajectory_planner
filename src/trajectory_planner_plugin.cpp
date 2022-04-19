@@ -8,8 +8,11 @@
 #include "tf2/LinearMath/Quaternion.h"
 
 #include <boost/crc.hpp>
+#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 
 #include <chrono>
+#include <fstream>
 #include <iomanip>
 #include <limits>
 
@@ -549,9 +552,15 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
 
         // Try to load the planner from a file.
         if (!cache_directory_.empty()) {
-            std::ifstream ifs(cache_file_name(new_hash));
-            if (ifs.good()) {
+            std::ios_base::openmode mode = std::ios_base::in | std::ios_base::binary;
+            std::ifstream file(cache_file_name(new_hash), mode);
+
+            if (file.good()) {
                 RCLCPP_INFO((*logger_), "Loading planner from cache...");
+
+                boost::iostreams::filtering_istream ifs;
+                ifs.push(boost::iostreams::zlib_decompressor());
+                ifs.push(file);
 
                 timestamp_start = std::chrono::steady_clock::now();
                 planner = TrajectoryPlanner::load_planner(
@@ -598,14 +607,20 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
         if (!planner_loaded && !cache_directory_.empty()) {
             RCLCPP_INFO((*logger_), "Writing planner to cache...");
 
-            std::ofstream ofs(cache_file_name(new_hash));
-            if (!ofs.good()) {
+            std::ios_base::openmode mode = std::ios_base::out | std::ios_base::binary;
+            std::ofstream file(cache_file_name(new_hash), mode);
+
+            if (!file.good()) {
                 RCLCPP_ERROR_STREAM(
                     (*logger_),
                     "Unable to open cache file '" <<
                     cache_file_name(new_hash) <<
                     "' for writing.");
             } else {
+                boost::iostreams::filtering_ostream ofs;
+                ofs.push(boost::iostreams::zlib_compressor());
+                ofs.push(file);
+
                 timestamp_start = std::chrono::steady_clock::now();
                 planner->store(ofs);
                 timestamp_end = std::chrono::steady_clock::now();

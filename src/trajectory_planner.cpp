@@ -70,7 +70,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
     LogCallback log_callback,
     std::string hash,
     Buffer<double> occupancy_map,
-    std::ifstream& ifs)
+    std::istream& istream)
 {
     // Create a dummy cost map when loading the planner from a file,
     // as the cost map is only used for debugging purposes.
@@ -80,7 +80,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
     Costs costs(0, 1);
     try {
         // Load the costs object.
-        boost::archive::binary_iarchive ia(ifs);
+        boost::archive::binary_iarchive ia(istream);
         ia >> costs;
     } catch (const std::exception& e) {
         log_callback(std::string("Error loading planner: ") + e.what());
@@ -574,9 +574,9 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
 }
 
 void TrajectoryPlanner::store(
-    std::ofstream& ofs) const
+    std::ostream& ostream) const
 {
-    boost::archive::binary_oarchive oa(ofs);
+    boost::archive::binary_oarchive oa(ostream);
     oa << costs_;
 }
 
