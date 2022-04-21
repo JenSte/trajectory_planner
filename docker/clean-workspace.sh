@@ -4,7 +4,7 @@
 
 set -eu
 
-SCRIPT_PATH=$(dirname "$0")
+SCRIPT_PATH=$(dirname `realpath "$0"`)
 
 rm -rf \
     "$SCRIPT_PATH/workspace/build" \

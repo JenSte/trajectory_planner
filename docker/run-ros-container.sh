@@ -15,7 +15,7 @@ else
     DOCKER=docker
 fi
 
-SCRIPT_PATH=$(dirname "$0")
+SCRIPT_PATH=$(dirname `realpath "$0"`)
 
 $DOCKER run \
     -it --rm \
