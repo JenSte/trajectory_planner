@@ -23,39 +23,6 @@ using MovementIndex = unsigned int;
 // have (0 .. movement_index_count - 1).
 const MovementIndex movement_index_count = 16;
 
-// Data structure to describe a single cell of the map,
-// not taking the orientation into account.
-struct Pose2D
-{
-    // The X coordinate of the cell.
-    unsigned int x;
-
-    // The Y coordinate of the cell.
-    unsigned int y;
-
-    bool operator==(
-        const Pose2D& other) const
-    {
-        return (x == other.x) && (y == other.y);
-    }
-
-    friend bool operator<(
-        const Pose2D& lh, const Pose2D& rh)
-    {
-        return std::tie(lh.x, lh.y) < std::tie(rh.x, rh.y);
-    }
-
-    friend std::size_t hash_value(const Pose2D& p)
-    {
-        std::size_t seed = 0;
-
-        boost::hash_combine(seed, p.x);
-        boost::hash_combine(seed, p.y);
-
-        return seed;
-    }
-};
-
 // A pose as used by the three dimensional planner.
 struct Pose3D
 {

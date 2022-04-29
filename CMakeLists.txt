@@ -62,6 +62,7 @@ add_library(${PROJECT_NAME}_plugin SHARED
     "include/trajectory_planner/convolution.hpp"
     "include/trajectory_planner/costs.hpp"
     "include/trajectory_planner/planning_3d.hpp"
+    "include/trajectory_planner/planning_5d.hpp"
     "include/trajectory_planner/trajectory_planner.hpp"
     "include/trajectory_planner/trajectory_planner_plugin.hpp"
     "include/trajectory_planner/types.hpp"
@@ -69,6 +70,7 @@ add_library(${PROJECT_NAME}_plugin SHARED
     "src/convolution.cpp"
     "src/costs.cpp"
     "src/planning_3d.cpp"
+    "src/planning_5d.cpp"
     "src/trajectory_planner.cpp"
     "src/trajectory_planner_plugin.cpp"
 )
@@ -150,6 +152,7 @@ if(BUILD_TESTING)
         "include/trajectory_planner/convolution.hpp"
         "include/trajectory_planner/costs.hpp"
         "include/trajectory_planner/planning_3d.hpp"
+        "include/trajectory_planner/planning_5d.hpp"
         "include/trajectory_planner/trajectory_planner.hpp"
         "include/trajectory_planner/trajectory_planner_plugin.hpp"
         "include/trajectory_planner/types.hpp"
@@ -157,10 +160,13 @@ if(BUILD_TESTING)
         "src/convolution.cpp"
         "src/costs.cpp"
         "src/planning_3d.cpp"
+        "src/planning_5d.cpp"
         "src/trajectory_planner.cpp"
         "test/test_a_star.cpp"
         "test/test_convolution.cpp"
+        "test/test_costs.cpp"
         "test/test_planning_3d.cpp"
+        "test/test_planning_5d.cpp"
     )
 
     target_include_directories(${PROJECT_NAME}_test

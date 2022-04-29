@@ -63,10 +63,16 @@ int main()
     // planner->dump_orientation_maps("/tmp/standalone_orientation_");
 
     std::cout << "planning\n";
+
+    trajectory_planner::TrajectoryPlanner::PlanningParameters pp;
+    pp.inflation_5d_radius = 0.2;
+    pp.inflation_5d_lookahead = 0.4;
+
     trajectory_planner::Pose start{50, 50, 0};
     trajectory_planner::Pose goal{50, static_cast<unsigned int>(map_height) - 50, 0};
+
     timestamp_start = std::chrono::steady_clock::now();
-    trajectory_planner::TrajectoryPlanner::Result result = planner->plan(start, goal);
+    trajectory_planner::TrajectoryPlanner::Result result = planner->plan(pp, start, goal);
     std::chrono::duration<double> planning_duration =
         std::chrono::steady_clock::now() - timestamp_start;
 

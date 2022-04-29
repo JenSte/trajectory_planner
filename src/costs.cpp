@@ -71,6 +71,31 @@ unsigned int Costs::goal_turn_penalty_distance() const
     return goal_turn_penalty_distance_;
 }
 
+Costs Costs::intersect(
+    std::vector<Pose2D> poses) const
+{
+    Costs result(angle_granularity_, goal_turn_penalty_distance_);
+
+    for (const Pose2D& pose: poses) {
+        const Location location(pose.x, pose.y);
+
+        auto it = costs_.find(location);
+        if (it != costs_.end()) {
+            result.costs_[location] = it->second;
+        }
+    }
+
+    return result;
+}
+
+void Costs::export_poses(
+    std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const
+{
+    for (const auto& it: costs_) {
+        poses_set.insert(Pose2D{std::get<0>(it.first), std::get<1>(it.first)});
+    }
+}
+
 double Costs::internal_cost_to_double_cost(
     const CostType c) const
 {

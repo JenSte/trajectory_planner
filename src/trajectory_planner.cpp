@@ -1,6 +1,7 @@
 #include "trajectory_planner/trajectory_planner.hpp"
 
 #include "trajectory_planner/planning_3d.hpp"
+#include "trajectory_planner/planning_5d.hpp"
 #include "trajectory_planner/convolution.hpp"
 
 #include <boost/asio/post.hpp>
@@ -19,11 +20,13 @@ namespace trajectory_planner
 
 TrajectoryPlanner::TrajectoryPlanner(
     LogCallback log_callback,
+    double map_resolution,
     std::string hash,
     Buffer<double> occupancy_map,
     Buffer<double> cost_map,
     Costs costs)
     : log_callback_(std::move(log_callback))
+    , map_resolution_(map_resolution)
     , hash_(std::move(hash))
     , original_occupancy_map_(std::move(occupancy_map))
     , cost_map_(std::move(cost_map))
@@ -59,6 +62,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     std::unique_ptr<TrajectoryPlanner> planner;
     planner.reset(new TrajectoryPlanner(
         std::move(log_callback),
+        resolution,
         std::move(hash),
         std::move(occupancy_map),
         std::move(cost_map),
@@ -68,6 +72,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
 
 std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
     LogCallback log_callback,
+    double resolution,
     std::string hash,
     Buffer<double> occupancy_map,
     std::istream& istream)
@@ -90,6 +95,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
     std::unique_ptr<TrajectoryPlanner> planner;
     planner.reset(new TrajectoryPlanner(
         std::move(log_callback),
+        resolution,
         std::move(hash),
         std::move(occupancy_map),
         std::move(cost_map),
@@ -581,6 +587,7 @@ void TrajectoryPlanner::dump_orientation_maps(
 }
 
 TrajectoryPlanner::Result TrajectoryPlanner::plan(
+    const PlanningParameters& parameters,
     const Pose& start,
     const Pose& goal) const
 {
@@ -592,9 +599,20 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
         throw std::invalid_argument("Goal pose is not valid.");
     }
 
-    three::SearchResult3D search_result_3d = three::plan(costs_, start, goal);
+    // Plan in three dimensions.
+    three::SearchResult3D result_3d = three::plan(costs_, start, goal);
 
-    return Result{search_result_3d.path, search_result_3d};
+    // Plan in five dimensions.
+    five::SearchResult5D result_5d = five::plan(
+        true,
+        parameters.inflation_5d_radius / map_resolution_,
+        parameters.inflation_5d_lookahead / map_resolution_,
+        costs_,
+        result_3d.path);
+
+    // TODO: convert the 5D search result back to a path and use this
+    // instead of result_3d.path.
+    return Result{result_3d.path, result_3d, result_5d};
 }
 
 void TrajectoryPlanner::store(

@@ -7,14 +7,29 @@ planner_server:
     planner_plugins: ["trajectory_planner"]
     trajectory_planner:
       plugin: "trajectory_planner/TrajectoryPlanner"
+
       # The number of steps the whole circle (2 * pi) is divided by to create
       # the three-dimensional cost maps.
       angle_granularity: 360
-      # The distance up to which obstacles are inflated to calculate the costs.
+
+      # The distance up to which obstacles are inflated to calculate the costs,
+      # in meter.
       inflation_radius: 5.0
+
+      # When inflating the 3D path to create the search space for the 5D planner,
+      # this is the maximum inflation radius (in meter), used when the 3D path is
+      # "very curvy".
+      inflation_5d_radius: 0.2
+
+      # When inflating the 3D path to create the search space for the 5D planner,
+      # this is the maximum distance (in meter) from each pose which is inspected to calculate
+      # the curvature.
+      inflation_5d_lookahead: 0.5
+
       # The directory to store costs to for a faster start-up of the planner with
       # the same map. Disable caching of costs by setting this to "".
       cache_directory: "/tmp"
+
       # The directory to write debug images to when creating the cost maps. Disable
       # this by setting this to "".
       debug_directory: "/tmp"

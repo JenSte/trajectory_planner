@@ -5,12 +5,12 @@
 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#include <boost/container_hash/hash.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/vector.hpp>
 
 #include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace trajectory_planner
 {
@@ -55,6 +55,15 @@ public:
 
     // Return a distance in cells to the goal to apply a turn penaltiy.
     unsigned int goal_turn_penalty_distance() const;
+
+    // Create an intersection between the costs in this object and the
+    // coordinates passed in.
+    Costs intersect(
+        std::vector<Pose2D> poses) const;
+
+    // Inserts all 2D poses that are contained in the cost structure into the given set.
+    void export_poses(
+        std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const;
 
     // Value used for positions that can not be occupied.
     static const double invalid_cost;

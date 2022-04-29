@@ -55,6 +55,32 @@ void TrajectoryPlannerPlugin::configure(
     }
 
     nav2_util::declare_parameter_if_not_declared(
+        node_, name + ".inflation_5d_radius", rclcpp::ParameterValue(0.2));
+    node_->get_parameter(
+        name + ".inflation_5d_radius",
+        planning_parameters_.inflation_5d_radius);
+    if (planning_parameters_.inflation_5d_radius < 0.01) {
+        planning_parameters_.inflation_5d_radius = 0.01;
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "invalid 'inflation_5d_radius' value, using " <<
+            planning_parameters_.inflation_5d_radius);
+    }
+
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name + ".inflation_5d_lookahead", rclcpp::ParameterValue(0.5));
+    node_->get_parameter(
+        name + ".inflation_5d_lookahead",
+        planning_parameters_.inflation_5d_lookahead);
+    if (planning_parameters_.inflation_5d_lookahead < 0.01) {
+        planning_parameters_.inflation_5d_lookahead = 0.01;
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "invalid 'inflation_5d_lookahead' value, using " <<
+            planning_parameters_.inflation_5d_lookahead);
+    }
+
+    nav2_util::declare_parameter_if_not_declared(
         node_, name + ".cache_directory", rclcpp::ParameterValue(""));
     node_->get_parameter(name + ".cache_directory", cache_directory_);
 
@@ -70,6 +96,16 @@ void TrajectoryPlannerPlugin::configure(
         "inflation_radius: " <<
         std::setprecision(3) << std::fixed <<
         inflation_radius_ << " m");
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "inflation_5d_radius: " <<
+        std::setprecision(3) << std::fixed <<
+        planning_parameters_.inflation_5d_radius << " m");
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "inflation_5d_lookahead: " <<
+        std::setprecision(3) << std::fixed <<
+        planning_parameters_.inflation_5d_lookahead << " m");
     RCLCPP_INFO_STREAM(
         (*logger_),
         "cache_directory: '" << cache_directory_ << "'");
@@ -95,6 +131,11 @@ void TrajectoryPlannerPlugin::configure(
     pub_3d_debug_map_ =
         node_->create_publisher<nav_msgs::msg::OccupancyGrid>(
             "~/" + name + "/three_dimension_planner_search_space",
+            rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+
+    pub_5d_search_space_ =
+        node_->create_publisher<nav_msgs::msg::OccupancyGrid>(
+            "~/" + name + "/five_dimension_planner_search_space",
             rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
 
     pub_augmented_path_ =
@@ -300,8 +341,48 @@ nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_opened_nodes(
     return result;
 }
 
+nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_5d_search_space(
+    const std::vector<five::SegmentSearchResult>& segments,
+    size_t width,
+    size_t height,
+    const std::string& frame_id,
+    double resolution,
+    double origin_x,
+    double origin_y) const
+{
+    nav_msgs::msg::OccupancyGrid result;
+
+    result.header.frame_id = frame_id;
+    result.info.resolution = resolution;
+    result.info.origin.position.x = origin_x;
+    result.info.origin.position.y = origin_y;
+    result.info.width = width;
+    result.info.height = height;
+
+    // Combine the search spaces of all segments into a single set.
+    std::unordered_set<Pose2D, boost::hash<Pose2D>> poses;
+    for (const five::SegmentSearchResult& search_result: segments) {
+        search_result.costs.export_poses(poses);
+    }
+
+    // "Draw" the search space on the map.
+    for (size_t y = 0; y < height; y++) {
+        for (size_t x = 0; x < width; x++) {
+            const Pose2D pose{static_cast<unsigned int>(x), static_cast<unsigned int>(y)};
+            if (poses.contains(pose)) {
+                // This cell is part of the search space, we color it yellow.
+                result.data.push_back(-2);
+            } else {
+                result.data.push_back(0);
+            }
+        }
+    }
+
+    return result;
+}
+
 void TrajectoryPlannerPlugin::publish_augmented_path_messages(
-    nav2_costmap_2d::Costmap2D* costmap,
+    const nav2_costmap_2d::Costmap2D* costmap,
     const std::string& frame_id,
     unsigned int angle_granularity,
     const Pose& start,
@@ -360,6 +441,40 @@ msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
     return result;
 }
 
+nav_msgs::msg::Path TrajectoryPlannerPlugin::convert_search_result(
+    const nav2_costmap_2d::Costmap2D* costmap,
+    const std::string& costmap_frame_id,
+    unsigned int angle_granularity,
+    const TrajectoryPlanner::Result& result) const
+{
+    nav_msgs::msg::Path path;
+    path.header.frame_id = costmap_frame_id;
+
+    // We create the final result by combining all the individual
+    // segments that the 5D planner returned.
+
+    for (const five::SegmentSearchResult& segment: result.search_result_5d.segment) {
+        size_t segment_index = &segment - &(*result.search_result_5d.segment.begin());
+
+        for (const Pose& pose: segment.path) {
+            size_t pose_index = &pose - &(*segment.path.begin());
+
+            if ((pose_index == 0) && (segment_index != 0)) {
+                // We skip this one pose because it was already added as the last
+                // pose of the previous segment.
+                continue;
+            }
+
+            const geometry_msgs::msg::PoseStamped pose_msg = convert_pose(
+                costmap, costmap_frame_id, pose, angle_granularity);
+
+            path.poses.push_back(pose_msg);
+        }
+    }
+
+    return path;
+}
+
 void TrajectoryPlannerPlugin::cleanup()
 {
     RCLCPP_DEBUG((*logger_), "cleanup()");
@@ -373,6 +488,7 @@ void TrajectoryPlannerPlugin::activate()
     pub_cost_map_->on_activate();
     pub_path_->on_activate();
     pub_3d_debug_map_->on_activate();
+    pub_5d_search_space_->on_activate();
     pub_augmented_path_->on_activate();
 
     // (Re-)Start the thread that creates the planner and keeps it up-to-date.
@@ -389,6 +505,7 @@ void TrajectoryPlannerPlugin::deactivate()
     pub_cost_map_->on_deactivate();
     pub_path_->on_deactivate();
     pub_3d_debug_map_->on_deactivate();
+    pub_5d_search_space_->on_deactivate();
     pub_augmented_path_->on_deactivate();
 
     // Stop the background thread and wait for it to finish.
@@ -435,24 +552,33 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::createPlan(
 }
 
 nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
-    nav2_costmap_2d::Costmap2D* costmap,
+    const nav2_costmap_2d::Costmap2D* costmap,
     const std::string& costmap_frame_id,
-    TrajectoryPlanner* planner,
+    const TrajectoryPlanner* planner,
     const geometry_msgs::msg::PoseStamped& start_msg,
     const geometry_msgs::msg::PoseStamped& goal_msg) const
 {
     Pose start = convert_pose_msg(costmap, start_msg, planner_->angle_granularity());
     Pose goal = convert_pose_msg(costmap, goal_msg, planner_->angle_granularity());
 
+    auto pose_to_string = [](const Pose& pose) {
+        std::ostringstream ss;
+        ss
+            << pose.x << "/"
+            << pose.y << "/"
+            << pose.angle_index;
+        return ss.str();
+    };
+
     RCLCPP_INFO_STREAM(
         (*logger_),
-        "Start: " << start.x << "/" << start.y << "/" << start.angle_index);
+        "Start: " << pose_to_string(start));
     RCLCPP_INFO_STREAM(
         (*logger_),
-        "Goal: " << goal.x << "/" << goal.y << "/" << goal.angle_index);
+        "Goal:  " << pose_to_string(goal));
 
     auto timestamp_start = std::chrono::steady_clock::now();
-    TrajectoryPlanner::Result result = planner->plan(start, goal);
+    TrajectoryPlanner::Result result = planner->plan(planning_parameters_, start, goal);
     auto timestamp_end = std::chrono::steady_clock::now();
 
     std::chrono::duration<double> duration = timestamp_end - timestamp_start;
@@ -460,10 +586,34 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
         (*logger_),
         "Planning took " << std::setprecision(3) << duration.count() << " sec.");
 
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "Search returned " << result.search_result_5d.segment.size() << " 5D segments:");
+    for (const five::SegmentSearchResult& segment: result.search_result_5d.segment) {
+        size_t index = &segment - &(*result.search_result_5d.segment.begin());
+        RCLCPP_INFO_STREAM(
+            (*logger_),
+            "  segment " << index << " start: " << pose_to_string(*segment.path.begin()));
+        RCLCPP_INFO_STREAM(
+            (*logger_),
+            "  segment " << index << " goal:  " << pose_to_string(*(segment.path.end() - 1)));
+    }
+
     // Publish a map showing the nodes touched by the 3D planner.
     pub_3d_debug_map_->publish(
         convert_opened_nodes(
             result.search_result_3d.opened_nodes,
+            planner->original_occupancy_map().width(),
+            planner->original_occupancy_map().height(),
+            costmap_frame_id,
+            costmap->getResolution(),
+            costmap->getOriginX(),
+            costmap->getOriginY()));
+
+    // Publish a map showing the search space used by the 5D planner.
+    pub_5d_search_space_->publish(
+        convert_5d_search_space(
+            result.search_result_5d.segment,
             planner->original_occupancy_map().width(),
             planner->original_occupancy_map().height(),
             costmap_frame_id,
@@ -480,17 +630,11 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
         result);
 
     // Convert the resulting path back to a ROS message.
-    nav_msgs::msg::Path path_msg;
-    path_msg.header.frame_id = costmap_ros_->getGlobalFrameID();
-
-    for (const Pose& p: result.path) {
-        const geometry_msgs::msg::PoseStamped pose_msg = convert_pose(
-            costmap, costmap_ros_->getGlobalFrameID(), p, planner_->angle_granularity());
-
-        path_msg.poses.push_back(pose_msg);
-    }
-
-    return path_msg;
+    return convert_search_result(
+        costmap,
+        costmap_ros_->getGlobalFrameID(),
+        planner_->angle_granularity(),
+        result);
 }
 
 void TrajectoryPlannerPlugin::planner_update_thread_function()
@@ -564,7 +708,11 @@ void TrajectoryPlannerPlugin::planner_update_thread_function()
 
                 timestamp_start = std::chrono::steady_clock::now();
                 planner = TrajectoryPlanner::load_planner(
-                    log_callback, new_hash, create_occupancy_map(costmap), ifs);
+                    log_callback,
+                    costmap->getResolution(),
+                    new_hash,
+                    create_occupancy_map(costmap),
+                    ifs);
                 timestamp_end = std::chrono::steady_clock::now();
 
                 if (planner) {

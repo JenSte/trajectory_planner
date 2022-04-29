@@ -4,7 +4,6 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /tp/3d search space1/Status1
         - /tp/3d search space1/Topic1
         - /tp/path1/Topic1
       Splitter Ratio: 0.47033897042274475
@@ -136,7 +135,7 @@ Visualization Manager:
       Class: rviz_default_plugins/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: tp/3d search space
       Topic:
         Depth: 5
@@ -151,6 +150,27 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /planner_server/trajectory_planner/three_dimension_planner_search_space_updates
+      Use Timestamp: false
+      Value: false
+    - Alpha: 0.699999988079071
+      Class: rviz_default_plugins/Map
+      Color Scheme: map
+      Draw Behind: false
+      Enabled: true
+      Name: tp/5d search space
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: System Default
+        Value: /planner_server/trajectory_planner/five_dimension_planner_search_space
+      Update Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /planner_server/trajectory_planner/five_dimension_planner_search_space_updates
       Use Timestamp: false
       Value: true
     - Alpha: 1

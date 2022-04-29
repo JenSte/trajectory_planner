@@ -51,6 +51,9 @@ private:
     // cost map.
     double inflation_radius_;
 
+    // Options for the path planning that are passed to the planning function.
+    TrajectoryPlanner::PlanningParameters planning_parameters_;
+
     // The name of a directory to cache planners.
     std::string cache_directory_;
 
@@ -79,6 +82,10 @@ private:
     // published for debug purposes.
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
         pub_3d_debug_map_;
+
+    // Publish the area inflated around the 3D path that is searched by the 5D planner.
+    rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
+        pub_5d_search_space_;
 
     // Publish the result of the search with additional information
     // to debug the planner.
@@ -137,9 +144,19 @@ private:
         double origin_x,
         double origin_y) const;
 
+    // Create an occupancy grid ROS message that shows the search space of the 5D planner.
+    nav_msgs::msg::OccupancyGrid convert_5d_search_space(
+        const std::vector<five::SegmentSearchResult>& segments,
+        size_t width,
+        size_t height,
+        const std::string& frame_id,
+        double resolution,
+        double origin_x,
+        double origin_y) const;
+
     // Publish the augmented path messages for a planning result.
     void publish_augmented_path_messages(
-        nav2_costmap_2d::Costmap2D* costmap,
+        const nav2_costmap_2d::Costmap2D* costmap,
         const std::string& frame_id,
         unsigned int angle_granularity,
         const Pose& start,
@@ -154,6 +171,13 @@ private:
         unsigned int angle_granularity,
         const three::SearchResult3D& search_result) const;
 
+    // Create the ROS path message that is returned from the planning function.
+    nav_msgs::msg::Path convert_search_result(
+        const nav2_costmap_2d::Costmap2D* costmap,
+        const std::string& frame_id,
+        unsigned int angle_granularity,
+        const TrajectoryPlanner::Result& result) const;
+
     // Create a hash used to identify the costmap.
     std::string hash_costmap(
         const Polygon& footprint,
@@ -161,9 +185,9 @@ private:
 
     // Create a plan using the given planner.
     nav_msgs::msg::Path plan(
-        nav2_costmap_2d::Costmap2D* costmap,
+        const nav2_costmap_2d::Costmap2D* costmap,
         const std::string& costmap_frame_id,
-        TrajectoryPlanner* planner,
+        const TrajectoryPlanner* planner,
         const geometry_msgs::msg::PoseStamped& start_msg,
         const geometry_msgs::msg::PoseStamped& goal_msg) const;
 

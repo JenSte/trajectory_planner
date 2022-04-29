@@ -4,6 +4,7 @@
 #include "trajectory_planner/buffer.hpp"
 #include "trajectory_planner/costs.hpp"
 #include "trajectory_planner/planning_3d.hpp"
+#include "trajectory_planner/planning_5d.hpp"
 #include "trajectory_planner/types.hpp"
 
 #include <iostream>
@@ -20,6 +21,18 @@ public:
     // Type of a callback function used to output log messages.
     using LogCallback = std::function<void(const std::string&)>;
 
+    // Contains additional parameters that are passed to the planning function.
+    struct PlanningParameters
+    {
+        // The maximum radius to inflate the 3D path up when calculating
+        // the 5D search space, in meter.
+        double inflation_5d_radius;
+
+        // The maximum distance to look forward/backward on the 3D path when
+        // "measuring" the curvature, in meter.
+        double inflation_5d_lookahead;
+    };
+
     // The result returned by a call to 'plan()'.
     struct Result
     {
@@ -29,6 +42,9 @@ public:
         // The search result of the three dimensional planner
         // used to get a rough estimate for the final path.
         three::SearchResult3D search_result_3d;
+
+        // The search result fo the five dimensional planner.
+        five::SearchResult5D search_result_5d;
     };
 
     // Create a new planner.
@@ -46,6 +62,7 @@ public:
     // Load a planner from a file created by 'store()'.
     static std::unique_ptr<TrajectoryPlanner> load_planner(
         LogCallback log_callback,
+        double resolution,
         std::string hash,
         Buffer<double> occupancy_map,
         std::istream& istream);
@@ -68,6 +85,7 @@ public:
 
     // Plan a route from 'start' to 'goal'.
     Result plan(
+        const PlanningParameters& parameters,
         const Pose& start,
         const Pose& goal) const;
 
@@ -80,6 +98,7 @@ private:
     // Private constructor, use the factory function to create a new object.
     TrajectoryPlanner(
         LogCallback log_callback,
+        double map_resolution,
         std::string hash,
         Buffer<double> occupancy_map,
         Buffer<double> cost_map,
@@ -119,6 +138,9 @@ private:
 
     // Callback to do logging.
     const LogCallback log_callback_;
+
+    // The resolution (in meter/pixel) of the maps.
+    const double map_resolution_;
 
     // The hash of the costmap this planner was created from.
     const std::string hash_;
