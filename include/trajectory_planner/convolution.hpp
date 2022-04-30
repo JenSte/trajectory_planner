@@ -88,6 +88,12 @@ private:
     bool plan_valid_;
 };
 
+// Return a value equal or bigger to 'size' that is well suited for a fast FFT.
+//
+// Not reentrant, as the function uses an internal cache object.
+size_t fast_fft_size(
+    size_t size);
+
 }
 
 #endif

@@ -2,6 +2,10 @@
 
 #include <fftw3.h>
 
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
 namespace trajectory_planner
 {
 
@@ -160,5 +164,67 @@ void FFTPlan::reset()
     }
 }
 
+size_t fast_fft_size(
+    size_t size)
+{
+    // Pre-computed vector containing numbers that are in the form 2^a+3^b+5^c+7^d,
+    // sizes which are best suited for FFTW.
+    static std::vector<size_t> sizes;
+
+    if (sizes.empty()) {
+        // We precompute values up to this value. Bigger arguments are returned
+        // unmodified, but given that this value, with a typical map resolution of
+        // 0.02 m/pixel would result in a maximum map size of more than 20 km, it's
+        // unlikely that we ever run in this limit.
+        size_t maxval = 1024 * 1024;
+
+        size_t factor_2 = 1;
+
+        double stop_2 = log(maxval);
+        stop_2 /= log(2.0);
+        for (size_t i_2 = 0; i_2 <= floor(stop_2); i_2++) {
+            size_t factor_3 = factor_2;
+
+            double stop_3 = log(maxval);
+            stop_3 -= i_2 * log(2.0);
+            stop_3 /= log(3.0);
+            for (size_t i_3 = 0; i_3 <= floor(stop_3); i_3++) {
+                size_t factor_5 = factor_3;
+
+                double stop_5 = log(maxval);
+                stop_5 -= i_2 * log(2.0);
+                stop_5 -= i_3 * log(3.0);
+                stop_5 /= log(5.0);
+                for (size_t i_5 = 0; i_5 <= floor(stop_5); i_5++) {
+                    size_t factor_7 = factor_5;
+
+                    double stop_7 = log(maxval);
+                    stop_7 -= i_2 * log(2.0);
+                    stop_7 -= i_3 * log(3.0);
+                    stop_7 -= i_5 * log(5.0);
+                    stop_7 /= log(7.0);
+                    for (size_t i_7 = 0; i_7 <= floor(stop_7); i_7++) {
+                        sizes.push_back(factor_7);
+                        factor_7 *= 7;
+                    }
+                    factor_5 *= 5;
+                }
+                factor_3 *= 3;
+            }
+            factor_2 *= 2;
+        }
+
+        // Sort the numbers so we can use a binary search for lookup below.
+        std::sort(sizes.begin(), sizes.end());
+    }
+
+    const auto it = std::lower_bound(sizes.begin(), sizes.end(), size);
+    if (it == sizes.end()) {
+        // The argument is bigger than any of our pre-calculated values.
+        return size;
+    }
+
+    return *it;
+}
 
 }

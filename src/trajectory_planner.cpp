@@ -111,8 +111,8 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
     // The height and width of the canvas we draw the circles on.
     const unsigned int mask_pixel_size = 2 * pixel_radius;
 
-    const size_t padded_width = occupancy_map.width() + mask_pixel_size - 1;
-    const size_t padded_height = occupancy_map.height() + mask_pixel_size - 1;
+    const size_t padded_width = fast_fft_size(occupancy_map.width() + mask_pixel_size - 1);
+    const size_t padded_height = fast_fft_size(occupancy_map.height() + mask_pixel_size - 1);
 
     Buffer<double> dummy_buffer(padded_width, padded_height);
     FFTPlan plan_forward = FFTPlan::plan_forward(dummy_buffer);
@@ -216,8 +216,8 @@ Costs TrajectoryPlanner::create_costs(
 
     // Buffers are extended to this size, so that the circular convolution
     // does not distort the result.
-    const size_t padded_width = occupancy_map.width() + footprint_pixel_size - 1;
-    const size_t padded_height = occupancy_map.height() + footprint_pixel_size - 1;
+    const size_t padded_width = fast_fft_size(occupancy_map.width() + footprint_pixel_size - 1);
+    const size_t padded_height = fast_fft_size(occupancy_map.height() + footprint_pixel_size - 1);
 
     //
     // Process input map.
@@ -440,11 +440,11 @@ std::vector<std::tuple<size_t, size_t, double>> TrajectoryPlanner::extract_costs
     const Buffer<double>& convoluted_occupancy_map,
     const Buffer<double>& convoluted_cost_map)
 {
-    if (convoluted_occupancy_map.width() != map_width + 2 * offset - 1) {
+    if (convoluted_occupancy_map.width() < map_width + 2 * offset - 1) {
         throw std::runtime_error("Convoluted occupancy map has wrong width.");
     }
 
-    if (convoluted_occupancy_map.height() != map_height + 2 * offset - 1) {
+    if (convoluted_occupancy_map.height() < map_height + 2 * offset - 1) {
         throw std::runtime_error("Convoluted occupancy map has wrong height.");
     }
 

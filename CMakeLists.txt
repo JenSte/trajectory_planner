@@ -159,6 +159,7 @@ if(BUILD_TESTING)
         "src/planning_3d.cpp"
         "src/trajectory_planner.cpp"
         "test/test_a_star.cpp"
+        "test/test_convolution.cpp"
         "test/test_planning_3d.cpp"
     )
 
