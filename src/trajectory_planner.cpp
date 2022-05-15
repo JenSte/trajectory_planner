@@ -126,46 +126,81 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
         plan_forward.frequency_domain_height());
     plan_forward.execute(occupancy_map_padded, occupancy_map_spectrum);
 
-    // Stores the cost calculated for a given radius.
-    std::unordered_map<unsigned int, Buffer<double>> cost_images;
+    // Stores the cost calculated in the threads.
+    std::vector<Buffer<double>> cost_images;
     std::mutex cost_images_mutex;
 
-    // Create a buffer that contains a non-zero value at positions that are within
-    // a range of 'radius' pixels around obstacles in the occupancy map. This is
-    // done by doing a convolution between the occupancy map and a circle of the
-    // given size. The resulting buffer is stored in 'cost_images'.
-    auto calculate_cost = [&](unsigned int radius) {
-        Buffer<double> mask_image(padded_width, padded_height);
-        draw_circle(mask_image, mask_pixel_size, radius);
+    // Calculate the combined costs for a given number of radius values. Each thread
+    // processes a number of radii (instead of posting a function for each radius
+    // to the thread pool), so that the combining of the result of multiple radii can
+    // also done in parallel in the threads.
+    auto process_work = [&](const std::vector<unsigned int>& work) {
+        // The result (the maximum of all layers) for all radii that are passed in
+        // is placed here.
+        Buffer<double> result(occupancy_map.width(), occupancy_map.height());
 
+        // Buffer to draw a circle on, that is then convoluted with the occupancy
+        // map. (Also used for the result of the inverse FFT.)
+        Buffer<double> mask_image(padded_width, padded_height);
+
+        // Holds the result of the FFT of the circle.
         Buffer<fftw_complex> mask_image_spectrum(
             plan_forward.frequency_domain_width(),
             plan_forward.frequency_domain_height());
-        plan_forward.execute(mask_image, mask_image_spectrum);
 
-        multiply_buffers(mask_image_spectrum, occupancy_map_spectrum);
+        // For each radius value, a circle is drawn on 'mask_image' and then convoluted
+        // with the occupancy map. From the result, each cell is checked if it is
+        // within 'radius' distance of something on the occupancy map, and the result
+        // is combined in 'result'.
+        for (const unsigned int radius: work) {
+            mask_image.set_zero();
+            draw_circle(mask_image, mask_pixel_size, radius);
 
-        Buffer<double> result(padded_width, padded_height);
-        plan_backward.execute(mask_image_spectrum, result);
+            // Convolute the circle with the occupancy map.
+            plan_forward.execute(mask_image, mask_image_spectrum);
+            multiply_buffers(mask_image_spectrum, occupancy_map_spectrum);
+            plan_backward.execute(mask_image_spectrum, mask_image);
+
+            // The cost falls off from 1.0 next to an obstacle to nearly 0.0.
+            const double cost = exp((-5.0 * radius) / pixel_radius);
+
+            for (size_t y = 0; y < result.height(); y++) {
+                for (size_t x = 0; x < result.width(); x++) {
+                    // Get the value that is offset by the center coordinate of the circle.
+                    const double pixel_value = mask_image.at(x + pixel_radius, y + pixel_radius);
+
+                    if (pixel_value > 0.5) {
+                        result.at(x, y) = std::max(result.at(x, y), cost);
+                    }
+                }
+            }
+        }
 
         std::lock_guard<std::mutex> lock(cost_images_mutex);
-        cost_images.emplace(radius, std::move(result));
+        cost_images.emplace_back(std::move(result));
     };
 
     log_callback("Creating inflation layers...");
 
+    // The number of threads that are used (if threading is requested).
+    const unsigned int threads = std::thread::hardware_concurrency();
+
     std::unique_ptr<boost::asio::thread_pool> pool;
     if (multi_threaded) {
-        pool = std::make_unique<boost::asio::thread_pool>(
-            std::thread::hardware_concurrency());
+        pool = std::make_unique<boost::asio::thread_pool>(threads);
     }
 
+    // Distribute the work on the threads.
+    std::vector<std::vector<unsigned int>> work(threads);
     for (unsigned int r = 0; r < pixel_radius; r++) {
+        work.at(r % threads).push_back(r);
+    }
+
+    for (const std::vector<unsigned int>& w: work) {
         if (multi_threaded) {
-            boost::asio::post(
-                *pool, [calculate_cost, r]{ calculate_cost(r); });
+            boost::asio::post(*pool, [&process_work, &w]{ process_work(w); });
         } else {
-            calculate_cost(r);
+            process_work(w);
         }
     }
 
@@ -179,21 +214,10 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
     Buffer<double> cost_map(occupancy_map.width(), occupancy_map.height());
 
     // Combine all the resulting cost images into one.
-    for (const auto& it: cost_images) {
-        const unsigned int radius = std::get<0>(it);
-        const Buffer<double>& buffer = std::get<1>(it);
-
-        // The cost falls off from 1.0 next to an obstalce to nearly 0.0.
-        const double cost = exp((-5.0 * radius) / pixel_radius);
-
+    for (const Buffer<double>& ci: cost_images) {
         for (size_t y = 0; y < cost_map.height(); y ++) {
             for (size_t x = 0; x < cost_map.width(); x ++) {
-                // Get the value that is offset by the center coordinate of the circle.
-                const double pixel_value = buffer.at(x + pixel_radius, y + pixel_radius);
-
-                if (pixel_value > 0.5) {
-                    cost_map.at(x, y) = std::max(cost_map.at(x, y), cost);
-                }
+                cost_map.at(x, y) = std::max(cost_map.at(x, y), ci.at(x, y));
             }
         }
     }
