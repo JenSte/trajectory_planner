@@ -80,8 +80,8 @@ public:
     // Return a reference to a single element.
     T& at(size_t x, size_t y)
     {
-        assert((0 <= x) && (x < width_));
-        assert((0 <= y) && (y < height_));
+        assert(x < width_);
+        assert(y < height_);
 
         return raw()[y * width_ + x];
     }
