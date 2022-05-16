@@ -19,7 +19,7 @@ public:
 
     // Create a buffer of the requested dimensions. The buffer's memory will be set
     // to all zeros after it is allocated.
-    Buffer(size_t width, size_t height)
+    explicit Buffer(size_t width, size_t height)
         : width_(width)
         , height_(height)
         , data_(fftw_malloc(byte_size()), &fftw_free)
@@ -27,13 +27,18 @@ public:
         set_zero();
     }
 
-    // Create a new buffer and copy over the data from the given buffer.
-    Buffer(const Buffer& buffer)
+    // Move constructor.
+    Buffer(Buffer&& buffer)
         : width_(buffer.width())
         , height_(buffer.height())
-        , data_(fftw_malloc(byte_size()), &fftw_free)
+        , data_(std::move(buffer.data_))
     {
-        memcpy(raw(), buffer.raw(), byte_size());
+    }
+
+    // Create a new buffer and copy over the data.
+    Buffer copy()
+    {
+        return Buffer(*this);
     }
 
     // Return the width of the buffer.
@@ -100,6 +105,17 @@ private:
 
     // A pointer to the actual buffer memory.
     pointer_type data_;
+
+    explicit Buffer(const Buffer& buffer)
+        : width_(buffer.width())
+        , height_(buffer.height())
+        , data_(fftw_malloc(byte_size()), &fftw_free)
+    {
+        memcpy(raw(), buffer.raw(), byte_size());
+    }
+
+    Buffer& operator=(const Buffer<T>&) = delete;
+    Buffer& operator=(const Buffer<T>&&) = delete;
 
     // Return the size of the data pointed to by 'data_'.
     size_t byte_size() const

@@ -74,7 +74,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
 {
     // Create a dummy cost map when loading the planner from a file,
     // as the cost map is only used for debugging purposes.
-    Buffer<double> cost_map(occupancy_map);
+    Buffer<double> cost_map(occupancy_map.width(), occupancy_map.height());
     draw_text(cost_map, "Cost map not available for planners loaded from cache.");
 
     Costs costs(0, 1);
@@ -298,7 +298,7 @@ Costs TrajectoryPlanner::create_costs(
 
         // We need the footprint's spectrum two times, so we make a copy
         // instead of transforming it again.
-        Buffer<fftw_complex> footprint_image_spectrum_2(footprint_image_spectrum_1);
+        Buffer<fftw_complex> footprint_image_spectrum_2 = footprint_image_spectrum_1.copy();
 
         // Multiply the corresponding spectrum buffers.
         multiply_buffers(footprint_image_spectrum_1, occupancy_map_spectrum);

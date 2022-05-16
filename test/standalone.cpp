@@ -50,7 +50,7 @@ int main()
             resolution,
             inflation_radius,
             footprint,
-            map);
+            std::move(map));
     std::chrono::duration<double> creation_duration =
         std::chrono::steady_clock::now() - timestamp_start;
 
@@ -64,7 +64,7 @@ int main()
 
     std::cout << "planning\n";
     trajectory_planner::Pose start{50, 50, 0};
-    trajectory_planner::Pose goal{50, static_cast<unsigned int>(map.height()) - 50, 0};
+    trajectory_planner::Pose goal{50, static_cast<unsigned int>(map_height) - 50, 0};
     timestamp_start = std::chrono::steady_clock::now();
     trajectory_planner::TrajectoryPlanner::Result result = planner->plan(start, goal);
     std::chrono::duration<double> planning_duration =
