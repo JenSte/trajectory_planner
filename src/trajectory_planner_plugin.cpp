@@ -130,7 +130,7 @@ void TrajectoryPlannerPlugin::configure(
 
     pub_3d_debug_map_ =
         node_->create_publisher<nav_msgs::msg::OccupancyGrid>(
-            "~/" + name + "/three_dimension_planner_search_space",
+            "~/" + name + "/three_dimension_planner_visited_space",
             rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
 
     pub_5d_search_space_ =

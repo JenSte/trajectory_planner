@@ -4,7 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /tp/3d search space1/Topic1
+        - /tp/3d opened space1/Topic1
         - /tp/path1/Topic1
       Splitter Ratio: 0.47033897042274475
     Tree Height: 716
@@ -136,20 +136,20 @@ Visualization Manager:
       Color Scheme: map
       Draw Behind: false
       Enabled: false
-      Name: tp/3d search space
+      Name: tp/3d opened space
       Topic:
         Depth: 5
         Durability Policy: Transient Local
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /planner_server/trajectory_planner/three_dimension_planner_search_space
+        Value: /planner_server/trajectory_planner/three_dimension_planner_visited_space
       Update Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /planner_server/trajectory_planner/three_dimension_planner_search_space_updates
+        Value: /planner_server/trajectory_planner/three_dimension_planner_visited_space_updates
       Use Timestamp: false
       Value: false
     - Alpha: 0.699999988079071
