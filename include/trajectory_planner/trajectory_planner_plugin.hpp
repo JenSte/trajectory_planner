@@ -41,6 +41,9 @@ private:
     // Pointer to the costmap_ros passed to the 'configure()' function.
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
 
+    // The name of the node.
+    std::string name_;
+
     // Logger object used in the whole plugin.
     std::optional<rclcpp::Logger> logger_;
 
@@ -50,9 +53,6 @@ private:
     // The distance for up to which obstacles are inflated when calculating the
     // cost map.
     double inflation_radius_;
-
-    // Options for the path planning that are passed to the planning function.
-    TrajectoryPlanner::PlanningParameters planning_parameters_;
 
     // The name of a directory to cache planners.
     std::string cache_directory_;
@@ -197,6 +197,14 @@ private:
     // Return the file name that shall be used to cache a planner's cost object.
     std::string cache_file_name(
         const std::string& hash) const;
+
+    // Declare all the used ROS parameters and also read the ones that influence
+    // the behaviour of the costmap creation.
+    void declare_parameters();
+
+    // Read the ROS parameters that influence the behaviour of the planner (while
+    // planning, not during the creation of the costmap).
+    TrajectoryPlanner::PlanningParameters read_planning_parameters() const;
 };
 
 }

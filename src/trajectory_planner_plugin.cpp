@@ -29,89 +29,14 @@ void TrajectoryPlannerPlugin::configure(
 {
     node_ = parent.lock();
     costmap_ros_ = costmap_ros;
+    name_ = name;
 
     logger_ = node_->get_logger().get_child(name);
 
     RCLCPP_DEBUG((*logger_), "Trajectory Planner: configure()");
 
-    nav2_util::declare_parameter_if_not_declared(
-        node_, name + ".angle_granularity", rclcpp::ParameterValue(128));
-    node_->get_parameter(name + ".angle_granularity", angle_granularity_);
-    if (angle_granularity_ < 0) {
-        angle_granularity_ = 128;
-        RCLCPP_ERROR_STREAM(
-            (*logger_),
-            "invalid 'angle_granularity' value, using " << angle_granularity_);
-    }
+    declare_parameters();
 
-    nav2_util::declare_parameter_if_not_declared(
-        node_, name + ".inflation_radius", rclcpp::ParameterValue(2.0));
-    node_->get_parameter(name + ".inflation_radius", inflation_radius_);
-    if (inflation_radius_ <= 0.01) {
-        inflation_radius_ = 2.0;
-        RCLCPP_ERROR_STREAM(
-            (*logger_),
-            "invalid 'inflation_radius' value, using " << inflation_radius_);
-    }
-
-    nav2_util::declare_parameter_if_not_declared(
-        node_, name + ".inflation_5d_radius", rclcpp::ParameterValue(0.2));
-    node_->get_parameter(
-        name + ".inflation_5d_radius",
-        planning_parameters_.inflation_5d_radius);
-    if (planning_parameters_.inflation_5d_radius < 0.01) {
-        planning_parameters_.inflation_5d_radius = 0.01;
-        RCLCPP_ERROR_STREAM(
-            (*logger_),
-            "invalid 'inflation_5d_radius' value, using " <<
-            planning_parameters_.inflation_5d_radius);
-    }
-
-    nav2_util::declare_parameter_if_not_declared(
-        node_, name + ".inflation_5d_lookahead", rclcpp::ParameterValue(0.5));
-    node_->get_parameter(
-        name + ".inflation_5d_lookahead",
-        planning_parameters_.inflation_5d_lookahead);
-    if (planning_parameters_.inflation_5d_lookahead < 0.01) {
-        planning_parameters_.inflation_5d_lookahead = 0.01;
-        RCLCPP_ERROR_STREAM(
-            (*logger_),
-            "invalid 'inflation_5d_lookahead' value, using " <<
-            planning_parameters_.inflation_5d_lookahead);
-    }
-
-    nav2_util::declare_parameter_if_not_declared(
-        node_, name + ".cache_directory", rclcpp::ParameterValue(""));
-    node_->get_parameter(name + ".cache_directory", cache_directory_);
-
-    nav2_util::declare_parameter_if_not_declared(
-        node_, name + ".debug_directory", rclcpp::ParameterValue(""));
-    node_->get_parameter(name + ".debug_directory", debug_directory_);
-
-    RCLCPP_INFO_STREAM(
-        (*logger_),
-        "angle_granularity: " << angle_granularity_);
-    RCLCPP_INFO_STREAM(
-        (*logger_),
-        "inflation_radius: " <<
-        std::setprecision(3) << std::fixed <<
-        inflation_radius_ << " m");
-    RCLCPP_INFO_STREAM(
-        (*logger_),
-        "inflation_5d_radius: " <<
-        std::setprecision(3) << std::fixed <<
-        planning_parameters_.inflation_5d_radius << " m");
-    RCLCPP_INFO_STREAM(
-        (*logger_),
-        "inflation_5d_lookahead: " <<
-        std::setprecision(3) << std::fixed <<
-        planning_parameters_.inflation_5d_lookahead << " m");
-    RCLCPP_INFO_STREAM(
-        (*logger_),
-        "cache_directory: '" << cache_directory_ << "'");
-    RCLCPP_INFO_STREAM(
-        (*logger_),
-        "debug_directory: '" << debug_directory_ << "'");
 
     pub_cost_map_ =
         node_->create_publisher<nav_msgs::msg::OccupancyGrid>(
@@ -577,8 +502,10 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
         (*logger_),
         "Goal:  " << pose_to_string(goal));
 
+    TrajectoryPlanner::PlanningParameters planning_parameters = read_planning_parameters();
+
     auto timestamp_start = std::chrono::steady_clock::now();
-    TrajectoryPlanner::Result result = planner->plan(planning_parameters_, start, goal);
+    TrajectoryPlanner::Result result = planner->plan(planning_parameters, start, goal);
     auto timestamp_end = std::chrono::steady_clock::now();
 
     std::chrono::duration<double> duration = timestamp_end - timestamp_start;
@@ -824,6 +751,124 @@ std::string TrajectoryPlannerPlugin::cache_file_name(
     const std::string& hash) const
 {
     return cache_directory_ + "/stored_trajectory_planner_" + hash + ".bin";
+}
+
+void TrajectoryPlannerPlugin::declare_parameters()
+{
+    // Parameters that influence the creation of the costmap. We are not able to
+    // react to changes of them, so we mark them as read-only so that users are
+    // not confused when changing them via rqt would not result in any change of
+    // the cost map.
+
+    rcl_interfaces::msg::ParameterDescriptor ro_descriptor;
+    ro_descriptor.read_only = true;
+
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".angle_granularity", rclcpp::ParameterValue(128), ro_descriptor);
+    node_->get_parameter(name_ + ".angle_granularity", angle_granularity_);
+    if (angle_granularity_ < 0) {
+        angle_granularity_ = 128;
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "invalid 'angle_granularity' value, using " << angle_granularity_);
+    }
+
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".inflation_radius", rclcpp::ParameterValue(2.0), ro_descriptor);
+    node_->get_parameter(name_ + ".inflation_radius", inflation_radius_);
+    if (inflation_radius_ <= 0.01) {
+        inflation_radius_ = 2.0;
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "invalid 'inflation_radius' value, using " << inflation_radius_);
+    }
+
+    // Unfortunately, rqt ignores the read only value for string parameters, even
+    // when the correct type value is specified.
+    ro_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".cache_directory", rclcpp::ParameterValue(""), ro_descriptor);
+    node_->get_parameter(name_ + ".cache_directory", cache_directory_);
+
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".debug_directory", rclcpp::ParameterValue(""), ro_descriptor);
+    node_->get_parameter(name_ + ".debug_directory", debug_directory_);
+
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "angle_granularity: " << angle_granularity_);
+
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "inflation_radius: " <<
+        std::setprecision(3) << std::fixed <<
+        inflation_radius_ << " m");
+
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "cache_directory: '" << cache_directory_ << "'");
+
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "debug_directory: '" << debug_directory_ << "'");
+
+    // Parameters that only influence the planning (not the costmap creation). We
+    // add ranges and descriptions for each of the parameters.
+
+    rcl_interfaces::msg::ParameterDescriptor descriptor;
+    descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE;
+    descriptor.floating_point_range = {rcl_interfaces::msg::FloatingPointRange()};
+
+    descriptor.description = "The maximum radius to inflate the 3D path, in meter.";
+    descriptor.floating_point_range.at(0).from_value = 0.02;
+    descriptor.floating_point_range.at(0).to_value = 0.5;
+    descriptor.floating_point_range.at(0).step = 0.02;
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".inflation_5d_radius", rclcpp::ParameterValue(0.2), descriptor);
+
+    descriptor.description = "Lookahead distance when \"measuring\" the curvature of the 3D path, in meter";
+    descriptor.floating_point_range.at(0).from_value = 0.02;
+    descriptor.floating_point_range.at(0).to_value = 1.0;
+    descriptor.floating_point_range.at(0).step = 0.02;
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".inflation_5d_lookahead", rclcpp::ParameterValue(0.5), descriptor);
+}
+
+TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_parameters() const
+{
+    TrajectoryPlanner::PlanningParameters result;
+
+    node_->get_parameter(name_ + ".inflation_5d_radius", result.inflation_5d_radius);
+    if (result.inflation_5d_radius < 0.01) {
+        result.inflation_5d_radius = 0.01;
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "invalid 'inflation_5d_radius' value, using " <<
+            result.inflation_5d_radius);
+    }
+
+    node_->get_parameter(name_ + ".inflation_5d_lookahead", result.inflation_5d_lookahead);
+    if (result.inflation_5d_lookahead < 0.01) {
+        result.inflation_5d_lookahead = 0.01;
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "invalid 'inflation_5d_lookahead' value, using " <<
+            result.inflation_5d_lookahead);
+    }
+
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "inflation_5d_radius: " <<
+        std::setprecision(3) << std::fixed <<
+        result.inflation_5d_radius << " m");
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "inflation_5d_lookahead: " <<
+        std::setprecision(3) << std::fixed <<
+        result.inflation_5d_lookahead << " m");
+
+    return result;
 }
 
 }
