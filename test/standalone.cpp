@@ -68,6 +68,17 @@ int main()
     pp.inflation_5d_radius = 0.2;
     pp.inflation_5d_lookahead = 0.4;
 
+    pp.linear_velocity_maximum = 0.5;
+    pp.angular_velocity_maximum = 0.5;
+
+    pp.linear_velocity_steps = 5;
+    pp.angular_velocity_steps = 5;
+
+    // pp.linear_acceleration_maximum =
+    // pp.angular_acceleration_maximum =
+
+    pp.time_delta = 0.1;
+
     trajectory_planner::Pose start{50, 50, 0};
     trajectory_planner::Pose goal{50, static_cast<unsigned int>(map_height) - 50, 0};
 
@@ -76,10 +87,14 @@ int main()
     std::chrono::duration<double> planning_duration =
         std::chrono::steady_clock::now() - timestamp_start;
 
-    if (result.path.empty()) {
-        std::cout << "no path found\n";
+    if (result.search_result_3d.path.empty()) {
+        std::cout << "no 3D path found\n";
     } else {
-        std::cout << "path found with " << result.path.size() << " poses\n";
+        std::cout << "3D path found with " << result.search_result_3d.path.size() << " poses\n";
+
+        for (const trajectory_planner::five::SegmentSearchResult& seg: result.search_result_5d.segment) {
+            std::cout << "5D segment found with " << seg.path.size() << " poses\n";
+        }
     }
 
     std::cout

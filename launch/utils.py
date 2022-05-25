@@ -24,6 +24,12 @@ def generate_launch_description():
                 executable="plot_augmented_path.py",
                 output="screen",
             ),
+            launch_ros.actions.Node(
+                name="forward_simulation",
+                package="trajectory_planner",
+                executable="forward_simulation.py",
+                output="screen",
+            ),
             launch.actions.ExecuteProcess(
                 name="echo_clicked_point",
                 cmd=["ros2", "topic", "echo", "--field", "point", "/clicked_point", "geometry_msgs/msg/PointStamped"],

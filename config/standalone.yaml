@@ -14,7 +14,7 @@ planner_server:
 
       # The distance up to which obstacles are inflated to calculate the costs,
       # in meter.
-      inflation_radius: 5.0
+      inflation_radius: 1.0
 
       # When inflating the 3D path to create the search space for the 5D planner,
       # this is the maximum inflation radius (in meter), used when the 3D path is
@@ -33,6 +33,15 @@ planner_server:
       # The directory to write debug images to when creating the cost maps. Disable
       # this by setting this to "".
       debug_directory: "/tmp"
+
+      # The maximum linear velocity of the vehicle, in meter/second.
+      linear_velocity_maximum: 0.5
+
+      # The maximum angular velocity of the vehicle, in radian/second.
+      angular_velocity_maximum: 0.5
+
+      # The time increment used when simulating the motion, in second.
+      simulation_time_delta: 0.1
 
 global_costmap:
   global_costmap:

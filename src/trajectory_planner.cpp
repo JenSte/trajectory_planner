@@ -599,20 +599,42 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
         throw std::invalid_argument("Goal pose is not valid.");
     }
 
+    // This object is used to do the simulation of the 5D movement.
+    MotionModel motion_model(
+        parameters.time_delta,
+        map_resolution_,
+        costs_.angle_granularity(),
+        //MotionModel::VelocitySpacing::LOGARITHMIC,
+        //MotionModel::VelocitySpacing::LOGARITHMIC,
+        MotionModel::VelocitySpacing::LINEAR,
+        MotionModel::VelocitySpacing::LINEAR,
+        parameters.linear_velocity_maximum,
+        parameters.angular_velocity_maximum,
+        parameters.linear_velocity_steps,
+        parameters.angular_velocity_steps,
+        parameters.linear_acceleration_maximum,
+        parameters.angular_acceleration_maximum);
+
+    log_motion_model(motion_model);
+
     // Plan in three dimensions.
     three::SearchResult3D result_3d = three::plan(costs_, start, goal);
+
+    log_callback_("3D search finished");
 
     // Plan in five dimensions.
     five::SearchResult5D result_5d = five::plan(
         true,
+        map_resolution_,
         parameters.inflation_5d_radius / map_resolution_,
         parameters.inflation_5d_lookahead / map_resolution_,
         costs_,
+        motion_model,
         result_3d.path);
 
-    // TODO: convert the 5D search result back to a path and use this
-    // instead of result_3d.path.
-    return Result{result_3d.path, result_3d, result_5d};
+    log_callback_("5D search finished");
+
+    return Result{std::move(result_3d), std::move(result_5d), std::move(motion_model)};
 }
 
 void TrajectoryPlanner::store(
@@ -695,6 +717,43 @@ unsigned int TrajectoryPlanner::draw_footprint(
     }
 
     return std::max(1u, black);
+}
+
+void TrajectoryPlanner::log_motion_model(
+    const MotionModel& motion_model) const
+{
+    log_callback_("motion model:");
+
+    std::ostringstream ss;
+
+    ss << "  linear steps (m/s):   " << std::setprecision(2) << std::fixed;
+    for (double vel: motion_model.linear_steps()) {
+        ss << " " << vel;
+    }
+    log_callback_(ss.str());
+
+    ss.str("");
+    ss << "  angular steps (rad/s):" << std::setprecision(2) << std::fixed;
+    for (double vel: motion_model.angular_steps()) {
+        ss << " " << vel;
+    }
+    log_callback_(ss.str());
+
+    ss.str("");
+    ss
+        << "  linear acceleration between steps:  "
+        << std::setprecision(3) << std::fixed
+        << (motion_model.linear_steps().at(1) / motion_model.time_delta())
+        << " m/s^2";
+    log_callback_(ss.str());
+
+    ss.str("");
+    ss
+        << "  angular acceleration between steps: "
+        << std::setprecision(3) << std::fixed
+        << (motion_model.angular_steps().at(1) / motion_model.time_delta())
+        << " rad/s^2";
+    log_callback_(ss.str());
 }
 
 }

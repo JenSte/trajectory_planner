@@ -67,9 +67,67 @@ struct Pose2D
     }
 };
 
+// A pose as used by the five dimensional planner.
+struct Pose5D
+{
+    // The X coordinate of the cell.
+    unsigned int x;
+
+    // The Y coordinate of the cell.
+    unsigned int y;
+
+    // A value corresponding to the orientation.
+    unsigned int angle_index;
+
+    // Distinct types to make swapping the different indices harder.
+    enum class LinearVelocity: int {};
+    enum class AngularVelocity: int {};
+
+    // A value (index) corresponding to the linear velocity.
+    LinearVelocity linear_velocity;
+
+    // A value (index) corresponding to the angular velocity.
+    AngularVelocity angular_velocity;
+
+    bool operator==(
+        const Pose5D& other) const
+    {
+        const auto a = std::tie(x, y, angle_index, linear_velocity, angular_velocity);
+        const auto b = std::tie(
+            other.x, other.y, other.angle_index, other.linear_velocity, other.angular_velocity);
+
+        return a == b;
+    }
+
+    friend bool operator<(
+        const Pose5D& lh, const Pose5D& rh)
+    {
+        const auto a = std::tie(lh.x, lh.y, lh.angle_index, lh.linear_velocity, lh.angular_velocity);
+        const auto b = std::tie(rh.x, rh.y, rh.angle_index, rh.linear_velocity, rh.angular_velocity);
+
+        return a < b;
+    }
+
+    friend std::size_t hash_value(const Pose5D& p)
+    {
+        std::size_t seed = 0;
+
+        boost::hash_combine(seed, p.x);
+        boost::hash_combine(seed, p.y);
+        boost::hash_combine(seed, p.angle_index);
+        boost::hash_combine(seed, p.linear_velocity);
+        boost::hash_combine(seed, p.angular_velocity);
+
+        return seed;
+    }
+};
+
 // A path from one pose to another. The first element is the start pose, the
 // last element is the goal.
 using Path = std::vector<Pose>;
+
+// A path from one pose to another, as returned by the 5D planning algorithm.
+using Path5D = std::vector<Pose5D>;
 
 }
 

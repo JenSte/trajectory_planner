@@ -8,11 +8,11 @@ import math
 import rclpy.node
 import rclpy.qos
 import transforms3d
-import yaml
 
 from geometry_msgs.msg import Point32, PolygonStamped
 from nav_msgs.msg import Path
-from rcl_interfaces.srv import GetParameters
+
+import utils
 
 
 class AnimatePath(rclpy.node.Node):
@@ -20,7 +20,7 @@ class AnimatePath(rclpy.node.Node):
     def __init__(self, costmap_node, path_topic):
         super().__init__("animate_path")
 
-        self._footprint = self.get_footprint(costmap_node)
+        self._footprint = utils.get_footprint(self, costmap_node)
         self.get_logger().info(f"Costmap footprint: {self._footprint}")
 
         self._poses = []
@@ -39,34 +39,6 @@ class AnimatePath(rclpy.node.Node):
         )
 
         self._timer = None
-
-    def get_footprint(self, costmap_node):
-        """Get the robot's footprint polygon from the costmap node."""
-
-        # ros2 does not allow easy access to parameters of another node any more,
-        # a service call to the other node has to be used to get it.
-
-        service_name = f"{costmap_node}/get_parameters"
-        service_client = self.create_client(GetParameters, service_name)
-
-        while not service_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info(f"Waiting for service '{service_name}'...")
-
-        request = GetParameters.Request()
-        request.names.append("footprint")
-        future = service_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
-
-        response = future.result()
-        if response is None:
-            e = future.exception()
-            raise RuntimeError(f"Error getting footprint parameter: {e}")
-
-        try:
-            string_value = response.values[0].string_value
-            return yaml.safe_load(string_value)
-        except Exception as e:
-            raise RuntimeError(f"Error reading service response: {e}")
 
     def path_callback(self, path):
         """Store the poses of the path for processing by the timer callback."""
@@ -125,7 +97,7 @@ def main(args=None):
 
     animate_path = AnimatePath(
         "/global_costmap/global_costmap",
-        "/planner_server/trajectory_planner/path",
+        "/planner_server/trajectory_planner/five_dimension_planner_path",
     )
 
     rclpy.spin(animate_path)

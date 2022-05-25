@@ -61,6 +61,7 @@ add_library(${PROJECT_NAME}_plugin SHARED
     "include/trajectory_planner/buffer.hpp"
     "include/trajectory_planner/convolution.hpp"
     "include/trajectory_planner/costs.hpp"
+    "include/trajectory_planner/motion_model.hpp"
     "include/trajectory_planner/planning_3d.hpp"
     "include/trajectory_planner/planning_5d.hpp"
     "include/trajectory_planner/trajectory_planner.hpp"
@@ -69,6 +70,7 @@ add_library(${PROJECT_NAME}_plugin SHARED
     "src/buffer.cpp"
     "src/convolution.cpp"
     "src/costs.cpp"
+    "src/motion_model.cpp"
     "src/planning_3d.cpp"
     "src/planning_5d.cpp"
     "src/trajectory_planner.cpp"
@@ -121,7 +123,9 @@ install(FILES ${PROJECT_NAME}_plugin.xml
 install(PROGRAMS
     script/animate_path.py
     script/client.py
+    script/forward_simulation.py
     script/plot_augmented_path.py
+    script/utils.py
     DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -133,6 +137,7 @@ install(DIRECTORY map DESTINATION share/${PROJECT_NAME})
 rosidl_generate_interfaces(${PROJECT_NAME}
     "msg/AugmentedPose.msg"
     "msg/AugmentedPath.msg"
+    "msg/MotionModel.msg"
     DEPENDENCIES
         geometry_msgs
 )
@@ -142,6 +147,8 @@ rosidl_target_interfaces(${PROJECT_NAME}_plugin
 )
 
 if(BUILD_TESTING)
+    pkg_search_module(GMOCK REQUIRED gmock)
+
     find_package(ament_lint_auto REQUIRED)
     ament_lint_auto_find_test_dependencies()
 
@@ -151,6 +158,7 @@ if(BUILD_TESTING)
         "include/trajectory_planner/buffer.hpp"
         "include/trajectory_planner/convolution.hpp"
         "include/trajectory_planner/costs.hpp"
+        "include/trajectory_planner/motion_model.hpp"
         "include/trajectory_planner/planning_3d.hpp"
         "include/trajectory_planner/planning_5d.hpp"
         "include/trajectory_planner/trajectory_planner.hpp"
@@ -159,12 +167,16 @@ if(BUILD_TESTING)
         "src/buffer.cpp"
         "src/convolution.cpp"
         "src/costs.cpp"
+        "src/motion_model.cpp"
         "src/planning_3d.cpp"
         "src/planning_5d.cpp"
         "src/trajectory_planner.cpp"
+        "test/motion_model_fixtures.cpp"
+        "test/motion_model_fixtures.hpp"
         "test/test_a_star.cpp"
         "test/test_convolution.cpp"
         "test/test_costs.cpp"
+        "test/test_motion_model.cpp"
         "test/test_planning_3d.cpp"
         "test/test_planning_5d.cpp"
     )
@@ -173,11 +185,13 @@ if(BUILD_TESTING)
         PRIVATE
             "include"
             ${Boost_INCLUDE_DIR}
+            ${GMOCK_INCLUDE_DIRS}
             ${OpenCV_INCLUDE_DIRS}
             PkgConfig::FFTW
     )
 
     target_link_libraries(${PROJECT_NAME}_test
+        ${GMOCK_LDFLAGS}
         ${OpenCV_LIBS}
         Boost::iostreams
         Boost::serialization

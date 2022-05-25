@@ -1,7 +1,9 @@
 #include "gtest/gtest.h"
 
 #include "trajectory_planner/planning_5d.hpp"
+#include "motion_model_fixtures.hpp"
 
+using namespace trajectory_planner;
 using namespace trajectory_planner::five;
 
 TEST(Planning5D, SplitSegments)
@@ -99,4 +101,37 @@ TEST(Planning5D, CircleCoordinates)
     EXPECT_NE(s.find(std::make_tuple(0, 0)), s.end());
     EXPECT_NE(s.find(std::make_tuple(0, 1)), s.end());
     EXPECT_NE(s.find(std::make_tuple(1, 0)), s.end());
+}
+
+TEST_F(LinearMotionModel, CalculateMovementDistance)
+{
+    unsigned int angle_index = 6; // approx 34 deg
+    int linear_index = 6; // 0.3 m/s, checked below
+
+    ASSERT_EQ(mm->linear_steps().size(), 11u);
+    EXPECT_NEAR(mm->linear_steps().at(linear_index), 0.300, 0.001);
+
+    Pose5D from{
+        10,
+        20,
+        angle_index,
+        Pose5D::LinearVelocity(linear_index),
+        Pose5D::AngularVelocity(0)};
+
+    Pose5D to{
+        11,
+        21,
+        angle_index,
+        Pose5D::LinearVelocity(linear_index),
+        Pose5D::AngularVelocity(0)};
+
+    double cell_distance, real_distance, error, angle_error;
+        std::tie(cell_distance, real_distance, error, angle_error) =
+            calculate_movement_distances(
+                0.02, 64, *mm, from, to);
+
+    EXPECT_NEAR(cell_distance, 1.414, 0.001);
+    EXPECT_NEAR(real_distance, 1.500, 0.001);
+    EXPECT_NEAR(error, 0.298, 0.001);
+    EXPECT_NEAR(angle_error, 0.196, 0.001);
 }

@@ -31,20 +31,41 @@ public:
         // The maximum distance to look forward/backward on the 3D path when
         // "measuring" the curvature, in meter.
         double inflation_5d_lookahead;
+
+        // The maximum linear velocity of the vehicle, in meter/second.
+        double linear_velocity_maximum;
+
+        // The maximum angular velocity of the vehicle, in radian/second.
+        double angular_velocity_maximum;
+
+        // The number of steps to subdivide 'linear_velocity_maximum'.
+        unsigned int linear_velocity_steps;
+
+        // The number of steps to subdivide 'angular_velocity_maximum'.
+        unsigned int angular_velocity_steps;
+
+        // The maximum linear acceleration of the vehicle, in meter/(second^2).
+        double linear_acceleration_maximum;
+
+        // The maximum angular acceleration of the vehicle, in radian/(second^2).
+        double angular_acceleration_maximum;
+
+        // The time increment used during the simulation, in second.
+        double time_delta;
     };
 
     // The result returned by a call to 'plan()'.
     struct Result
     {
-        // The path (if found, otherwise empty).
-        Path path;
-
         // The search result of the three dimensional planner
         // used to get a rough estimate for the final path.
         three::SearchResult3D search_result_3d;
 
         // The search result fo the five dimensional planner.
         five::SearchResult5D search_result_5d;
+
+        // The motion model used to do the five dimensional planning.
+        MotionModel motion_model;
     };
 
     // Create a new planner.
@@ -189,6 +210,10 @@ private:
         unsigned int footprint_covered_pixels,
         const Buffer<double>& convoluted_occupancy_map,
         const Buffer<double>& convoluted_cost_map);
+
+    // Print some details of the motion model to the log.
+    void log_motion_model(
+        const MotionModel& motion_model) const;
 };
 
 }

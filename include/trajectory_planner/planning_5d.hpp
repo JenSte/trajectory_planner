@@ -2,6 +2,7 @@
 #define TRAJECTORY_PLANNER_PLANNING_5D_HPP
 
 #include "trajectory_planner/costs.hpp"
+#include "trajectory_planner/motion_model.hpp"
 
 // The functions in this name space implement a "five dimensional" search. This
 // means that the search happens in on cells (X, Y, Theta, linear velodicty, angular
@@ -36,9 +37,19 @@ struct Segment
 // The search result for a single segment.
 struct SegmentSearchResult
 {
+    // The directon of the segment.
+    Direction direction;
+
     // The path that was found for this segment.
-    // TODO: make this a 5d path.
-    Path path;
+    Path5D path;
+
+    // Contains the heuristic value for every pose in the path (vector has
+    // the exact same length as 'path', not used for TURN segments).
+    std::vector<double> path_heuristics;
+
+    // The cost values of the poses along the path (vector has the exact same
+    // length as 'path', not used for TURN segments).
+    std::vector<double> path_costs;
 
     // The cost object used for the search on this segment. This
     // is a subset of the global cost object, but only around the
@@ -76,12 +87,30 @@ Costs inflate_path(
     const Costs& costs,
     const Path& path);
 
+// Calculate the distance that is traveled from "pose" to "neighbour". Basically, doing
+// this calculation would should be as easy as using the Pythagorean theorem on the gris
+// coordinates of the two poses. However, because of the rounding needed to map the
+// calculated distances (floating point numbers) to the cells of the map's grid, it can
+// happen that multiple velocity combination from a given start coordinate map to the
+// same goal coordinate (on the map's grid). To handle this, this function returns a
+// tuple consisting of three distances: The easy to calculate the distance when using
+// the map cell coordinates, the distance when using the velocities without rounding,
+// and the error distance between the first two ones (calculated as vector lengths).
+std::tuple<double, double, double, double> calculate_movement_distances(
+    double map_resolution,
+    unsigned int angle_granularity,
+    const MotionModel& motion_model,
+    const Pose5D& pose,
+    const Pose5D& neighbour);
+
 // Plan in the five dimensional space, using a three dimensional path to aid the search.
 SearchResult5D plan(
     bool multi_threaded,
+    double map_resolution,
     unsigned int inflation_radius_pixels,
     unsigned int inflation_lookahead_pixels,
     const Costs& costs,
+    const MotionModel motion_model,
     const Path& path);
 }
 

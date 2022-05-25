@@ -74,9 +74,13 @@ private:
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
         pub_cost_map_;
 
-    // Publishes the created plan for debug purposes.
+    // Publishes the created 3D plan for debug purposes.
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr
-        pub_path_;
+        pub_3d_path_;
+
+    // Publishes the created 5D plan for debug purposes.
+    rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr
+        pub_5d_path_;
 
     // Publish a map showing the space visited by the 3-dimensional planner,
     // published for debug purposes.
@@ -118,6 +122,7 @@ private:
     geometry_msgs::msg::PoseStamped convert_pose(
         const nav2_costmap_2d::Costmap2D* costmap,
         const std::string& frame_id,
+        double timestamp,
         const Pose& pose,
         unsigned int angle_granularity) const;
 
@@ -163,16 +168,37 @@ private:
         const Pose& goal,
         const TrajectoryPlanner::Result result) const;
 
-    // Create an augmented path message.
+    // Create an augmented path message for a 3D search result.
     msg::AugmentedPath create_augmented_path_message(
         const std::string& name,
         const nav2_costmap_2d::Costmap2D* costmap,
         const std::string& frame_id,
         unsigned int angle_granularity,
+        const MotionModel& motion_model,
         const three::SearchResult3D& search_result) const;
 
+    // Create an augmented path message for a 5D segment search result.
+    msg::AugmentedPath create_augmented_path_message(
+        const std::string& name,
+        const nav2_costmap_2d::Costmap2D* costmap,
+        const std::string& frame_id,
+        unsigned int angle_granularity,
+        const MotionModel& motion_model,
+        const five::SegmentSearchResult& search_result) const;
+
+    // Create a motion model ROS message.
+    msg::MotionModel create_motion_model_message(
+        const MotionModel& motion_model) const;
+
+    // Create a ROS path message from the 3D search result.
+    nav_msgs::msg::Path convert_3d_search_result(
+        const nav2_costmap_2d::Costmap2D* costmap,
+        const std::string& costmap_frame_id,
+        unsigned int angle_granularity,
+        const TrajectoryPlanner::Result& result) const;
+
     // Create the ROS path message that is returned from the planning function.
-    nav_msgs::msg::Path convert_search_result(
+    nav_msgs::msg::Path convert_5d_search_result(
         const nav2_costmap_2d::Costmap2D* costmap,
         const std::string& frame_id,
         unsigned int angle_granularity,

@@ -1,4 +1,5 @@
 #include "trajectory_planner/planning_5d.hpp"
+#include "trajectory_planner/a_star.hpp"
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/weighted_sum.hpp>
@@ -11,9 +12,6 @@
 #include <cmath>
 #include <optional>
 #include <thread>
-
-#include <iostream>
-#include <iomanip>
 
 namespace trajectory_planner::five
 {
@@ -208,7 +206,6 @@ double measure_curvature(
     return std::min(1.0, accumulators::weighted_sum(acc) / denom);
 }
 
-
 Costs inflate_path(
     const CircleCoordinatesMap& coordinates_map,
     const unsigned int inflation_lookahead,
@@ -257,6 +254,117 @@ Costs inflate_path(
     return costs.intersect(subset);
 }
 
+std::vector<Pose5D> neighbours(
+    const double map_resolution,
+    const Costs& costs,
+    const MotionModel motion_model,
+    bool forward,
+    const Pose5D& pose)
+{
+    // The current position and orientation (in m and rad).
+    const double real_x = pose.x * map_resolution;
+    const double real_y = pose.y * map_resolution;
+    const double real_theta = pose.angle_index * 2 * M_PI / costs.angle_granularity();
+
+    // The real velocities (in m/s and rad/s) of the current pose.
+    double real_linear_velocity;
+    double real_angular_velocity;
+    std::tie(real_linear_velocity, real_angular_velocity) = motion_model.velocities(
+        pose.linear_velocity, pose.angular_velocity);
+
+    // "Move" with the current velocities and calculate the new 3D pose.
+    double dx, dy, dtheta;
+    std::tie(dx, dy, dtheta) = motion_model.calculate_displacement(
+        real_theta, real_linear_velocity, real_angular_velocity);
+
+    const double new_x = real_x + dx;
+    const double new_y = real_y + dy;
+    double new_theta = real_theta + dtheta;
+    if (new_theta < 0.0) {
+        new_theta += 2 * M_PI;
+    }
+
+    if ((new_x < 0.0) || (new_y < 0.0)) {
+        // Cell coordinates can only be positive.
+        return {};
+    }
+
+    const unsigned int x = static_cast<unsigned int>(std::round(new_x / map_resolution));
+    const unsigned int y = static_cast<unsigned int>(std::round(new_y / map_resolution));
+    unsigned int angle_index =
+        static_cast<unsigned int>(std::round(new_theta / ((2 * M_PI) / costs.angle_granularity())));
+
+    angle_index %= costs.angle_granularity();
+
+    if (costs.get_cost(x, y, angle_index) < (0.5 * Costs::invalid_cost)) {
+        // The new pose is not valid.
+        return {};
+    }
+
+    // Get the possible changed velocities that can be "reached" from the current ones.
+    const MotionModel::ValueType& velocities = motion_model.lookup(
+        forward, pose.linear_velocity, pose.angular_velocity);
+
+    std::vector<Pose5D> result;
+    for (const auto& vels: velocities) {
+        Pose5D new_pose{x, y, angle_index, std::get<0>(vels), std::get<1>(vels)};
+
+        if (new_pose == pose) {
+            // Skip poses that are the same due to rounding errors.
+            continue;
+        }
+
+        result.emplace_back(std::move(new_pose));
+    }
+
+    return result;
+}
+
+std::tuple<double, double, double, double> calculate_movement_distances(
+    const double map_resolution,
+    const unsigned int angle_granularity,
+    const MotionModel& motion_model,
+    const Pose5D& pose,
+    const Pose5D& neighbour)
+{
+    // Calculate the direct distance between the two poses on the grid.
+    const double cell_dx = static_cast<double>(neighbour.x) - static_cast<double>(pose.x);
+    const double cell_dy = static_cast<double>(neighbour.y) - static_cast<double>(pose.y);
+    const double cell_distance = sqrt(pow(cell_dx, 2.0) + pow(cell_dy, 2.0));
+
+    // Calculate the "real" coordinates with no rounding, when starting from 'pose'
+    // and going with the velocities of said pose.
+    const double real_theta = pose.angle_index * 2 * M_PI / angle_granularity;
+
+    double real_linear_velocity;
+    double real_angular_velocity;
+    std::tie(real_linear_velocity, real_angular_velocity) =
+        motion_model.velocities(pose.linear_velocity, pose.angular_velocity);
+
+    double real_dx, real_dy, real_dtheta;
+    std::tie(real_dx, real_dy, real_dtheta) =
+        motion_model.calculate_displacement(
+            real_theta, real_linear_velocity, real_angular_velocity);
+
+    const double real_distance = sqrt(pow(real_dx, 2.0) + pow(real_dy, 2.0));
+    const double scaled_real_distance = real_distance / map_resolution;
+
+    const double scaled_real_dx = real_dx / map_resolution;
+    const double scaled_real_dy = real_dy / map_resolution;
+
+    const double error_dx = cell_dx - scaled_real_dx;
+    const double error_dy = cell_dy - scaled_real_dy;
+
+    const double error = sqrt(pow(error_dx, 2.0) + pow(error_dy, 2.0));
+
+    const double real_angle = atan2(real_dy, real_dx);
+    const double cell_angle = atan2(cell_dy, cell_dx);
+
+    const double angel_diff = atan2(sin(real_angle - cell_angle), cos(real_angle - cell_angle));
+
+    return std::make_tuple(cell_distance, scaled_real_distance, error, abs(angel_diff));
+}
+
 SegmentSearchResult plan_turn_segment(
     const Costs& costs,
     const Segment& segment)
@@ -265,26 +373,144 @@ SegmentSearchResult plan_turn_segment(
     std::vector<Pose2D> subset{Pose2D{segment.path.at(0).x, segment.path.at(0).y}};
     Costs search_space = costs.intersect(subset);
 
-    return SegmentSearchResult{segment.path, search_space};
+    Path5D path;
+    for (const Pose& pose: segment.path) {
+        path.emplace_back(
+            Pose5D{pose.x, pose.y, pose.angle_index, Pose5D::LinearVelocity(0), Pose5D::AngularVelocity(0)});
+    }
+
+    return SegmentSearchResult{Direction::TURN, path, {}, {}, search_space};
 }
 
 SegmentSearchResult plan_movement_segment(
+    const double map_resolution,
     const CircleCoordinatesMap& coordinates_map,
     const int inflation_lookahead,
     const Costs& costs,
+    const MotionModel motion_model,
     const Segment& segment)
 {
+    // Create the space we search by inflating the 3D path.
     Costs search_space = inflate_path(
         coordinates_map, inflation_lookahead, costs, segment.path);
 
-    return SegmentSearchResult{segment.path, search_space};
+    // The real start pose, in 5D.
+    Pose5D real_start{
+        segment.path.front().x,
+        segment.path.front().y,
+        segment.path.front().angle_index,
+        Pose5D::LinearVelocity(0),
+        Pose5D::AngularVelocity(0)};
+
+    // The real goal pose, in 5D.
+    Pose5D real_goal{
+        segment.path.back().x,
+        segment.path.back().y,
+        segment.path.back().angle_index,
+        Pose5D::LinearVelocity(0),
+        Pose5D::AngularVelocity(0)};
+
+    Pose5D start = real_start;
+    Pose5D goal = real_goal;
+
+    if (segment.direction == Direction::FORWARD) {
+        start.linear_velocity = Pose5D::LinearVelocity(1);
+        goal.linear_velocity = Pose5D::LinearVelocity(1);
+    } else {
+        start.linear_velocity = Pose5D::LinearVelocity(-1);
+        goal.linear_velocity = Pose5D::LinearVelocity(-1);
+    }
+
+    auto goal_reached = [&goal](const Pose5D& pose) {
+        return pose == goal;
+    };
+
+    auto get_neighbours = [&](const Pose5D& pose) {
+         return neighbours(
+            map_resolution,
+            search_space,
+            motion_model,
+            segment.direction == Direction::FORWARD,
+            pose);
+    };
+
+    auto movement_cost = [&](const Pose5D& pose, const Pose5D& neighbour) {
+
+        double cell_distance, real_distance, error, angle_error;
+        std::tie(cell_distance, real_distance, error, angle_error) =
+            calculate_movement_distances(
+                map_resolution,
+                search_space.angle_granularity(),
+                motion_model,
+                pose,
+                neighbour);
+
+            return cell_distance + sqrt(error * angle_error);
+    };
+
+    auto heuristic = [&goal](const Pose5D& pose) {
+        return 0.0;
+        const double dx =
+            static_cast<double>(goal.x) - static_cast<double>(pose.x);
+        const double dy =
+            static_cast<double>(goal.y) - static_cast<double>(pose.y);
+        return sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+    };
+
+    using a_star_type = AStar<
+        Pose5D,
+        decltype(goal_reached),
+        decltype(get_neighbours),
+        decltype(movement_cost),
+        decltype(heuristic)>;
+
+    a_star_type a_star;
+    a_star_type::search_result a_star_result = a_star.search(
+        goal_reached,
+        get_neighbours,
+        movement_cost,
+        heuristic,
+        start);
+
+    const Path5D& path = std::get<0>(a_star_result);
+
+    // Create the heuristic values for each pose of the path.
+    std::vector<double> path_heuristics;
+    for (const Pose5D& pose: path) {
+        path_heuristics.push_back(heuristic(pose));
+    }
+
+    // Sum up the cost values along the path.
+    std::vector<double> path_costs;
+    if (path.size() >= 2) {
+        // Cost of the goal.
+        path_costs.push_back(0.0);
+
+        double cost = 0.0;
+        for (size_t i = path.size() - 1; i > 0; --i) {
+            const Pose5D& node = path.at(i);
+            const Pose5D& predecessor = path.at(i - 1);
+            cost += movement_cost(predecessor, node);
+            path_costs.push_back(cost);
+        }
+        std::reverse(path_costs.begin(), path_costs.end());
+    }
+
+    return SegmentSearchResult{
+        segment.direction,
+        std::move(path),
+        std::move(path_heuristics),
+        std::move(path_costs),
+        search_space};
 }
 
 SearchResult5D plan(
-    const bool multi_threaded,
+    bool multi_threaded,
+    double map_resolution,
     unsigned int inflation_radius_pixels,
     unsigned int inflation_lookahead_pixels,
     const Costs& costs,
+    const MotionModel motion_model,
     const Path& path)
 {
     // The width, in pixels, of the maximum inflation around a cell in the 3D path.
@@ -308,7 +534,12 @@ SearchResult5D plan(
             search_result = plan_turn_segment(costs, segment);
         } else {
             search_result = plan_movement_segment(
-                coordinates_map, inflation_lookahead_pixels, costs, segment);
+                map_resolution,
+                coordinates_map,
+                inflation_lookahead_pixels,
+                costs,
+                motion_model,
+                segment);
         }
 
         std::lock_guard<std::mutex> lock(result_map_mutex);
