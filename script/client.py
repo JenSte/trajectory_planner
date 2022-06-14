@@ -20,6 +20,7 @@ from nav2_msgs.action import ComputePathToPose
 
 # Some predefined routes for the test map.
 ROUTES = {
+    # on "map/test.png"
     "big": ((1.5, 1.5, 0), (1.5, 4.5, 180)),
     "big-reversed": ((1.5, 1.5, 0), (1.5, 4.5, 0)),
     "straight": ((1.5, 1.5, 0), (5.4, 1.5, 0)),
@@ -30,6 +31,8 @@ ROUTES = {
     "uturn-reversed": ((7.3, 0.75, 0), (7.3, 2.35, 0)),
     "pipes": ((9.0, 4.0, 180), (6.0, 7.8, 90)),
     "nopath": ((1.5, 1.5, 0), (7.3, 0.75, 0)),
+    # on "map/tiny.png"
+    "tiny": ((0.10, 0.125, 0), (0.52, 0.055, 0.0)),
 }
 
 

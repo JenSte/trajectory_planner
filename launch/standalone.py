@@ -16,11 +16,25 @@ def generate_launch_description():
     map_dir = os.path.join(package_dir, "map")
     config_dir = os.path.join(package_dir, "config")
 
-    nav2_dir = get_package_share_directory("nav2_bringup")
-    nav2_launch_dir = os.path.join(nav2_dir, "launch")
+    config_file_argument = launch.actions.DeclareLaunchArgument(
+        "config_file",
+        description="The planner_server configuration file.",
+        default_value="standalone.yaml",
+    )
+
+    map_name_argument = launch.actions.DeclareLaunchArgument(
+        "map_name",
+        description="The map to load.",
+        default_value="map.yaml",
+    )
+
+    config_file = launch.substitutions.LaunchConfiguration("config_file")
+    map_name = launch.substitutions.LaunchConfiguration("map_name")
 
     return launch.LaunchDescription(
         [
+            config_file_argument,
+            map_name_argument,
             launch.actions.SetEnvironmentVariable(
                 "RCUTILS_LOGGING_BUFFERED_STREAM", "1"
             ),
@@ -29,7 +43,11 @@ def generate_launch_description():
                 package="nav2_planner",
                 executable="planner_server",
                 output="screen",
-                parameters=[os.path.join(config_dir, "standalone.yaml")],
+                parameters=[
+                    launch.substitutions.PathJoinSubstitution(
+                        [config_dir, config_file]
+                    )
+                ],
             ),
             launch_ros.actions.Node(
                 name="lifecycle_manager",
@@ -55,7 +73,11 @@ def generate_launch_description():
                 output="screen",
                 # arguments=["--ros-args", "--log-level", "debug"],
                 parameters=[
-                    {"yaml_filename": os.path.join(map_dir, "map.yaml")},
+                    {
+                        "yaml_filename": launch.substitutions.PathJoinSubstitution(
+                            [map_dir, map_name]
+                        )
+                    },
                 ],
             ),
         ]
