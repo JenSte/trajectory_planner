@@ -112,12 +112,22 @@ std::tuple<Pose3D, Pose3D> turn_neighbours(
         Pose3D{pose.x, pose.y, (pose.movement - 1) % movement_index_count});
 }
 
-boost::container::static_vector<Pose3D, 4> neighbours(
+std::tuple<Pose3D, Pose3D, Pose3D, Pose3D> move_turn_neighbours(
+    const std::tuple<Pose3D, Pose3D>& ln)
+{
+    return std::make_tuple(
+        Pose3D{std::get<0>(ln).x, std::get<0>(ln).y, (std::get<0>(ln).movement + 1) % movement_index_count},
+        Pose3D{std::get<0>(ln).x, std::get<0>(ln).y, (std::get<0>(ln).movement - 1) % movement_index_count},
+        Pose3D{std::get<1>(ln).x, std::get<1>(ln).y, (std::get<1>(ln).movement + 1) % movement_index_count},
+        Pose3D{std::get<1>(ln).x, std::get<1>(ln).y, (std::get<1>(ln).movement - 1) % movement_index_count});
+}
+
+boost::container::static_vector<Pose3D, 8> neighbours(
     const Costs& costs,
     const AngleIndexLUT& lut,
     const Pose3D& pose)
 {
-    boost::container::static_vector<Pose3D, 4> result;
+    boost::container::static_vector<Pose3D, 8> result;
 
     auto add_neighbour = [&result, &costs, &lut](Pose3D p) {
         const unsigned int angle_index = lut.at(p.movement);
@@ -135,6 +145,12 @@ boost::container::static_vector<Pose3D, 4> neighbours(
     std::tuple<Pose3D, Pose3D> tn = turn_neighbours(pose);
     add_neighbour(std::get<0>(tn));
     add_neighbour(std::get<1>(tn));
+
+    std::tuple<Pose3D, Pose3D, Pose3D, Pose3D> mt = move_turn_neighbours(ln);
+    add_neighbour(std::get<0>(mt));
+    add_neighbour(std::get<1>(mt));
+    add_neighbour(std::get<2>(mt));
+    add_neighbour(std::get<3>(mt));
 
     return result;
 }
@@ -171,6 +187,98 @@ Pose3D refine_pose(
     return Pose3D{pose.x, pose.y, movement_index};
 }
 
+double normalized_angle_distance(
+    const AngleIndexLUT& lut,
+    unsigned int angle_granularity,
+    const unsigned int movement_index_a,
+    const unsigned int movement_index_b)
+{
+    // The angle indices (5D) that correspond to the movement indices (3D).
+    const unsigned int angle_index_a = lut.at(movement_index_a);
+    const unsigned int angle_index_b = lut.at(movement_index_b);
+
+    // The actual orientation angles in radians.
+    const double a = angle_index_a * (2 * M_PI) / angle_granularity;
+    const double b = angle_index_b * (2 * M_PI) / angle_granularity;
+
+    // The difference between the two orientations, from -pi to pi.
+    const double diff = atan2(sin(a - b), cos(a - b));
+
+    // We return the difference between the two orientations, normalized to
+    // the range from 0.0 to 1.0.
+    return abs(diff) / M_PI;
+}
+
+double calculate_movemement_cost(
+    const Costs& costs,
+    const AngleIndexLUT& lut,
+    const Pose3D& goal_pose,
+    const Pose3D& from,
+    const Pose3D& to)
+{
+    // Calculate the cost of a pure forward/backward movement.
+    auto pure_movement_cost = [](const Pose3D& from, const Pose3D& to, double cost_value) {
+        // The distance when moving from 'from' to 'to'.
+        const double dx = static_cast<double>(from.x) - static_cast<double>(to.x);
+        const double dy = static_cast<double>(from.y) - static_cast<double>(to.y);
+        const double distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+
+        // The cost of the neighbour is multiplied by the distance to the cell,
+        // so that edges that move diagonally do not have an advantage.
+        return distance * (1.0 + cost_value);
+    };
+
+    // Calculate the costs of turning on the spot.
+    auto pure_turn_cost = [&costs, &lut, &goal_pose](const Pose3D& from, const Pose3D& to, double cost_value) {
+        // Turning on the spot. We calculate the distance to the goal, and apply
+        // a penalty for poses close to the goal. This is so that turns near the
+        // goal are discouraged as turning often causes the robot to deviate from
+        // the pose and makes it harder to hit the goal exactly.
+        const double dx = static_cast<double>(goal_pose.x) - static_cast<double>(to.x);
+        const double dy = static_cast<double>(goal_pose.y) - static_cast<double>(to.y);
+        const double goal_distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+
+        double goal_penalty = 1.0 + exp(-goal_distance / costs.goal_turn_penalty_distance());
+        if (goal_distance < 1.0) {
+            goal_penalty = 2.0;
+        }
+
+        const double angle_distance = normalized_angle_distance(
+            lut, costs.angle_granularity(), from.movement, to.movement);
+
+        return goal_penalty * (1.0 + angle_distance) * (1.0 + cost_value);
+    };
+
+    // The value on the costmap at the 'to' pose.
+    const double to_cost = costs.get_cost(to.x, to.y, lut.at(to.movement));
+
+    if (from.movement == to.movement) {
+        // The orientation stayed the same: pure forward/backward movement.
+        return pure_movement_cost(from, to, to_cost);
+    } else {
+        if ((from.x == to.x) && (from.y == to.y)) {
+            // Turning on the spot.
+            return pure_turn_cost(from, to, to_cost);
+        } else {
+            // Moving forward/backward and turning at the same time.
+
+            // The pose "between" 'from' and 'to'.
+            Pose3D via{to.x, to.y, from.movement};
+
+            double mc = pure_movement_cost(from, via, to_cost);
+            double tc = pure_turn_cost(via, to, to_cost);
+
+            // Calculate the cost of the combined "move + turn" from the costs
+            // of separate "pure move" and "pure turn" costs when going over 'via'.
+            // The turn cost is half the cost of a pure turn, this way multiple
+            // consecutive turns are still "expensive", while only a single turn
+            // can be cone relatively cheaply by using such a combined move. Also,
+            // this cost value honors the triangle inequality.
+            return mc + 0.5 * tc;
+        }
+    }
+}
+
 SearchResult3D plan(
     const Costs& costs,
     const Pose& start,
@@ -192,37 +300,7 @@ SearchResult3D plan(
     };
 
     auto movement_cost = [&costs, &lut, &goal_pose](const Pose3D& pose, const Pose3D& neighbour) {
-        const unsigned int angle_index = lut.at(neighbour.movement);
-        const double cost = costs.get_cost(neighbour.x, neighbour.y, angle_index);
-
-        if (pose.movement == neighbour.movement) {
-            // Linear movement.
-            const double dx =
-                static_cast<double>(pose.x) - static_cast<double>(neighbour.x);
-            const double dy =
-                static_cast<double>(pose.y) - static_cast<double>(neighbour.y);
-            const double distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
-
-            // The cost of the neighbour is multiplied by the distance to the cell,
-            // so that edges that move diagonally do not have an advantage.
-            return distance * (1.0 + cost);
-        } else {
-            // Turning on the spot. We calculate the distance to the goal, and apply
-            // a penalty for poses close to the goal. This is so that turns near the
-            // goal are discouraged as turning often causes the robot to deviate from
-            // the pose and makes it harder to hit the goal exactly.
-            const double dx =
-                static_cast<double>(goal_pose.x) - static_cast<double>(neighbour.x);
-            const double dy =
-                static_cast<double>(goal_pose.y) - static_cast<double>(neighbour.y);
-            const double distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
-
-            double factor = 1.0 + exp(-distance / costs.goal_turn_penalty_distance());
-            if (distance < 1.0) {
-                factor = 2.0;
-            }
-            return factor * cost;
-        }
+        return calculate_movemement_cost(costs, lut, goal_pose, pose, neighbour);
     };
 
     auto heuristic = [&goal_pose](const Pose3D& pose) {

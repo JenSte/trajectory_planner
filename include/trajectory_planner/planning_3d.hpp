@@ -105,9 +105,9 @@ std::tuple<Pose3D, Pose3D> linear_neighbours(
 std::tuple<Pose3D, Pose3D> turn_neighbours(
     const Pose3D& pose);
 
-// Return up to four neighbouring poses for a given pose that actually exist in the
+// Return up to eight neighbouring poses for a given pose that actually exist in the
 // costs object.
-boost::container::static_vector<Pose3D, 4> neighbours(
+boost::container::static_vector<Pose3D, 8> neighbours(
     const Costs& costs,
     const AngleIndexLUT& lut,
     const Pose3D& pose);
