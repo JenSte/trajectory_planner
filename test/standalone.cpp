@@ -78,6 +78,7 @@ int main()
     // pp.angular_acceleration_maximum =
 
     pp.time_delta = 0.1;
+    pp.multi_threaded = false;
 
     trajectory_planner::Pose start{50, 50, 0};
     trajectory_planner::Pose goal{50, static_cast<unsigned int>(map_height) - 50, 0};

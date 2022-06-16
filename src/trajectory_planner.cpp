@@ -624,7 +624,7 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
 
     // Plan in five dimensions.
     five::SearchResult5D result_5d = five::plan(
-        true,
+        parameters.multi_threaded,
         map_resolution_,
         parameters.inflation_5d_radius / map_resolution_,
         parameters.inflation_5d_lookahead / map_resolution_,

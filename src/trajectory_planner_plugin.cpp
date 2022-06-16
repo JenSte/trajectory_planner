@@ -1041,6 +1041,8 @@ TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_par
     result.linear_acceleration_maximum = 1.1;
     result.angular_acceleration_maximum = 3.5;
 
+    result.multi_threaded = true;
+
     node_->get_parameter(name_ + ".inflation_5d_radius", result.inflation_5d_radius);
     if (result.inflation_5d_radius < 0.01) {
         result.inflation_5d_radius = 0.01;

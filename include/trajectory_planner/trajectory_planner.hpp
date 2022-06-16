@@ -52,6 +52,9 @@ public:
 
         // The time increment used during the simulation, in second.
         double time_delta;
+
+        // Wheter or not to do a multi-threaded search.
+        bool multi_threaded;
     };
 
     // The result returned by a call to 'plan()'.
