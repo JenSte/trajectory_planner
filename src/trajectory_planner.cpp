@@ -618,11 +618,20 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     log_motion_model(motion_model);
 
     // Plan in three dimensions.
+    auto timestamp_start = std::chrono::steady_clock::now();
     three::SearchResult3D result_3d = three::plan(costs_, start, goal);
+    auto timestamp_end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> duration = timestamp_end - timestamp_start;
 
-    log_callback_("3D search finished");
+    std::ostringstream ss;
+    ss
+        << "3D search finished in "
+        << std::setprecision(3) << std::fixed
+        << duration.count() << " sec.";
+    log_callback_(ss.str());
 
     // Plan in five dimensions.
+    timestamp_start = std::chrono::steady_clock::now();
     five::SearchResult5D result_5d = five::plan(
         parameters.multi_threaded,
         map_resolution_,
@@ -631,8 +640,15 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
         costs_,
         motion_model,
         result_3d.path);
+    timestamp_end = std::chrono::steady_clock::now();
+    duration = timestamp_end - timestamp_start;
 
-    log_callback_("5D search finished");
+    ss.str("");
+    ss
+        << "5D search finished in "
+        << std::setprecision(3) << std::fixed
+        << duration.count() << " sec.";
+    log_callback_(ss.str());
 
     return Result{std::move(result_3d), std::move(result_5d), std::move(motion_model)};
 }
