@@ -190,7 +190,7 @@ Visualization Manager:
         Durability Policy: Transient Local
         Filter size: 10
         History Policy: Keep Last
-        Reliability Policy: System Default
+        Reliability Policy: Reliable
         Value: /planner_server/trajectory_planner/five_dimension_planner_search_space
       Update Topic:
         Depth: 5
