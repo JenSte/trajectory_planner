@@ -5,6 +5,12 @@
 #include <iomanip>
 #include <sstream>
 
+namespace {
+    // This value is multiplied with the (normalized) angle difference when turning
+    // on the spot. A turn of 180 degrees will correspond to the full 'angle_factor'.
+    const double angle_factor = 10.0;
+}
+
 namespace trajectory_planner::three
 {
 
@@ -246,7 +252,7 @@ double calculate_movemement_cost(
         const double angle_distance = normalized_angle_distance(
             lut, costs.angle_granularity(), from.movement, to.movement);
 
-        return goal_penalty * (1.0 + angle_distance) * (1.0 + cost_value);
+        return goal_penalty * (1.0 + angle_factor * angle_distance) * (1.0 + cost_value);
     };
 
     // The value on the costmap at the 'to' pose.
@@ -279,6 +285,34 @@ double calculate_movemement_cost(
     }
 }
 
+double calculate_heuristic(
+    const Costs& costs,
+    const AngleIndexLUT& lut,
+    const Pose3D& goal_pose,
+    const Pose3D& pose)
+{
+    // Calculate the distance to the goal.
+    const double dx = static_cast<double>(goal_pose.x) - static_cast<double>(pose.x);
+    const double dy = static_cast<double>(goal_pose.y) - static_cast<double>(pose.y);
+    const double goal_distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+
+    // Calculate the normalized angle differenct between the orientation of the
+    // pose and the goal pose.
+    const double angle_distance = normalized_angle_distance(
+        lut, costs.angle_granularity(), pose.movement, goal_pose.movement);
+
+    // Compare to 'pure_movement_cost()': If we drive only forward, without ever
+    // turning, far from every obstacle, so that the cost of a cell is 0.0:
+    const double movement_cost = goal_distance;
+
+    // Compare to 'pure_turn_cost()', but also to the calculation of the combined
+    // "move + turn" step (taking only half the costs of a pure turn). No 'goal_penalty'
+    // (see 'pure_turn_cost()' is applied, as we can not know where the turns would occur).
+    const double turn_cost = 0.5 * (1.0 + angle_factor * angle_distance);
+
+    return std::max(movement_cost, turn_cost);
+}
+
 SearchResult3D plan(
     const Costs& costs,
     const Pose& start,
@@ -303,12 +337,8 @@ SearchResult3D plan(
         return calculate_movemement_cost(costs, lut, goal_pose, pose, neighbour);
     };
 
-    auto heuristic = [&goal_pose](const Pose3D& pose) {
-        const double dx =
-            static_cast<double>(goal_pose.x) - static_cast<double>(pose.x);
-        const double dy =
-            static_cast<double>(goal_pose.y) - static_cast<double>(pose.y);
-        return sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+    auto heuristic = [&costs, &lut, &goal_pose](const Pose3D& pose) {
+        return calculate_heuristic(costs, lut, goal_pose, pose);
     };
 
     using a_star_type = AStar<
