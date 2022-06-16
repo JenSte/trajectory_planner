@@ -89,18 +89,19 @@ template<
     typename GoalReached,
     typename GetNeighbours,
     typename MovementCost,
-    typename Heuristic
+    typename Heuristic,
+    bool UseClosedSet
 > class AStar
 {
 public:
 
     // Set type to hold all the nodes that were "opened" during the search.
-    using OpenedNodesSet = std::unordered_set<Node, boost::hash<Node>>;
+    using NodesSet = std::unordered_set<Node, boost::hash<Node>>;
 
     // The type returned from the 'search()' function. The first element of the tuple
     // is the path (can be empty if no path is found), while the second element holds
     // all the nodes that the algorithm "opened".
-    using search_result = std::tuple<std::vector<Node>, OpenedNodesSet>;
+    using search_result = std::tuple<std::vector<Node>, NodesSet>;
 
     // Map type to store the predecessors of nodes.
     using PredecessorsMap = std::unordered_map<Node, Node, boost::hash<Node>>;
@@ -119,6 +120,10 @@ public:
         PriorityQueue<Node> open_nodes;
         open_nodes.push(start, 0.0);
 
+        // Set of nodes that were already processed and that will not be looked at
+        // again. Only used if the 'UseClosedSet' template argument is true.
+        NodesSet closed_set;
+
         // Maps nodes to their predecessor on the path back to the start node.
         PredecessorsMap predecessors;
 
@@ -135,7 +140,17 @@ public:
                     opened_nodes(total_costs));
             }
 
+            if (UseClosedSet) {
+                closed_set.insert(node);
+            }
+
             for (const Node& neighbour: get_neighbours(node)) {
+                if (UseClosedSet) {
+                    if (closed_set.contains(neighbour)) {
+                        continue;
+                    }
+                }
+
                 // The path cost if we would enter the neighbour via the current node.
                 double total_cost =
                     get_total_cost(total_costs, node) + movement_cost(node, neighbour);
@@ -188,10 +203,10 @@ private:
     }
 
     // Create a set that contains all nodes that the algorithm looked at.
-    OpenedNodesSet opened_nodes(
+    NodesSet opened_nodes(
         const TotalCostsMap& total_costs)
     {
-        OpenedNodesSet result;
+        NodesSet result;
 
         std::transform(
             total_costs.begin(),

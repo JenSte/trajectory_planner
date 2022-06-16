@@ -462,7 +462,8 @@ SegmentSearchResult plan_movement_segment(
         decltype(goal_reached),
         decltype(get_neighbours),
         decltype(movement_cost),
-        decltype(heuristic)>;
+        decltype(heuristic),
+        false>;
 
     a_star_type a_star;
     a_star_type::search_result a_star_result = a_star.search(

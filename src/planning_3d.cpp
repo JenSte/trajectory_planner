@@ -316,7 +316,8 @@ SearchResult3D plan(
         decltype(goal_reached),
         decltype(get_neighbours),
         decltype(movement_cost),
-        decltype(heuristic)>;
+        decltype(heuristic),
+        true>;
 
     a_star_type a_star;
     a_star_type::search_result a_star_result = a_star.search(
