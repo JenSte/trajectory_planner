@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME}
     "../include/trajectory_planner/buffer.hpp"
     "../include/trajectory_planner/convolution.hpp"
     "../include/trajectory_planner/costs.hpp"
+    "../include/trajectory_planner/heuristic.hpp"
     "../include/trajectory_planner/motion_model.hpp"
     "../include/trajectory_planner/planning_3d.hpp"
     "../include/trajectory_planner/planning_5d.hpp"
@@ -37,10 +38,12 @@ add_executable(${PROJECT_NAME}
     "../src/buffer.cpp"
     "../src/convolution.cpp"
     "../src/costs.cpp"
+    "../src/heuristic.cpp"
     "../src/motion_model.cpp"
     "../src/planning_3d.cpp"
     "../src/planning_5d.cpp"
     "../src/trajectory_planner.cpp"
+    "../src/types.cpp"
     "standalone.cpp"
 )
 

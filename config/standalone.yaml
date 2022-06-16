@@ -43,6 +43,9 @@ planner_server:
       # The time increment used when simulating the motion, in second.
       simulation_time_delta: 0.1
 
+      # The heuristic to use.
+      heuristic: "depth"
+
 global_costmap:
   global_costmap:
     ros__parameters:

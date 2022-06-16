@@ -254,6 +254,30 @@ Costs inflate_path(
     return costs.intersect(subset);
 }
 
+std::shared_ptr<Heuristic> create_heuristic(
+    HeuristicType heuristic_type,
+    const Pose5D& goal,
+    const Path& path,
+    const Costs& search_space)
+{
+    switch (heuristic_type) {
+        case HeuristicType::EUCLIDEAN:
+            return std::make_shared<EuclideanHeuristic>(goal);
+
+        case HeuristicType::MANHATTAN:
+            return std::make_shared<ManhattanHeuristic>(goal);
+
+        case HeuristicType::DEPTH:
+            return std::make_shared<DepthHeuristic>(goal, search_space);
+
+        case HeuristicType::PATH:
+            return std::make_shared<PathHeuristic>(path, search_space);
+
+        default:
+            return std::make_shared<NoneHeuristic>();
+    };
+}
+
 std::vector<Pose5D> neighbours(
     const double map_resolution,
     const Costs& costs,
@@ -379,13 +403,14 @@ SegmentSearchResult plan_turn_segment(
             Pose5D{pose.x, pose.y, pose.angle_index, Pose5D::LinearVelocity(0), Pose5D::AngularVelocity(0)});
     }
 
-    return SegmentSearchResult{Direction::TURN, path, {}, {}, search_space};
+    return SegmentSearchResult{Direction::TURN, std::move(path), {}, {}, std::move(search_space), nullptr};
 }
 
 SegmentSearchResult plan_movement_segment(
     const double map_resolution,
     const CircleCoordinatesMap& coordinates_map,
     const int inflation_lookahead,
+    const HeuristicType heuristic_type,
     const Costs& costs,
     const MotionModel motion_model,
     const Segment& segment)
@@ -448,13 +473,10 @@ SegmentSearchResult plan_movement_segment(
             return cell_distance + sqrt(error * angle_error);
     };
 
-    auto heuristic = [&goal](const Pose5D& pose) {
-        return 0.0;
-        const double dx =
-            static_cast<double>(goal.x) - static_cast<double>(pose.x);
-        const double dy =
-            static_cast<double>(goal.y) - static_cast<double>(pose.y);
-        return sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+    std::shared_ptr<Heuristic> heuristic =
+        create_heuristic(heuristic_type, goal, segment.path, search_space);
+    auto heuristic_callback = [&heuristic](const Pose5D& pose) {
+        return heuristic->value(pose);
     };
 
     using a_star_type = AStar<
@@ -462,7 +484,7 @@ SegmentSearchResult plan_movement_segment(
         decltype(goal_reached),
         decltype(get_neighbours),
         decltype(movement_cost),
-        decltype(heuristic),
+        decltype(heuristic_callback),
         false>;
 
     a_star_type a_star;
@@ -470,7 +492,7 @@ SegmentSearchResult plan_movement_segment(
         goal_reached,
         get_neighbours,
         movement_cost,
-        heuristic,
+        heuristic_callback,
         start);
 
     const Path5D& path = std::get<0>(a_star_result);
@@ -478,7 +500,7 @@ SegmentSearchResult plan_movement_segment(
     // Create the heuristic values for each pose of the path.
     std::vector<double> path_heuristics;
     for (const Pose5D& pose: path) {
-        path_heuristics.push_back(heuristic(pose));
+        path_heuristics.push_back(heuristic_callback(pose));
     }
 
     // Sum up the cost values along the path.
@@ -502,7 +524,8 @@ SegmentSearchResult plan_movement_segment(
         std::move(path),
         std::move(path_heuristics),
         std::move(path_costs),
-        search_space};
+        std::move(search_space),
+        std::move(heuristic)};
 }
 
 SearchResult5D plan(
@@ -510,6 +533,7 @@ SearchResult5D plan(
     double map_resolution,
     unsigned int inflation_radius_pixels,
     unsigned int inflation_lookahead_pixels,
+    HeuristicType heuristic_type,
     const Costs& costs,
     const MotionModel motion_model,
     const Path& path)
@@ -538,6 +562,7 @@ SearchResult5D plan(
                 map_resolution,
                 coordinates_map,
                 inflation_lookahead_pixels,
+                heuristic_type,
                 costs,
                 motion_model,
                 segment);
@@ -578,7 +603,7 @@ SearchResult5D plan(
 
     // Sort the individual segment results into a single vector.
     for (size_t index = 0; index < segments.size(); index++) {
-        result.segment.emplace_back(result_map.at(index));
+        result.segment.emplace_back(std::move(result_map.at(index)));
     }
 
     return result;

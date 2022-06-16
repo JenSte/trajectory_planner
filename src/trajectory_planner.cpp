@@ -637,6 +637,7 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
         map_resolution_,
         parameters.inflation_5d_radius / map_resolution_,
         parameters.inflation_5d_lookahead / map_resolution_,
+        parameters.heuristic_type,
         costs_,
         motion_model,
         result_3d.path);

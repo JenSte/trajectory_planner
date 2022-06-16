@@ -2,6 +2,7 @@
 #define TRAJECTORY_PLANNER_PLANNING_5D_HPP
 
 #include "trajectory_planner/costs.hpp"
+#include "trajectory_planner/heuristic.hpp"
 #include "trajectory_planner/motion_model.hpp"
 
 // The functions in this name space implement a "five dimensional" search. This
@@ -55,6 +56,9 @@ struct SegmentSearchResult
     // is a subset of the global cost object, but only around the
     // 3D path of the segment.
     Costs costs;
+
+    // The heuristic object used for planning this segment.
+    std::shared_ptr<Heuristic> heuristic;
 };
 
 // Data type returned from the search in 5D space.
@@ -78,6 +82,13 @@ using CircleCoordinatesMap = std::map<unsigned int, CircleCoordinates>;
 // Calculate the coordinates a circle with a given radius covers.
 CircleCoordinates circle_coordinates(
     unsigned int pixel_radius);
+
+// Return a heuristic object matching the given type.
+std::shared_ptr<Heuristic> create_heuristic(
+    HeuristicType heuristic_type,
+    const Pose5D& goal,
+    const Path& path,
+    const Costs& search_space);
 
 // Inflate an given path, and return a new cost object that only
 // contains the values around the path.
@@ -109,6 +120,7 @@ SearchResult5D plan(
     double map_resolution,
     unsigned int inflation_radius_pixels,
     unsigned int inflation_lookahead_pixels,
+    HeuristicType heuristic_type,
     const Costs& costs,
     const MotionModel motion_model,
     const Path& path);

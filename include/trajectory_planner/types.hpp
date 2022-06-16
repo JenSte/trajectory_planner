@@ -129,6 +129,28 @@ using Path = std::vector<Pose>;
 // A path from one pose to another, as returned by the 5D planning algorithm.
 using Path5D = std::vector<Pose5D>;
 
+// Describes a heuristic for the 5D planner.
+enum class HeuristicType {
+    // The heuristic function always returns '0.0'.
+    NONE,
+
+    // Euclidean distance to the goal pose.
+    EUCLIDEAN,
+
+    // Manhattan distance to the goal pose.
+    MANHATTAN,
+
+    // The number of cells from the goal along the inflated 5D search space.
+    DEPTH,
+
+    // The number of cells from the goal of the closest element of the 3D path.
+    PATH,
+};
+
+std::ostream& operator<<(
+    std::ostream& os,
+    HeuristicType ht);
+
 }
 
 #endif

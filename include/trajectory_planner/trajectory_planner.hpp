@@ -55,6 +55,9 @@ public:
 
         // Wheter or not to do a multi-threaded search.
         bool multi_threaded;
+
+        // The heuristic to use for the 5D search.
+        HeuristicType heuristic_type;
     };
 
     // The result returned by a call to 'plan()'.

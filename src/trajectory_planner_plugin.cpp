@@ -1031,6 +1031,20 @@ void TrajectoryPlannerPlugin::declare_parameters()
     descriptor.integer_range.at(0).step = 1;
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".angular_velocity_steps", rclcpp::ParameterValue(4), descriptor);
+
+    descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+
+    std::ostringstream ss;
+    ss
+        << "The heuristic to use for the 5D search ('"
+        << HeuristicType::NONE << "'/'"
+        << HeuristicType::EUCLIDEAN << "'/'"
+        << HeuristicType::MANHATTAN << "'/'"
+        << HeuristicType::DEPTH << "'/'"
+        << HeuristicType::PATH << "').";
+    descriptor.description = ss.str();
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".heuristic", rclcpp::ParameterValue("none"), descriptor);
 }
 
 TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_parameters() const
@@ -1110,6 +1124,26 @@ TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_par
     }
     result.angular_velocity_steps = angular_velocity_steps;
 
+    std::string heuristic;
+    node_->get_parameter(name_ + ".heuristic", heuristic);
+    if (heuristic == "euclidean") {
+        result.heuristic_type = HeuristicType::EUCLIDEAN;
+    } else if (heuristic == "manhattan") {
+        result.heuristic_type = HeuristicType::MANHATTAN;
+    } else if (heuristic == "depth") {
+        result.heuristic_type = HeuristicType::DEPTH;
+    } else if (heuristic == "path") {
+        result.heuristic_type = HeuristicType::PATH;
+    } else {
+        result.heuristic_type = HeuristicType::NONE;
+
+        RCLCPP_ERROR_STREAM(
+            (*logger_),
+            "invalid 'heuristic' value, using '" <<
+            result.heuristic_type <<
+            "' (planning will be slow).");
+    }
+
     RCLCPP_INFO((*logger_), "Planning parameters:");
     RCLCPP_INFO_STREAM(
         (*logger_),
@@ -1154,6 +1188,10 @@ TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_par
         "  simulation_time_delta: " <<
         std::setprecision(3) << std::fixed <<
         result.time_delta << " s");
+    RCLCPP_INFO_STREAM(
+        (*logger_),
+        "  heuristic: " <<
+        result.heuristic_type);
 
     return result;
 }

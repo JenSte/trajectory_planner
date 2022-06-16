@@ -17,6 +17,7 @@ planner_server:
       linear_velocity_maximum: 0.5
       angular_velocity_maximum: 1.0
       simulation_time_delta: 0.1
+      heuristic: "depth"
 
 global_costmap:
   global_costmap:
