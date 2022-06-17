@@ -260,6 +260,16 @@ class PlotAugmentedPath(rclpy.node.Node):
         axes_c.set_xlabel("time (sec)" if five else "pose index")
         axes_c.grid(True)
 
+        # If the heuristic overestimates the cost of a pose on the path, we color
+        # the background of the cost/heuristic plot.
+        overestimates = [d.heuristic > d.cost for d in data]
+        if any(overestimates):
+            axes_c.set_facecolor("yellow")
+
+            for o, t in zip(overestimates, time):
+                if o:
+                    axes_c.axvspan(t - 0.1, t + 0.1, facecolor="r", alpha=0.5)
+
         matplotlib.pyplot.setp(axes_x.get_xticklabels(), visible=False)
         matplotlib.pyplot.setp(axes_y.get_xticklabels(), visible=False)
         matplotlib.pyplot.setp(axes_t.get_xticklabels(), visible=False)
