@@ -291,21 +291,39 @@ nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_5d_search_space(
     result.info.width = width;
     result.info.height = height;
 
-    // Combine the search spaces of all segments into a single set.
-    std::unordered_set<Pose2D, boost::hash<Pose2D>> poses;
-    for (const five::SegmentSearchResult& search_result: segments) {
-        search_result.costs.export_poses(poses);
+    // The biggest heuristic value we come across, used to scale down the rest.
+    double maximum_heuristic_value = 1.0;
+
+    // The poses in the search space, and their heuristic values.
+    std::unordered_map<Pose2D, double, boost::hash<Pose2D>> heuristic_values;
+
+    for (size_t i = segments.size() - 1; i < segments.size(); i--) {
+        std::unordered_set<Pose2D, boost::hash<Pose2D>> poses;
+        segments.at(i).costs.export_poses(poses);
+
+        for (const Pose2D& pose: poses) {
+            const Pose5D dummy{pose.x, pose.y, 0, Pose5D::LinearVelocity(0), Pose5D::AngularVelocity(0)};
+            const double h = segments.at(i).heuristic->value(dummy);
+
+            heuristic_values[pose] = h;
+            maximum_heuristic_value = std::max(maximum_heuristic_value, h);
+        }
     }
 
     // "Draw" the search space on the map.
     for (size_t y = 0; y < height; y++) {
         for (size_t x = 0; x < width; x++) {
             const Pose2D pose{static_cast<unsigned int>(x), static_cast<unsigned int>(y)};
-            if (poses.contains(pose)) {
-                // This cell is part of the search space, we color it yellow.
-                result.data.push_back(-2);
-            } else {
+
+            const auto it = heuristic_values.find(pose);
+            if (it == heuristic_values.end()) {
+                // This cell is not part of the search space.
                 result.data.push_back(0);
+            } else {
+                // Map the heuristic into the range from 0 to 98, which rviz
+                // draws from blue to red in "costmap" mode.
+                const uint8_t h = 1.0 + it->second / maximum_heuristic_value * 97.0;
+                result.data.push_back(h);
             }
         }
     }
