@@ -162,20 +162,28 @@ class PlotAugmentedPath(rclpy.node.Node):
 
         if five:
             time = [d.time for d in data]
-            subplots = 7
+            subplots = 8
         else:
             # 3D paths do not include timestamps for the poses.
             time = range(len(data))
             subplots = 4
 
-        right_wheel_speeds = []
-        left_wheel_speeds = []
-        for d in data:
-            linear_velocity = linear_velocity_lut[d.linear_index]
-            angular_velocity = angular_velocity_lut[d.angular_index]
+        if five:
+            right_wheel_speeds = []
+            left_wheel_speeds = []
+            right_wheel_accelerations = []
+            left_wheel_accelerations = []
+            for i, d in enumerate(data):
+                linear_velocity = linear_velocity_lut[d.linear_index]
+                angular_velocity = angular_velocity_lut[d.angular_index]
 
-            left_wheel_speeds.append(linear_velocity - wheel_distance * angular_velocity / 2.0)
-            right_wheel_speeds.append(linear_velocity + wheel_distance * angular_velocity / 2.0)
+                left_wheel_speeds.append(linear_velocity - wheel_distance * angular_velocity / 2.0)
+                right_wheel_speeds.append(linear_velocity + wheel_distance * angular_velocity / 2.0)
+
+                if i > 0:
+                    dt = d.time - data[i - 1].time
+                    right_wheel_accelerations.append((right_wheel_speeds[-1] - right_wheel_speeds[-2]) / dt)
+                    left_wheel_accelerations.append((left_wheel_speeds[-1] - left_wheel_speeds[-2]) / dt)
 
         # The number of the current plot.
         plot = 0
@@ -250,6 +258,13 @@ class PlotAugmentedPath(rclpy.node.Node):
             axes_w.plot(time, right_wheel_speeds, color="r")
             axes_w.set_ylabel("wheel speeds (m/s)\n(blue left, red right)")
             axes_w.grid(True)
+
+            plot += 1
+            axes_b = fig.add_subplot(subplots, 1, plot, sharex=axes_x)
+            axes_b.plot(time[:-1], left_wheel_accelerations, color="b")
+            axes_b.plot(time[:-1], right_wheel_accelerations, color="r")
+            axes_b.set_ylabel("wheel accelerations (m/s^2)\n(blue left, red right)")
+            axes_b.grid(True)
 
         # Costs and heuristic values on one plot.
         plot += 1
