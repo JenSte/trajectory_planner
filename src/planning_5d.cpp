@@ -470,7 +470,14 @@ SegmentSearchResult plan_movement_segment(
                 pose,
                 neighbour);
 
-            return cell_distance + sqrt(error * angle_error);
+        // A penalty for lower speeds, to force the search algorithm to prefer
+        // higher velocities.
+        const unsigned int linear_index = abs(static_cast<int>(pose.linear_velocity));
+        const unsigned int indices = motion_model.linear_steps().size();
+        const double low_speed_penalty =
+            (1.0 / (2.0 * indices)) * (indices - 1 - linear_index);
+
+        return cell_distance + sqrt(error * angle_error) + low_speed_penalty;
     };
 
     std::shared_ptr<Heuristic> heuristic =
