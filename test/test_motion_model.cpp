@@ -117,17 +117,38 @@ TEST(MotionModel, LookupTable)
     ASSERT_TRUE(lut.contains(key(3, 1)));
     EXPECT_THAT(
        lut.find(key(3, 1))->second,
-       testing::UnorderedElementsAre(key(3, 1), key(2, 1), key(3, 0)));
+       testing::UnorderedElementsAre(
+           key(2, 0),
+           key(2, 1),
+           key(3, 0),
+           key(3, 1)));
 
     ASSERT_TRUE(lut.contains(key(1, 0)));
     EXPECT_THAT(
        lut.find(key(1, 0))->second,
-       testing::UnorderedElementsAre(key(1, 0), key(1, 1), key(2, 0), key(1, -1)));
+       testing::UnorderedElementsAre(
+           key(0, -1),
+           key(0, 1),
+           key(1, -1),
+           key(1, 0),
+           key(1, 1),
+           key(2, -1),
+           key(2, 0),
+           key(2, 1)));
 
     ASSERT_TRUE(lut.contains(key(2, 0)));
     EXPECT_THAT(
        lut.find(key(2, 0))->second,
-       testing::UnorderedElementsAre(key(2, 0), key(1, 0), key(2, 1), key(3, 0), key(2, -1)));
+       testing::UnorderedElementsAre(
+           key(1, -1),
+           key(1, 0),
+           key(1, 1),
+           key(2, -1),
+           key(2, 0),
+           key(2, 1),
+           key(3, -1),
+           key(3, 0),
+           key(3, 1)));
 
     // Turn the lookup table around and check it.
     std::map<MotionModel::KeyType, MotionModel::ValueType> reversed =
@@ -140,17 +161,38 @@ TEST(MotionModel, LookupTable)
     ASSERT_TRUE(reversed.contains(key(-3, 1)));
     EXPECT_THAT(
        reversed.find(key(-3, 1))->second,
-       testing::UnorderedElementsAre(key(-3, 1), key(-2, 1), key(-3, 0)));
+       testing::UnorderedElementsAre(
+           key(-2, 0),
+           key(-2, 1),
+           key(-3, 0),
+           key(-3, 1)));
 
     ASSERT_TRUE(reversed.contains(key(-1, 0)));
     EXPECT_THAT(
        reversed.find(key(-1, 0))->second,
-       testing::UnorderedElementsAre(key(-1, 0), key(-1, 1), key(-2, 0), key(-1, -1)));
+       testing::UnorderedElementsAre(
+           key(-0, -1),
+           key(-0, 1),
+           key(-1, -1),
+           key(-1, 0),
+           key(-1, 1),
+           key(-2, -1),
+           key(-2, 0),
+           key(-2, 1)));
 
     ASSERT_TRUE(reversed.contains(key(-2, 0)));
     EXPECT_THAT(
        reversed.find(key(-2, 0))->second,
-       testing::UnorderedElementsAre(key(-2, 0), key(-1, 0), key(-2, 1), key(-3, 0), key(-2, -1)));
+       testing::UnorderedElementsAre(
+           key(-1, -1),
+           key(-1, 0),
+           key(-1, 1),
+           key(-2, -1),
+           key(-2, 0),
+           key(-2, 1),
+           key(-3, -1),
+           key(-3, 0),
+           key(-3, 1)));
 }
 
 TEST_F(LinearMotionModel, CheckMotionModel)
@@ -194,10 +236,22 @@ TEST_F(LinearMotionModel, CheckMotionModel)
     // Drive forward.
     EXPECT_THAT(
         mm->lookup(true, LinearVelocity(1), AngularVelocity(0)),
-        testing::UnorderedElementsAre(key(1, 0), key(2, 0), key(1, 1), key(1, -1)));
+        testing::UnorderedElementsAre(
+            key(1, -1),
+            key(1, 0),
+            key(1, 1),
+            key(2, -1),
+            key(2, 0),
+            key(2, 1)));
 
     // Drive backward.
     EXPECT_THAT(
         mm->lookup(false, LinearVelocity(-1), AngularVelocity(0)),
-        testing::UnorderedElementsAre(key(-1, 0), key(-2, 0), key(-1, 1), key(-1, -1)));
+        testing::UnorderedElementsAre(
+            key(-1, -1),
+            key(-1, 0),
+            key(-1, 1),
+            key(-2, -1),
+            key(-2, 0),
+            key(-2, 1)));
 }

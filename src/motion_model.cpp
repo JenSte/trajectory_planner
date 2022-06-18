@@ -166,12 +166,15 @@ std::map<MotionModel::KeyType, MotionModel::ValueType> MotionModel::create_looku
         int l = static_cast<int>(std::get<0>(key));
         int a = static_cast<int>(std::get<1>(key));
 
-        // TODO: also allow diagonal movements?
         add(l, a);
         add(l + 1, a);
-        add(l - 1, a);
+        add(l + 1, a + 1);
         add(l, a + 1);
+        add(l - 1, a + 1);
+        add(l - 1, a);
+        add(l - 1, a - 1);
         add(l, a - 1);
+        add(l + 1, a - 1);
 
         result[key] = v;
     }
