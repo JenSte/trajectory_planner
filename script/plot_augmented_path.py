@@ -125,16 +125,16 @@ class PlotAugmentedPath(rclpy.node.Node):
 
         self._output_directory = output_directory
 
+        footprint = utils.get_footprint(self, costmap_node)
+        self._wheel_distance = utils.estimate_wheel_distance(footprint)
+        self.get_logger().info(f"Estimated wheel distance: {self._wheel_distance:.3f} m")
+
         self._sub_augmented_path = self.create_subscription(
             AugmentedPath,
             augmented_path_topic,
             self.augmented_path_callback,
             10,
         )
-
-        footprint = utils.get_footprint(self, costmap_node)
-        self._wheel_distance = utils.estimate_wheel_distance(footprint)
-        self.get_logger().info(f"Estimated wheel distance: {self._wheel_distance:.3f} m")
 
     def augmented_path_callback(self, path):
         """Plot the details of the augmented path."""

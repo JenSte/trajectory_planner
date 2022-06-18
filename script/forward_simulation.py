@@ -47,6 +47,10 @@ class ForwardSimulation(rclpy.node.Node):
     ):
         super().__init__("forward_simulation")
 
+        footprint = utils.get_footprint(self, costmap_node)
+        self._wheel_distance = utils.estimate_wheel_distance(footprint)
+        self.get_logger().info(f"Estimated wheel distance: {self._wheel_distance:.3f} m")
+
         self._sub_augmented_path = self.create_subscription(
             AugmentedPath,
             augmented_path_topic,
@@ -65,10 +69,6 @@ class ForwardSimulation(rclpy.node.Node):
             differential_drive_path_topic,
             rclpy.qos.qos_profile_system_default,
         )
-
-        footprint = utils.get_footprint(self, costmap_node)
-        self._wheel_distance = utils.estimate_wheel_distance(footprint)
-        self.get_logger().info(f"Estimated wheel distance: {self._wheel_distance:.3f} m")
 
         self._wheel_velocity_max = 1.0
         self._wheel_acceleration_max = 1.5
