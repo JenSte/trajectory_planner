@@ -26,8 +26,8 @@ import utils
 
 
 # A few constants that influence the size of the plot.
-WIDTH = 2000
-HEIGHT = 1550
+WIDTH = 2400
+HEIGHT = 2000
 DPI = 100
 
 
@@ -233,7 +233,7 @@ class PlotAugmentedPath(rclpy.node.Node):
             plot += 1
             axes_l = fig.add_subplot(subplots, 1, plot, sharex=axes_x)
             axes_l.plot(time, [d.linear_index for d in data])
-            axes_l.set_ylabel("linear velocity (index/value)")
+            axes_l.set_ylabel("linear velocity\n(index/value)")
             axes_l.yaxis.set_major_formatter(
                 matplotlib.ticker.FuncFormatter(
                     functools.partial(_linear_labels, linear_velocity_lut)
@@ -244,7 +244,7 @@ class PlotAugmentedPath(rclpy.node.Node):
             plot += 1
             axes_a = fig.add_subplot(subplots, 1, plot, sharex=axes_x)
             axes_a.plot(time, [d.angular_index for d in data])
-            axes_a.set_ylabel("angular velocity (index/value)")
+            axes_a.set_ylabel("angular velocity\n(index/value)")
             axes_a.yaxis.set_major_formatter(
                 matplotlib.ticker.FuncFormatter(
                     functools.partial(_angular_labels, angular_velocity_lut)
