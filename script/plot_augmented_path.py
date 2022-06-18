@@ -281,9 +281,13 @@ class PlotAugmentedPath(rclpy.node.Node):
         if any(overestimates):
             axes_c.set_facecolor("yellow")
 
-            for o, t in zip(overestimates, time):
-                if o:
+            for d, t in zip(data, time):
+                if d.heuristic > d.cost:
                     axes_c.axvspan(t - 0.1, t + 0.1, facecolor="r", alpha=0.5)
+
+                    self.get_logger().info(
+                        f"bad heuristic value at path element {t}, h = {d.heuristic:.2f}, c = {d.cost:.2f}"
+                    )
 
         matplotlib.pyplot.setp(axes_x.get_xticklabels(), visible=False)
         matplotlib.pyplot.setp(axes_y.get_xticklabels(), visible=False)

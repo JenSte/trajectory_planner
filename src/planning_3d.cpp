@@ -308,9 +308,9 @@ double calculate_heuristic(
     // Compare to 'pure_turn_cost()', but also to the calculation of the combined
     // "move + turn" step (taking only half the costs of a pure turn). No 'goal_penalty'
     // (see 'pure_turn_cost()' is applied, as we can not know where the turns would occur).
-    const double turn_cost = 0.5 * (1.0 + angle_factor * angle_distance);
+    const double turn_cost = 0.5 * (angle_factor * angle_distance);
 
-    return std::max(movement_cost, turn_cost);
+    return movement_cost + turn_cost;
 }
 
 SearchResult3D plan(
