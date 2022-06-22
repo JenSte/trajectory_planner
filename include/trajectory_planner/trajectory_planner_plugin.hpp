@@ -166,7 +166,7 @@ private:
         unsigned int angle_granularity,
         const Pose& start,
         const Pose& goal,
-        const TrajectoryPlanner::Result result) const;
+        const TrajectoryPlanner::Result& result) const;
 
     // Create an augmented path message for a 3D search result.
     msg::AugmentedPath create_augmented_path_message(

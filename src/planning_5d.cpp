@@ -281,7 +281,7 @@ std::shared_ptr<Heuristic> create_heuristic(
 std::vector<Pose5D> neighbours(
     const double map_resolution,
     const Costs& costs,
-    const MotionModel motion_model,
+    const MotionModel& motion_model,
     bool forward,
     const Pose5D& pose)
 {
@@ -412,7 +412,7 @@ SegmentSearchResult plan_movement_segment(
     const int inflation_lookahead,
     const HeuristicType heuristic_type,
     const Costs& costs,
-    const MotionModel motion_model,
+    const MotionModel& motion_model,
     const Segment& segment)
 {
     // Create the space we search by inflating the 3D path.
@@ -542,7 +542,7 @@ SearchResult5D plan(
     unsigned int inflation_lookahead_pixels,
     HeuristicType heuristic_type,
     const Costs& costs,
-    const MotionModel motion_model,
+    const MotionModel& motion_model,
     const Path& path)
 {
     // The width, in pixels, of the maximum inflation around a cell in the 3D path.

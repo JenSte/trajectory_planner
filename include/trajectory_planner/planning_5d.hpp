@@ -122,7 +122,7 @@ SearchResult5D plan(
     unsigned int inflation_lookahead_pixels,
     HeuristicType heuristic_type,
     const Costs& costs,
-    const MotionModel motion_model,
+    const MotionModel& motion_model,
     const Path& path);
 }
 

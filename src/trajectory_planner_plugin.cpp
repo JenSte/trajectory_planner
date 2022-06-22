@@ -337,7 +337,7 @@ void TrajectoryPlannerPlugin::publish_augmented_path_messages(
     unsigned int angle_granularity,
     const Pose& start,
     const Pose& goal,
-    const TrajectoryPlanner::Result result) const
+    const TrajectoryPlanner::Result& result) const
 {
     std::ostringstream ss;
     ss

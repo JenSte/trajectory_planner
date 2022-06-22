@@ -39,6 +39,8 @@ public:
         double linear_acceleration_maximum,
         double angular_acceleration_maximum);
 
+    MotionModel(MotionModel&&) = default;
+
     static std::vector<double> linear_steps(
         unsigned int steps,
         double maximum_value);
@@ -114,6 +116,8 @@ public:
     std::set<KeyType> velocity_combinations() const;
 
 private:
+
+    MotionModel(const MotionModel&) = delete;
 
     // The simulation time step.
     double time_delta_;
