@@ -7,7 +7,7 @@ project(trajectory_planner_standalone)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -19,6 +19,7 @@ endif()
 
 find_package(Boost 1.65 REQUIRED COMPONENTS iostreams serialization system)
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc)
+find_package(PNG REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -52,6 +53,7 @@ target_include_directories(${PROJECT_NAME}
         "../include"
         ${Boost_INCLUDE_DIR}
         ${OpenCV_INCLUDE_DIRS}
+        PNG::PNG
         PkgConfig::FFTW
 )
 
@@ -60,6 +62,7 @@ target_link_libraries(${PROJECT_NAME}
     Boost::iostreams
     Boost::serialization
     Boost::system
+    PNG::PNG
     PkgConfig::FFTW
     Threads::Threads
 )
@@ -71,6 +74,6 @@ target_compile_options(${PROJECT_NAME}
         "-mtune=native"
 )
 
-set_property(TARGET ${PROJECT_NAME}
-    PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE
-)
+#set_property(TARGET ${PROJECT_NAME}
+#    PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE
+#)

@@ -146,7 +146,8 @@ public:
 
             for (const Node& neighbour: get_neighbours(node)) {
                 if (UseClosedSet) {
-                    if (closed_set.contains(neighbour)) {
+                    const auto it = closed_set.find(neighbour);
+                    if (it != closed_set.end()) {
                         continue;
                     }
                 }

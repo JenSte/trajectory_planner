@@ -157,7 +157,8 @@ std::map<MotionModel::KeyType, MotionModel::ValueType> MotionModel::create_looku
 
             KeyType k = std::make_tuple(linear_index, angular_index);
 
-            if (keys.contains(k)) {
+            const auto it = keys.find(k);
+            if (it != keys.end()) {
                 // Only add valid velocity combinations.
                 v.push_back(k);
             }

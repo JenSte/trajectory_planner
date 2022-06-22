@@ -35,4 +35,16 @@ std::ostream& operator<<(
     return os;
 }
 
+std::ostream& operator<<(
+    std::ostream& os,
+    const Pose& pose)
+{
+    os
+        << "Pose{x = " << pose.x
+        << ", y = " << pose.y
+        << ", angle_index = " << pose.angle_index << "}";
+
+    return os;
+}
+
 }

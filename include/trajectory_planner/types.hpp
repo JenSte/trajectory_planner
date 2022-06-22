@@ -151,6 +151,10 @@ std::ostream& operator<<(
     std::ostream& os,
     HeuristicType ht);
 
+std::ostream& operator<<(
+    std::ostream& os,
+    const Pose& pose);
+
 }
 
 #endif
