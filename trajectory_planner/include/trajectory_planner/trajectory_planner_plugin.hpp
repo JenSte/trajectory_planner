@@ -1,7 +1,7 @@
 #ifndef TRAJECTORY_PLANNER_TRAJECTORY_PLANNER_PLUGIN_HPP
 #define TRAJECTORY_PLANNER_TRAJECTORY_PLANNER_PLUGIN_HPP
 
-#include "trajectory_planner/msg/augmented_path.hpp"
+#include "trajectory_planner_msgs/msg/augmented_path.hpp"
 #include "trajectory_planner/trajectory_planner.hpp"
 
 #include "nav2_core/global_planner.hpp"
@@ -93,7 +93,7 @@ private:
 
     // Publish the result of the search with additional information
     // to debug the planner.
-    rclcpp_lifecycle::LifecyclePublisher<trajectory_planner::msg::AugmentedPath>::SharedPtr
+    rclcpp_lifecycle::LifecyclePublisher<trajectory_planner_msgs::msg::AugmentedPath>::SharedPtr
         pub_augmented_path_;
 
     // Background thread that periodically checks for changes of the costmap
@@ -169,7 +169,7 @@ private:
         const TrajectoryPlanner::Result& result) const;
 
     // Create an augmented path message for a 3D search result.
-    msg::AugmentedPath create_augmented_path_message(
+    trajectory_planner_msgs::msg::AugmentedPath create_augmented_path_message(
         const std::string& name,
         const nav2_costmap_2d::Costmap2D* costmap,
         const std::string& frame_id,
@@ -178,7 +178,7 @@ private:
         const three::SearchResult3D& search_result) const;
 
     // Create an augmented path message for a 5D segment search result.
-    msg::AugmentedPath create_augmented_path_message(
+    trajectory_planner_msgs::msg::AugmentedPath create_augmented_path_message(
         const std::string& name,
         const nav2_costmap_2d::Costmap2D* costmap,
         const std::string& frame_id,
@@ -187,7 +187,7 @@ private:
         const five::SegmentSearchResult& search_result) const;
 
     // Create a motion model ROS message.
-    msg::MotionModel create_motion_model_message(
+    trajectory_planner_msgs::msg::MotionModel create_motion_model_message(
         const MotionModel& motion_model) const;
 
     // Create a ROS path message from the 3D search result.

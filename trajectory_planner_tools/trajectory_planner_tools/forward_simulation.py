@@ -16,7 +16,7 @@ import transforms3d
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
-from trajectory_planner.msg import AugmentedPath
+from trajectory_planner_msgs.msg import AugmentedPath
 
 import plot_augmented_path
 import utils

@@ -17,7 +17,7 @@ def generate_launch_description():
                     [
                         launch.substitutions.PathJoinSubstitution(
                             [
-                                launch_ros.substitutions.FindPackageShare("trajectory_planner"),
+                                launch_ros.substitutions.FindPackageShare("trajectory_planner_tools"),
                                 "launch",
                                 "standalone.py"
                             ]

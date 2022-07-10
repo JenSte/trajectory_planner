@@ -33,7 +33,7 @@ echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc
 # Add some often used commands to the bash history.
 echo "colcon build" >> ~/.bash_history
 echo "colcon build && ./build/trajectory_planner/trajectory_planner_test" >> ~/.bash_history
-echo "ros2 launch trajectory_planner standalone.py" >> ~/.bash_history
-echo "ros2 launch trajectory_planner rviz.py" >> ~/.bash_history
-echo "ros2 launch trajectory_planner utils.py" >> ~/.bash_history
-echo "ros2 run trajectory_planner client.py big" >> ~/.bash_history
+echo "ros2 launch trajectory_planner_tools standalone.py" >> ~/.bash_history
+echo "ros2 launch trajectory_planner_tools rviz.py" >> ~/.bash_history
+echo "ros2 launch trajectory_planner_tools utils.py" >> ~/.bash_history
+echo "ros2 run trajectory_planner_tools client.py big" >> ~/.bash_history

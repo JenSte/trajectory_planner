@@ -24,5 +24,7 @@ $DOCKER run \
     --env DISPLAY=$DISPLAY \
     --volume /tmp/.X11-unix:/tmp/.X11-unix \
     --volume "$SCRIPT_PATH/workspace:/opt/ws" \
-    --volume "$SCRIPT_PATH/..:/opt/trajectory_planner" \
+    --volume "$SCRIPT_PATH/../trajectory_planner:/opt/trajectory_planner" \
+    --volume "$SCRIPT_PATH/../trajectory_planner_msgs:/opt/trajectory_planner_msgs" \
+    --volume "$SCRIPT_PATH/../trajectory_planner_tools:/opt/trajectory_planner_tools" \
     "$TAG" "$@"

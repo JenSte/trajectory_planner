@@ -14,19 +14,19 @@ def generate_launch_description():
             ),
             launch_ros.actions.Node(
                 name="animate_path",
-                package="trajectory_planner",
+                package="trajectory_planner_tools",
                 executable="animate_path.py",
                 output="screen",
             ),
             launch_ros.actions.Node(
                 name="plot_augmented_path",
-                package="trajectory_planner",
+                package="trajectory_planner_tools",
                 executable="plot_augmented_path.py",
                 output="screen",
             ),
             launch_ros.actions.Node(
                 name="forward_simulation",
-                package="trajectory_planner",
+                package="trajectory_planner_tools",
                 executable="forward_simulation.py",
                 output="screen",
             ),
