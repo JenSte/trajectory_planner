@@ -12,7 +12,7 @@ import launch_ros.actions
 
 def generate_launch_description():
 
-    package_dir = get_package_share_directory("trajectory_planner")
+    package_dir = get_package_share_directory("trajectory_planner_tools")
     map_dir = os.path.join(package_dir, "map")
     config_dir = os.path.join(package_dir, "config")
 

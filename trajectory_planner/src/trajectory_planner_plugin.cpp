@@ -69,7 +69,7 @@ void TrajectoryPlannerPlugin::configure(
             rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
 
     pub_augmented_path_ =
-        node_->create_publisher<trajectory_planner::msg::AugmentedPath>(
+        node_->create_publisher<trajectory_planner_msgs::msg::AugmentedPath>(
             "~/" + name + "/augmented_path",
             10);
 }
@@ -381,7 +381,7 @@ void TrajectoryPlannerPlugin::publish_augmented_path_messages(
     }
 }
 
-msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
+trajectory_planner_msgs::msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
     const std::string& name,
     const nav2_costmap_2d::Costmap2D* costmap,
     const std::string& frame_id,
@@ -396,12 +396,12 @@ msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
         throw std::runtime_error("Search result cost vector has wrong size.");
     }
 
-    msg::AugmentedPath result;
+    trajectory_planner_msgs::msg::AugmentedPath result;
     result.name = name;
     result.motion_model = create_motion_model_message(motion_model);
 
     for (size_t i = 0; i < search_result.path.size(); ++i) {
-        msg::AugmentedPose pose_message;
+        trajectory_planner_msgs::msg::AugmentedPose pose_message;
 
         pose_message.pose = convert_pose(
             costmap,
@@ -419,7 +419,7 @@ msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
     return result;
 }
 
-msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
+trajectory_planner_msgs::msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
     const std::string& name,
     const nav2_costmap_2d::Costmap2D* costmap,
     const std::string& frame_id,
@@ -427,7 +427,7 @@ msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
     const MotionModel& motion_model,
     const five::SegmentSearchResult& search_result) const
 {
-    msg::AugmentedPath result;
+    trajectory_planner_msgs::msg::AugmentedPath result;
     result.name = name;
     result.motion_model = create_motion_model_message(motion_model);
 
@@ -435,7 +435,7 @@ msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
         const Pose5D& pose_5d = search_result.path.at(i);
         const Pose pose{pose_5d.x, pose_5d.y, pose_5d.angle_index};
 
-        msg::AugmentedPose pose_message;
+        trajectory_planner_msgs::msg::AugmentedPose pose_message;
 
         pose_message.pose = convert_pose(
             costmap,
@@ -456,10 +456,10 @@ msg::AugmentedPath TrajectoryPlannerPlugin::create_augmented_path_message(
     return result;
 }
 
-msg::MotionModel TrajectoryPlannerPlugin::create_motion_model_message(
+trajectory_planner_msgs::msg::MotionModel TrajectoryPlannerPlugin::create_motion_model_message(
     const MotionModel& motion_model) const
 {
-    msg::MotionModel result;
+    trajectory_planner_msgs::msg::MotionModel result;
 
     for (const double linear_velocity_value: motion_model.linear_steps()) {
         result.linear_velocities.push_back(linear_velocity_value);

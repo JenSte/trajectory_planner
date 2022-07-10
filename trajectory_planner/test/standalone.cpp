@@ -9,7 +9,7 @@
 #include <iostream>
 
 // The image file to load as the map. Path is relative to the current director.
-#define MAP_FILE "../map/test.png"
+#define MAP_FILE "../../trajectory_planner_tools/map/test.png"
 
 // The start pose.
 #define START_X_METER 1.5

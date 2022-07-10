@@ -20,7 +20,7 @@ import rclpy.node
 import rclpy.qos
 import transforms3d
 
-from trajectory_planner.msg import AugmentedPath
+from trajectory_planner_msgs.msg import AugmentedPath
 
 import utils
 
