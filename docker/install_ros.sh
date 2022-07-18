@@ -34,6 +34,6 @@ echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc
 echo "colcon build" >> ~/.bash_history
 echo "colcon build && ./build/trajectory_planner/trajectory_planner_test" >> ~/.bash_history
 echo "ros2 launch trajectory_planner_tools standalone.py" >> ~/.bash_history
-echo "ros2 launch trajectory_planner_tools rviz.py" >> ~/.bash_history
+echo "nice -n 19 ros2 launch trajectory_planner_tools rviz.py" >> ~/.bash_history
 echo "ros2 launch trajectory_planner_tools utils.py" >> ~/.bash_history
 echo "ros2 run trajectory_planner_tools client.py big" >> ~/.bash_history
