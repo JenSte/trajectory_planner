@@ -78,6 +78,10 @@ private:
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr
         pub_3d_path_;
 
+    // Publishes the (2D) heuristic used by the 3D planner.
+    rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
+        pub_3d_heuristic_;
+
     // Publishes the created 5D plan for debug purposes.
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr
         pub_5d_path_;
@@ -142,6 +146,16 @@ private:
     // Convert the map containing the opened nodes to an occupancy grid ROS message.
     nav_msgs::msg::OccupancyGrid convert_opened_nodes(
         const three::SearchResult3D::OpenedNodesMap& opened_nodes,
+        size_t width,
+        size_t height,
+        const std::string& frame_id,
+        double resolution,
+        double origin_x,
+        double origin_y) const;
+
+    // Convert the map containing the heuristic values to an occupancy grid ROS message.
+    nav_msgs::msg::OccupancyGrid convert_3d_heuristic_map(
+        const three::HeuristicMap heuristic_map,
         size_t width,
         size_t height,
         const std::string& frame_id,

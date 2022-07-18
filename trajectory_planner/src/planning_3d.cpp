@@ -50,6 +50,83 @@ AngleIndexLUT create_lookup_table(
     };
 }
 
+HeuristicMap create_heuristic_map(
+    const Costs& costs,
+    const Pose3D& goal)
+{
+    // The result of this function, maps poses to the distance to the goal.
+    HeuristicMap result;
+
+    // The list of nodes that are between the processed and unprocessed poses.
+    std::unordered_set<Pose2D, boost::hash<Pose2D>> frontier;
+
+    // The set of all unprocessed poses.
+    std::unordered_set<Pose2D, boost::hash<Pose2D>> remaining;
+    costs.export_poses(remaining);
+
+    // At the start, the values for the goal poses is known.
+    result[Pose2D{goal.x, goal.y}] = 0.0;
+    frontier.insert(Pose2D{goal.x, goal.y});
+    remaining.erase(Pose2D{goal.x, goal.y});
+
+    // The frontier of the last iteration.
+    std::unordered_set<Pose2D, boost::hash<Pose2D>> old_frontier;
+
+    // The number of iterations the loop below already ran, also the current
+    // distance to the goal.
+    unsigned int iteration = 0;
+
+    for (;;) {
+        iteration++;
+
+        // Candidates for the new frontier are all neighbours (direct or diagnoal)
+        // of the current frontier set.
+        std::unordered_set<Pose2D, boost::hash<Pose2D>> candidates;
+        for (const Pose2D& p: frontier) {
+            candidates.insert(Pose2D{p.x + 1, p.y + 1});
+            candidates.insert(Pose2D{p.x + 1, p.y});
+            candidates.insert(Pose2D{p.x + 1, p.y - 1});
+            candidates.insert(Pose2D{p.x, p.y - 1});
+            candidates.insert(Pose2D{p.x - 1, p.y - 1});
+            candidates.insert(Pose2D{p.x - 1, p.y});
+            candidates.insert(Pose2D{p.x - 1, p.y + 1});
+            candidates.insert(Pose2D{p.x, p.y + 1});
+        }
+
+        // Don't look back, remove all the elements that
+        // were processed in the last iterations.
+        for (auto it = candidates.begin(); it != candidates.end();) {
+            if (frontier.find(*it) != frontier.end()) {
+                it = candidates.erase(it);
+            } else if (old_frontier.find(*it) != old_frontier.end()) {
+                it = candidates.erase(it);
+            } else {
+                it++;
+            }
+        }
+
+        // Add poses from 'candidates' to the result if they are unprocessed.
+        std::unordered_set<Pose2D, boost::hash<Pose2D>> new_frontier;
+        for (const Pose2D& c: candidates) {
+            if (remaining.erase(c) == 1) {
+                // If 'remaining.erase()' returns 1, the candidate 'c' was in remaining.
+                result[c] = iteration;
+                new_frontier.insert(c);
+            }
+        }
+
+        if (new_frontier.empty()) {
+            // No more new cells that are next to the current frontier, done.
+            break;
+        }
+
+        old_frontier = std::move(frontier);
+        frontier = std::move(new_frontier);
+    }
+
+    return result;
+}
+
 std::tuple<Pose3D, Pose3D> linear_neighbours(
     const Pose3D& pose)
 {
@@ -287,14 +364,24 @@ double calculate_movemement_cost(
 
 double calculate_heuristic(
     const Costs& costs,
+    const HeuristicMap& heuristic_map,
     const AngleIndexLUT& lut,
     const Pose3D& goal_pose,
     const Pose3D& pose)
 {
-    // Calculate the distance to the goal.
-    const double dx = static_cast<double>(goal_pose.x) - static_cast<double>(pose.x);
-    const double dy = static_cast<double>(goal_pose.y) - static_cast<double>(pose.y);
-    const double goal_distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+    double goal_distance = 0.0;
+
+    const auto it = heuristic_map.find(Pose2D{pose.x, pose.y});
+    if (it != heuristic_map.end()) {
+        goal_distance = it->second;
+    } else {
+        // A fallback if the pose is not in 'heuristic_map'. In this case there is
+        // probably no path to the goal in the search space (otherwise the heuristic
+        // map calculation would include the pose), so we could also this earlier.
+        const double dx = static_cast<double>(goal_pose.x) - static_cast<double>(pose.x);
+        const double dy = static_cast<double>(goal_pose.y) - static_cast<double>(pose.y);
+        goal_distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+    }
 
     // Calculate the normalized angle differenct between the orientation of the
     // pose and the goal pose.
@@ -325,6 +412,12 @@ SearchResult3D plan(
     Pose3D start_pose = refine_pose(costs, lut, start);
     Pose3D goal_pose = refine_pose(costs, lut, goal);
 
+    // The main heuristic for the 3D search is the distance to the goal, calculated
+    // by flood-filling the 3D search space in 2D. While it takes some time to
+    // pre-calculate these values before doing the actual search, it pays of on
+    // large maps, and does not take much time on small maps.
+    HeuristicMap heuristic_map = create_heuristic_map(costs, goal_pose);
+
     auto goal_reached = [&goal_pose](const Pose3D& pose) {
         return goal_pose == pose;
     };
@@ -337,8 +430,8 @@ SearchResult3D plan(
         return calculate_movemement_cost(costs, lut, goal_pose, pose, neighbour);
     };
 
-    auto heuristic = [&costs, &lut, &goal_pose](const Pose3D& pose) {
-        return calculate_heuristic(costs, lut, goal_pose, pose);
+    auto heuristic = [&costs, &lut, &goal_pose, &heuristic_map](const Pose3D& pose) {
+        return calculate_heuristic(costs, heuristic_map, lut, goal_pose, pose);
     };
 
     using a_star_type = AStar<
@@ -358,6 +451,7 @@ SearchResult3D plan(
         start_pose);
 
     SearchResult3D result;
+    result.heuristic_map = std::move(heuristic_map);
 
     // Convert the 3D path back to a path for the trajectory planner
     // and create the heuristic vector.

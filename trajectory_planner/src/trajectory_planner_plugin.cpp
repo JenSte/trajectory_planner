@@ -53,6 +53,11 @@ void TrajectoryPlannerPlugin::configure(
             "~/" + name + "/three_dimension_planner_path",
             rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
 
+    pub_3d_heuristic_ =
+        node_->create_publisher<nav_msgs::msg::OccupancyGrid>(
+            "~/" + name + "/three_dimension_heuristic",
+            rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+
     pub_5d_path_ =
         node_->create_publisher<nav_msgs::msg::Path>(
             "~/" + name + "/five_dimension_planner_path",
@@ -266,6 +271,50 @@ nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_opened_nodes(
             } else {
                 // Add a negative value so that rviz colors this cell yellow-ish.
                 result.data.push_back(-1 - it->second);
+            }
+        }
+    }
+
+    return result;
+}
+
+nav_msgs::msg::OccupancyGrid TrajectoryPlannerPlugin::convert_3d_heuristic_map(
+    const three::HeuristicMap heuristic_map,
+    size_t width,
+    size_t height,
+    const std::string& frame_id,
+    double resolution,
+    double origin_x,
+    double origin_y) const
+{
+    nav_msgs::msg::OccupancyGrid result;
+
+    result.header.frame_id = frame_id;
+    result.info.resolution = resolution;
+    result.info.origin.position.x = origin_x;
+    result.info.origin.position.y = origin_y;
+    result.info.width = width;
+    result.info.height = height;
+
+    // Find the biggest heuristic value we come across, used to scale down the rest.
+    double maximum_heuristic_value = 1.0;
+    for (const auto it: heuristic_map) {
+        maximum_heuristic_value = std::max(maximum_heuristic_value, it.second);
+    }
+
+    for (size_t y = 0; y < height; y++) {
+        for (size_t x = 0; x < width; x++) {
+            const Pose2D pose{static_cast<unsigned int>(x), static_cast<unsigned int>(y)};
+
+            const auto it = heuristic_map.find(pose);
+            if (it == heuristic_map.end()) {
+                // This cell is not part of the search space.
+                result.data.push_back(0);
+            } else {
+                // Map the heuristic into the range from 0 to 98, which rviz
+                // draws from blue to red in "costmap" mode.
+                const uint8_t h = 1.0 + it->second / maximum_heuristic_value * 97.0;
+                result.data.push_back(h);
             }
         }
     }
@@ -553,6 +602,7 @@ void TrajectoryPlannerPlugin::activate()
     pub_original_occupancy_map_->on_activate();
     pub_cost_map_->on_activate();
     pub_3d_path_->on_activate();
+    pub_3d_heuristic_->on_activate();
     pub_5d_path_->on_activate();
     pub_3d_debug_map_->on_activate();
     pub_5d_search_space_->on_activate();
@@ -571,6 +621,7 @@ void TrajectoryPlannerPlugin::deactivate()
     pub_original_occupancy_map_->on_deactivate();
     pub_cost_map_->on_deactivate();
     pub_3d_path_->on_deactivate();
+    pub_3d_heuristic_->on_deactivate();
     pub_5d_path_->on_deactivate();
     pub_3d_debug_map_->on_deactivate();
     pub_5d_search_space_->on_deactivate();
@@ -720,6 +771,16 @@ nav_msgs::msg::Path TrajectoryPlannerPlugin::plan(
             costmap_ros_->getGlobalFrameID(),
             planner_->angle_granularity(),
             result));
+
+    pub_3d_heuristic_->publish(
+        convert_3d_heuristic_map(
+            result.search_result_3d.heuristic_map,
+            planner->original_occupancy_map().width(),
+            planner->original_occupancy_map().height(),
+            costmap_frame_id,
+            costmap->getResolution(),
+            costmap->getOriginX(),
+            costmap->getOriginY()));
 
     publish_augmented_path_messages(
         costmap,

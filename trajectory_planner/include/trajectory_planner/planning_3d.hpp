@@ -68,6 +68,9 @@ using Path3D = std::vector<Pose3D>;
 // be indexed by a movement index to get the corresponding angle index.
 using AngleIndexLUT = std::array<unsigned int, movement_index_count>;
 
+// The heuristic used by the 3D planner is the 2D distance from the goal.
+using HeuristicMap = std::unordered_map<Pose2D, double, boost::hash<Pose2D>>;
+
 // Data type returned from the search in 3D space.
 struct SearchResult3D
 {
@@ -83,6 +86,9 @@ struct SearchResult3D
     // length as 'path').
     std::vector<double> cost;
 
+    // The data structure that contains the pre-calculated 2D heuristic values.
+    HeuristicMap heuristic_map;
+
     // Describes the cells the search algorithm looked at during the search. This
     // maps the 2D coordinates to the number of orientations that were checked
     // on that postition. As the maximum number of valid orientations (orientations
@@ -96,6 +102,11 @@ struct SearchResult3D
 // Create a lookup table for a given angle granularity.
 AngleIndexLUT create_lookup_table(
     unsigned int angle_granularity);
+
+// Create the data structure containting the heuristic values.
+HeuristicMap create_heuristic_map(
+    const Costs& costs,
+    const Pose3D& goal);
 
 // Return the two neighbour candidates for a given pose when moving forward/backward.
 std::tuple<Pose3D, Pose3D> linear_neighbours(
