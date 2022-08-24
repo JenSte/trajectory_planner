@@ -13,10 +13,16 @@ apt-get update
 apt-get install --yes \
     python3-colcon-common-extensions \
     ros-galactic-desktop \
+    ros-galactic-gazebo-dev \
+    ros-galactic-gazebo-msgs \
+    ros-galactic-gazebo-plugins \
+    ros-galactic-gazebo-ros \
     ros-galactic-nav2-bringup \
     ros-galactic-nav2-core \
     ros-galactic-nav2-costmap-2d \
-    ros-galactic-nav2-util
+    ros-galactic-nav2-util \
+    ros-galactic-tf-transformations \
+    ros-galactic-xacro
 
 # After the 'exec ...' in our entrypoint script the bash completion is somehow broken,
 # restore it for the 'ros2' command.
