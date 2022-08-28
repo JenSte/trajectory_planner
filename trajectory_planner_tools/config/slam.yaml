@@ -1,0 +1,11 @@
+slam_toolbox:
+  ros__parameters:
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link
+    scan_topic: /scan_raw
+    mode: mapping
+
+    resolution: 0.05
+    #resolution: 0.02
+    #resolution: 0.01
