@@ -51,6 +51,18 @@ TEST(MotionModel, LogarithmicDistribution)
     EXPECT_DOUBLE_EQ(l.at(4), 0.8);
 }
 
+template<typename K>
+bool contains(const std::set<K>& container, const K& key)
+{
+    return container.find(key) != container.end();
+}
+
+template<typename K, typename V>
+bool contains(const std::map<K, V>& container, const K& key)
+{
+    return container.find(key) != container.end();
+}
+
 TEST(MotionModel, VelocityCombinations)
 {
     std::vector<double> ls{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
@@ -65,34 +77,34 @@ TEST(MotionModel, VelocityCombinations)
             static_cast<AngularVelocity>(a));
     };
 
-    EXPECT_FALSE(cs.contains(key(0, -5)));
-    EXPECT_FALSE(cs.contains(key(0, 0)));
-    EXPECT_FALSE(cs.contains(key(0, 5)));
+    EXPECT_FALSE(contains(cs, key(0, -5)));
+    EXPECT_FALSE(contains(cs, key(0, 0)));
+    EXPECT_FALSE(contains(cs, key(0, 5)));
 
-    EXPECT_TRUE(cs.contains(key(1, 0)));
-    EXPECT_TRUE(cs.contains(key(1, 1)));
-    EXPECT_TRUE(cs.contains(key(1, 2)));
-    EXPECT_TRUE(cs.contains(key(1, 3)));
-    EXPECT_FALSE(cs.contains(key(1, 4)));
+    EXPECT_TRUE(contains(cs, key(1, 0)));
+    EXPECT_TRUE(contains(cs, key(1, 1)));
+    EXPECT_TRUE(contains(cs, key(1, 2)));
+    EXPECT_TRUE(contains(cs, key(1, 3)));
+    EXPECT_FALSE(contains(cs, key(1, 4)));
 
-    EXPECT_TRUE(cs.contains(key(2, 0)));
-    EXPECT_TRUE(cs.contains(key(2, 1)));
-    EXPECT_TRUE(cs.contains(key(2, 2)));
-    EXPECT_FALSE(cs.contains(key(2, 3)));
+    EXPECT_TRUE(contains(cs, key(2, 0)));
+    EXPECT_TRUE(contains(cs, key(2, 1)));
+    EXPECT_TRUE(contains(cs, key(2, 2)));
+    EXPECT_FALSE(contains(cs, key(2, 3)));
 
-    EXPECT_TRUE(cs.contains(key(3, 0)));
-    EXPECT_TRUE(cs.contains(key(3, 1)));
-    EXPECT_TRUE(cs.contains(key(3, 2)));
-    EXPECT_FALSE(cs.contains(key(3, 3)));
+    EXPECT_TRUE(contains(cs, key(3, 0)));
+    EXPECT_TRUE(contains(cs, key(3, 1)));
+    EXPECT_TRUE(contains(cs, key(3, 2)));
+    EXPECT_FALSE(contains(cs, key(3, 3)));
 
-    EXPECT_TRUE(cs.contains(key(4, 0)));
-    EXPECT_TRUE(cs.contains(key(4, 1)));
-    EXPECT_FALSE(cs.contains(key(4, 2)));
+    EXPECT_TRUE(contains(cs, key(4, 0)));
+    EXPECT_TRUE(contains(cs, key(4, 1)));
+    EXPECT_FALSE(contains(cs, key(4, 2)));
 
-    EXPECT_TRUE(cs.contains(key(5, 0)));
-    EXPECT_FALSE(cs.contains(key(5, 1)));
+    EXPECT_TRUE(contains(cs, key(5, 0)));
+    EXPECT_FALSE(contains(cs, key(5, 1)));
 
-    EXPECT_FALSE(cs.contains(key(6, 0)));
+    EXPECT_FALSE(contains(cs, key(6, 0)));
 }
 
 TEST(MotionModel, LookupTable)
@@ -112,9 +124,9 @@ TEST(MotionModel, LookupTable)
     std::map<MotionModel::KeyType, MotionModel::ValueType> lut =
         MotionModel::create_lookup_table(keys);
 
-    EXPECT_FALSE(lut.contains(key(0, 0)));
+    EXPECT_FALSE(contains(lut, key(0, 0)));
 
-    ASSERT_TRUE(lut.contains(key(3, 1)));
+    ASSERT_TRUE(contains(lut, key(3, 1)));
     EXPECT_THAT(
        lut.find(key(3, 1))->second,
        testing::UnorderedElementsAre(
@@ -123,7 +135,7 @@ TEST(MotionModel, LookupTable)
            key(3, 0),
            key(3, 1)));
 
-    ASSERT_TRUE(lut.contains(key(1, 0)));
+    ASSERT_TRUE(contains(lut, key(1, 0)));
     EXPECT_THAT(
        lut.find(key(1, 0))->second,
        testing::UnorderedElementsAre(
@@ -136,7 +148,7 @@ TEST(MotionModel, LookupTable)
            key(2, 0),
            key(2, 1)));
 
-    ASSERT_TRUE(lut.contains(key(2, 0)));
+    ASSERT_TRUE(contains(lut, key(2, 0)));
     EXPECT_THAT(
        lut.find(key(2, 0))->second,
        testing::UnorderedElementsAre(
@@ -154,11 +166,11 @@ TEST(MotionModel, LookupTable)
     std::map<MotionModel::KeyType, MotionModel::ValueType> reversed =
         MotionModel::reverse_lookup_table(lut);
 
-    EXPECT_FALSE(reversed.contains(key(3, 1)));
-    EXPECT_FALSE(reversed.contains(key(1, 1)));
-    EXPECT_FALSE(reversed.contains(key(2, 0)));
+    EXPECT_FALSE(contains(reversed, key(3, 1)));
+    EXPECT_FALSE(contains(reversed, key(1, 1)));
+    EXPECT_FALSE(contains(reversed, key(2, 0)));
 
-    ASSERT_TRUE(reversed.contains(key(-3, 1)));
+    ASSERT_TRUE(contains(reversed, key(-3, 1)));
     EXPECT_THAT(
        reversed.find(key(-3, 1))->second,
        testing::UnorderedElementsAre(
@@ -167,7 +179,7 @@ TEST(MotionModel, LookupTable)
            key(-3, 0),
            key(-3, 1)));
 
-    ASSERT_TRUE(reversed.contains(key(-1, 0)));
+    ASSERT_TRUE(contains(reversed, key(-1, 0)));
     EXPECT_THAT(
        reversed.find(key(-1, 0))->second,
        testing::UnorderedElementsAre(
@@ -180,7 +192,7 @@ TEST(MotionModel, LookupTable)
            key(-2, 0),
            key(-2, 1)));
 
-    ASSERT_TRUE(reversed.contains(key(-2, 0)));
+    ASSERT_TRUE(contains(reversed, key(-2, 0)));
     EXPECT_THAT(
        reversed.find(key(-2, 0))->second,
        testing::UnorderedElementsAre(

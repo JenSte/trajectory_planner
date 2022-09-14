@@ -18,7 +18,6 @@ RUN \
         htop \
         less \
         libfftw3-dev \
-        libgmock-dev \
         libopencv-dev \
         python3-pip \
         vim-tiny

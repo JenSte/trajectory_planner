@@ -3,7 +3,7 @@ project(trajectory_planner)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -126,13 +126,11 @@ install(FILES ${PROJECT_NAME}_plugin.xml
 install(DIRECTORY include DESTINATION include)
 
 if(BUILD_TESTING)
-    pkg_search_module(GMOCK REQUIRED gmock)
-
     find_package(ament_lint_auto REQUIRED)
     ament_lint_auto_find_test_dependencies()
 
-    find_package(ament_cmake_gtest REQUIRED)
-    ament_add_gtest(${PROJECT_NAME}_test
+    find_package(ament_cmake_gmock REQUIRED)
+    ament_add_gmock(${PROJECT_NAME}_test
         "include/trajectory_planner/a_star.hpp"
         "include/trajectory_planner/buffer.hpp"
         "include/trajectory_planner/convolution.hpp"
