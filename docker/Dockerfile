@@ -1,4 +1,10 @@
-FROM ubuntu:focal
+# The base image for this image.
+ARG BASE_IMAGE
+
+FROM $BASE_IMAGE
+
+# The ROS version to install.
+ARG ROS_VERSION
 
 RUN \
     export DEBIAN_FRONTEND=noninteractive && \
@@ -22,7 +28,7 @@ RUN python3 -m pip install transforms3d
 # This script installs ROS and the needed packages without
 # having to escape every command in the Dockerfile.
 COPY install_ros.sh .
-RUN ./install_ros.sh
+RUN ./install_ros.sh "$ROS_VERSION"
 
 # Running possibly hardware accelerated programs (like rviz)
 # often fails when using X11 forwarding.

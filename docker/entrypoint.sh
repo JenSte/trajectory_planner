@@ -5,7 +5,11 @@ if [ -f /opt/ws/install/setup.sh ]; then
     source /opt/ws/install/setup.sh
 else
     echo "sourcing ros installation"
-    source /opt/ros/galactic/setup.bash
+    if [ -f /opt/ros/humble/setup.bash ]; then
+        source /opt/ros/humble/setup.bash
+    else
+        source /opt/ros/galactic/setup.bash
+    fi
 fi
 
 cd /opt/ws
