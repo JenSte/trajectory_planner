@@ -77,8 +77,8 @@ public:
     // Return a 'const' reference to a single element.
     const T& at(size_t x, size_t y) const
     {
-        assert((0 <= x) && (x < width_));
-        assert((0 <= y) && (y < height_));
+        assert(x < width_);
+        assert(y < height_);
 
         return raw()[y * width_ + x];
     }
