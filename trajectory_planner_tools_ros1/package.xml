@@ -1,0 +1,9 @@
+<package format="2">
+    <name>trajectory_planner_tools</name>
+    <version>0.0.1</version>
+    <description>Debug/development tools and example launch/configuration files for the trajectory planner.</description>
+    <maintainer email="jens.steinhauser@gmail.com">Jens Steinhauser</maintainer>
+    <license>MIT</license>
+
+    <run_depend>roslaunch</run_depend>
+</package>

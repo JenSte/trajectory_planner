@@ -1,0 +1,31 @@
+<launch>
+
+    <arg
+        name="map_name"
+        value="cave_2cm.yaml"
+        doc="The map to load."
+    />
+
+    <node
+        name="map_server"
+        pkg="map_server"
+        type="map_server"
+        output="screen"
+        args="$(find trajectory_planner_tools)/map/$(arg map_name)"
+    />
+
+    <node
+        name="move_base"
+        pkg="move_base"
+        type="move_base"
+        output="screen"
+    >
+        <rosparam
+            file="$(find trajectory_planner_tools)/config/navigation.yaml"
+            command="load"
+        />
+    </node>
+
+    <node pkg="tf" type="static_transform_publisher" name="link_broadcaster_1" args="1 0 0 0 0 0 1 map odom 100" />
+    <node pkg="tf" type="static_transform_publisher" name="link_broadcaster_2" args="1 0 0 0 0 0 1 odom base_link 100" />
+</launch>
