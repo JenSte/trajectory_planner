@@ -27,4 +27,6 @@ $DOCKER run \
     --volume "$SCRIPT_PATH/../trajectory_planner:/opt/trajectory_planner" \
     --volume "$SCRIPT_PATH/../trajectory_planner_msgs:/opt/trajectory_planner_msgs" \
     --volume "$SCRIPT_PATH/../trajectory_planner_tools:/opt/trajectory_planner_tools" \
+    --volume "$SCRIPT_PATH/../trajectory_planner_tools_ros1:/opt/trajectory_planner_tools_ros1" \
+    --volume "$SCRIPT_PATH/../trajectory_planner_plugin_ros1:/opt/trajectory_planner_plugin_ros1" \
     "$TAG" "$@"

@@ -16,4 +16,4 @@ fi
 $DOCKER exec \
     -it \
     "$CONTAINER" \
-    /entrypoint.sh bash
+    bash

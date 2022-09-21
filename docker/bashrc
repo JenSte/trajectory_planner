@@ -1,0 +1,24 @@
+if [ -f /opt/ws/install/setup.sh ]; then
+    echo "sourcing ROS2 workspace"
+    source /opt/ws/install/setup.sh
+elif [ -f /opt/ws/devel/setup.bash ]; then
+    echo "sourcing ROS1 workspace"
+    source /opt/ws/devel/setup.bash
+else
+    if [ -f /opt/ros/noetic/setup.bash ]; then
+        echo "sourcing ROS1 'noetic' installation"
+        source /opt/ros/noetic/setup.bash
+    elif [ -f /opt/ros/humble/setup.bash ]; then
+        echo "sourcing ROS2 'humble' installation"
+        source /opt/ros/humble/setup.bash
+    elif [ -f /opt/ros/galactic/setup.bash ]; then
+        echo "sourcing ROS2 'galactic' installation"
+        source /opt/ros/galactic/setup.bash
+    else
+        echo "no ROS installation found"
+    fi
+fi
+
+export ROSCONSOLE_FORMAT='[${severity}] - ${node}: [${time}] ${message}'
+
+cd /opt/ws

@@ -1,15 +1,16 @@
 #!/bin/bash
 
-# Build a Docker image with a ROS2 installation in it.
+# Build a Docker image with a ROS installation in it.
 
 set -eu
 
-# The ROS2 version to install.
-ROS_VERSION=galactic
+# The ROS version to install.
+ROS_VERSION=noetic
+#ROS_VERSION=galactic
 #ROS_VERSION=humble
 
 # The base OS image.
-if [ "$ROS_VERSION" = "galactic" ]; then
+if [ "$ROS_VERSION" = "noetic" ] || [ "$ROS_VERSION" = "galactic" ]; then
     BASE_IMAGE=ubuntu:focal
 else
     BASE_IMAGE=ubuntu:jammy

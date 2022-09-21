@@ -33,8 +33,7 @@ RUN ./install_ros.sh "$ROS_VERSION"
 # often fails when using X11 forwarding.
 ENV LIBGL_ALWAYS_SOFTWARE=1
 
-# The entrypoint script sources either the ROS installation
+# The code in the bashrc file sources either the ROS installation
 # or the workspace (if it is already build).
-COPY entrypoint.sh .
-ENTRYPOINT ["./entrypoint.sh"]
-CMD ["bash"]
+COPY bashrc /root/.bashrc
+ENTRYPOINT ["bash"]
