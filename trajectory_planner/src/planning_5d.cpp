@@ -512,19 +512,16 @@ SegmentSearchResult plan_movement_segment(
 
     // Sum up the cost values along the path.
     std::vector<double> path_costs;
-    if (path.size() >= 2) {
-        // Cost of the goal.
-        path_costs.push_back(0.0);
+    path_costs.push_back(0.0); // Cost of the goal.
 
-        double cost = 0.0;
-        for (size_t i = path.size() - 1; i > 0; --i) {
-            const Pose5D& node = path.at(i);
-            const Pose5D& predecessor = path.at(i - 1);
-            cost += movement_cost(predecessor, node);
-            path_costs.push_back(cost);
-        }
-        std::reverse(path_costs.begin(), path_costs.end());
+    double cost = 0.0;
+    for (size_t i = path.size(); i-- > 1;) {
+        const Pose5D& node = path.at(i);
+        const Pose5D& predecessor = path.at(i - 1);
+        cost += movement_cost(predecessor, node);
+        path_costs.push_back(cost);
     }
+    std::reverse(path_costs.begin(), path_costs.end());
 
     return SegmentSearchResult{
         segment.direction,

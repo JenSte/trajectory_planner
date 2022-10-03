@@ -1,0 +1,53 @@
+# /opt/ros/galactic/share/nav2_bringup/params/nav2_params.yaml
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 20.0
+    use_sim_time: True
+    planner_plugins: ["trajectory_planner"]
+    trajectory_planner:
+      plugin: "trajectory_planner/TrajectoryPlanner"
+
+      # The number of steps the whole circle (2 * pi) is divided by to create
+      # the three-dimensional cost maps.
+      angle_granularity: 120
+
+      # The distance up to which obstacles are inflated to calculate the costs,
+      # in meter.
+      inflation_radius: 2.5
+
+      # When inflating the 3D path to create the search space for the 5D planner,
+      # this is the maximum inflation radius (in meter), used when the 3D path is
+      # "very curvy".
+      inflation_5d_radius: 0.10
+
+      # When inflating the 3D path to create the search space for the 5D planner,
+      # this is the maximum distance (in meter) from each pose which is inspected to calculate
+      # the curvature.
+      inflation_5d_lookahead: 0.5
+
+      # The directory to store costs to for a faster start-up of the planner with
+      # the same map. Disable caching of costs by setting this to "".
+      cache_directory: "/tmp"
+
+      # The directory to write debug images to when creating the cost maps. Disable
+      # this by setting this to "".
+      debug_directory: "/tmp"
+
+      # The maximum linear velocity of the vehicle, in meter/second.
+      linear_velocity_maximum: 0.5
+
+      # The maximum angular velocity of the vehicle, in radian/second.
+      angular_velocity_maximum: 0.5
+
+      # The time increment used when simulating the motion, in second.
+      simulation_time_delta: 0.1
+
+      # The heuristic to use.
+      heuristic: "depth"
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      footprint_padding: 0.05
+      footprint: "[[-0.2, 0.2], [0.3, 0.2], [0.45, 0.05], [0.45, -0.05], [0.3, -0.2], [-0.2, -0.2]]"

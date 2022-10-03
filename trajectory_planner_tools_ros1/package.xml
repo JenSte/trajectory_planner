@@ -5,5 +5,7 @@
     <maintainer email="jens.steinhauser@gmail.com">Jens Steinhauser</maintainer>
     <license>MIT</license>
 
-    <run_depend>roslaunch</run_depend>
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <exec_depend>roslaunch</exec_depend>
 </package>
