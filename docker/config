@@ -1,0 +1,14 @@
+# This file is sourced by the other bash scripts in this directory.
+
+# The ROS version to use.
+ROS_VERSION=noetic
+#ROS_VERSION=galactic
+#ROS_VERSION=humble
+
+# The tag of the image that is created by the build-script and
+# started by the run-script.
+TAG=trajectory-planner-build-image-$ROS_VERSION
+
+# The name of the container that is started by the run-script
+# and where additional shells are executed by the exec-script.
+CONTAINER=trajectory-planner-container-$ROS_VERSION

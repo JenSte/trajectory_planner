@@ -5,17 +5,14 @@
 
 set -eu
 
-TAG=trajectory-planner-build-image
-
-CONTAINER=trajectory-planner-container
+SCRIPT_PATH=$(dirname `realpath "$0"`)
+source "$SCRIPT_PATH/config"
 
 if command -v podman &> /dev/null; then
     DOCKER=podman
 else
     DOCKER=docker
 fi
-
-SCRIPT_PATH=$(dirname `realpath "$0"`)
 
 $DOCKER run \
     -it --rm \

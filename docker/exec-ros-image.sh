@@ -5,7 +5,8 @@
 
 set -eu
 
-CONTAINER=trajectory-planner-container
+SCRIPT_PATH=$(dirname `realpath "$0"`)
+source "$SCRIPT_PATH/config"
 
 if command -v podman &> /dev/null; then
     DOCKER=podman

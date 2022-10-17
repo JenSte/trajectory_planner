@@ -4,28 +4,21 @@
 
 set -eu
 
-# The ROS version to install.
-ROS_VERSION=noetic
-#ROS_VERSION=galactic
-#ROS_VERSION=humble
+SCRIPT_PATH=$(dirname `realpath "$0"`)
+source "$SCRIPT_PATH/config"
 
-# The base OS image.
+# Select an apropriate base OS image depending on the ROS version.
 if [ "$ROS_VERSION" = "noetic" ] || [ "$ROS_VERSION" = "galactic" ]; then
     BASE_IMAGE=ubuntu:focal
 else
     BASE_IMAGE=ubuntu:jammy
 fi
 
-# The tag of the image that is created.
-TAG=trajectory-planner-build-image
-
 if command -v podman &> /dev/null; then
     DOCKER=podman
 else
     DOCKER=docker
 fi
-
-SCRIPT_PATH=$(dirname `realpath "$0"`)
 
 # Update base image.
 $DOCKER pull $BASE_IMAGE
