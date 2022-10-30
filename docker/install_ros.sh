@@ -19,10 +19,11 @@ if [ "$ROS_VERSION" = "noetic" ]; then
 
     PACKAGES="
         ros-${ROS_VERSION}-costmap-2d
+        ros-${ROS_VERSION}-desktop-full
+        ros-${ROS_VERSION}-fake-localization
         ros-${ROS_VERSION}-map-server
         ros-${ROS_VERSION}-move-base
         ros-${ROS_VERSION}-nav-core
-        ros-${ROS_VERSION}-desktop-full
     "
 else
     # ROS2
@@ -61,7 +62,8 @@ if [ "$ROS_VERSION" = "noetic" ]; then
     # ROS1
     # Add some often used commands to the bash history.
     echo "catkin_make" >> ~/.bash_history
-    echo "roslaunch trajectory_planner_tools navigation.launch" >> ~/.bash_history
+    echo "roslaunch trajectory_planner_tools static.launch" >> ~/.bash_history
+    echo "roslaunch trajectory_planner_tools simulation.launch" >> ~/.bash_history
     echo "rviz -d /opt/ws/src/trajectory_planner_tools_ros1/config/navigation.rviz" >> ~/.bash_history
 else
     # ROS2

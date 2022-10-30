@@ -29,10 +29,26 @@ if [ "$ROS_VERSION" = "noetic" ]; then
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_msgs_ros1:/opt/trajectory_planner_msgs_ros1"
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_plugin_ros1:/opt/trajectory_planner_plugin_ros1"
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_tools_ros1:/opt/trajectory_planner_tools_ros1"
+
+    # Package containing models used for the simulation, located at
+    # https://github.com/tuw-robotics/tuw_gazebo
+    if [ -d "$SCRIPT_PATH/tuw_gazebo" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_gazebo:/opt/tuw_gazebo"
+    fi
+    # https://github.com/tuw-robotics/tuw_msgs.git
+    if [ -d "$SCRIPT_PATH/tuw_msgs" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_msgs:/opt/tuw_msgs"
+    fi
 else
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_msgs_ros2:/opt/trajectory_planner_msgs_ros2"
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_plugin_ros2:/opt/trajectory_planner_plugin_ros2"
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_tools_ros2:/opt/trajectory_planner_tools_ros2"
+
+    # Package containing models used for the simulation, located at
+    # https://github.com/tuw-robotics/tuw2_gazebo
+    if [ -d "$SCRIPT_PATH/tuw2_gazebo" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw2_gazebo:/opt/tuw2_gazebo"
+    fi
 fi
 
 $DOCKER run \

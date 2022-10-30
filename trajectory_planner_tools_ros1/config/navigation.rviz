@@ -1,11 +1,11 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 105
+    Help Height: 150
     Name: Displays
     Property Tree Widget:
       Expanded: ~
       Splitter Ratio: 0.5397849678993225
-    Tree Height: 713
+    Tree Height: 668
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -53,13 +53,45 @@ Visualization Manager:
       Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
         base_link:
           Value: true
+        battery0:
+          Value: false
+        center_hubcap:
+          Value: false
+        center_wheel:
+          Value: false
+        chassis:
+          Value: false
+        laser0:
+          Value: false
+        left_hub:
+          Value: false
+        left_hub_mount:
+          Value: false
+        left_wheel:
+          Value: false
         map:
           Value: true
+        mount_bottom_left:
+          Value: false
+        mount_camera_tof:
+          Value: false
         odom:
           Value: true
+        right_hub:
+          Value: false
+        right_hub_mount:
+          Value: false
+        right_wheel:
+          Value: false
+        sonar:
+          Value: false
+        swivel:
+          Value: false
+        top:
+          Value: false
       Marker Alpha: 1
       Marker Scale: 1
       Name: TF
@@ -70,9 +102,132 @@ Visualization Manager:
         map:
           odom:
             base_link:
-              {}
+              chassis:
+                battery0:
+                  {}
+                sonar:
+                  {}
+              left_hub_mount:
+                left_hub:
+                  left_wheel:
+                    {}
+              right_hub_mount:
+                right_hub:
+                  right_wheel:
+                    {}
+              swivel:
+                center_wheel:
+                  center_hubcap:
+                    {}
+              top:
+                laser0:
+                  {}
+                mount_bottom_left:
+                  {}
+                mount_camera_tof:
+                  {}
       Update Interval: 0
       Value: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        battery0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        center_hubcap:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        center_wheel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        chassis:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        laser0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        left_hub:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        left_hub_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        left_wheel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        mount_bottom_left:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        mount_camera_tof:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        right_hub:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        right_hub_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        right_wheel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        sonar:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        swivel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        top:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel
+      Robot Description: robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
     - Alpha: 0.699999988079071
       Class: rviz/Map
       Color Scheme: map
