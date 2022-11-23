@@ -6,35 +6,39 @@ namespace trajectory_planner
 {
 
 MotionModel::MotionModel(
-    double time_delta,
-    double /*map_resolution*/,
-    unsigned int /*angle_granularity*/,
-    MotionModel::VelocitySpacing /*linear_velocity_spacing*/,
-    MotionModel::VelocitySpacing /*angular_velocity_spacing*/,
-    double linear_velocity_maximum,
-    double angular_velocity_maximum,
+    double maximum_wheel_velocity,
+    double maximum_wheel_acceleration,
+    double wheel_distance,
+//    double map_resolution,
+//    unsigned int angle_granularity,
     unsigned int linear_velocity_steps,
-    unsigned int angular_velocity_steps,
-    double /*linear_acceleration_maximum*/,
-    double /*angular_acceleration_maximum*/)
-    : time_delta_(time_delta)
-    , linear_steps_(linear_steps(linear_velocity_steps, linear_velocity_maximum))
-    , angular_steps_(linear_steps(angular_velocity_steps, angular_velocity_maximum))
-//    , linear_steps_(
-//        distribute_values(
-//            linear_velocity_spacing,
-//            smallest_linear_velocity(time_delta, map_resolution),
-//            linear_velocity_maximum))
-//    , angular_steps_(
-//        distribute_values(
-//            angular_velocity_spacing,
-//            smallest_angular_velocity(time_delta, angle_granularity),
-//            angular_velocity_maximum))
-    , lookup_table_forward_(
-        create_lookup_table(
-            create_velocity_combinations(linear_steps_, angular_steps_)))
-    , lookup_table_backward_(reverse_lookup_table(lookup_table_forward_))
+    unsigned int angular_velocity_steps)
 {
+    // Maximum linear speed of the vehicle: Both wheels drive forward with maximum
+    // speed.
+    double maximum_linear_velocity = maximum_wheel_velocity;
+
+    // Maximum angular speed of the vehicle: One wheel drives forward with maximum
+    // speed, the other backward with maximum speed.
+    double maximum_angular_velocity = 2.0 * maximum_wheel_velocity / wheel_distance;
+
+    linear_steps_ = linear_steps(linear_velocity_steps, maximum_linear_velocity);
+    angular_steps_ = linear_steps(angular_velocity_steps, maximum_angular_velocity);
+
+    lookup_table_forward_ = create_lookup_table(
+        create_velocity_combinations(linear_steps_, angular_steps_));
+    lookup_table_backward_ = reverse_lookup_table(lookup_table_forward_);
+
+    // The maximum linear acceleration: Both wheels drive forward and accelerate
+    // with the maximum allowed per-wheel acceleration.
+    double maximum_linear_acceleration = maximum_wheel_acceleration;
+
+    // The simulation time step is choosen so that it is possible to accelerate in
+    // one simulation step from one velocity to the next.
+    double smallest_linear_velocity = maximum_linear_velocity / linear_velocity_steps;
+    time_delta_ = smallest_linear_velocity / maximum_linear_acceleration;
+
+    //time_delta_ = sqrt(2.0) * map_resolution / smallest_linear_velocity;
 }
 
 std::vector<double> MotionModel::linear_steps(

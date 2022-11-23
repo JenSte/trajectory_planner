@@ -27,17 +27,13 @@ public:
     using ValueType = std::vector<KeyType>;
 
     MotionModel(
-        double time_delta,
-        double map_resolution,
-        unsigned int angle_granularity,
-        VelocitySpacing linear_velocity_spacing,
-        VelocitySpacing angular_velocity_spacing,
-        double linear_velocity_maximum,
-        double angular_velocity_maximum,
+        double maximum_wheel_velocity,
+        double maximum_wheel_acceleration,
+        double wheel_distance,
+//        double map_resolution,
+//        unsigned int angle_granularity,
         unsigned int linear_velocity_steps,
-        unsigned int angular_velocity_steps,
-        double linear_acceleration_maximum,
-        double angular_acceleration_maximum);
+        unsigned int angular_velocity_steps);
 
     MotionModel(MotionModel&&) = default;
 

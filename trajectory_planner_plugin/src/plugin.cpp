@@ -80,33 +80,33 @@ void Plugin::cleanup_planning_parameters(
         log_warn(ss.str());
     }
 
-    if (parameters.linear_velocity_maximum < 0.01) {
-        parameters.linear_velocity_maximum = 0.01;
+    if (parameters.maximum_wheel_velocity < 0.01) {
+        parameters.maximum_wheel_velocity = 0.01;
         std::ostringstream ss;
         ss
-            << "invalid 'linear_velocity_maximum' value, using "
+            << "invalid 'maximum_wheel_velocity' value, using "
             << std::setprecision(3) << std::fixed
-            << parameters.linear_velocity_maximum << " m/s";
+            << parameters.maximum_wheel_velocity << " m/s";
         log_warn(ss.str());
     }
 
-    if (parameters.angular_velocity_maximum < 0.01) {
-        parameters.angular_velocity_maximum = 0.01;
+    if (parameters.maximum_wheel_acceleration < 0.01) {
+        parameters.maximum_wheel_acceleration = 0.01;
         std::ostringstream ss;
         ss
-            << "invalid 'angular_velocity_maximum' value, using "
+            << "invalid 'maximum_wheel_acceleration' value, using "
             << std::setprecision(3) << std::fixed
-            << parameters.angular_velocity_maximum << " rad/s";
+            << parameters.maximum_wheel_acceleration << " m/s^2";
         log_warn(ss.str());
     }
 
-    if (parameters.time_delta < 0.01) {
-        parameters.time_delta = 0.01;
+    if (parameters.wheel_distance < 0.01) {
+        parameters.wheel_distance = 0.01;
         std::ostringstream ss;
         ss
-            << "invalid 'time_delta' value, using "
-            << std::setprecision(3) << std::fixed
-            << parameters.time_delta << " s";
+            << "invalid 'wheel_distance' value, using "
+            << std::setprecision(2) << std::fixed
+            << parameters.wheel_distance << " m";
         log_warn(ss.str());
     }
 
@@ -150,23 +150,23 @@ void Plugin::log_planning_parameters(
 
     ss.str("");
     ss
-        << "  linear_velocity_maximum: "
+        << "  maximum_wheel_velocity: "
         << std::setprecision(3) << std::fixed
-        << parameters.linear_velocity_maximum << " m/s";
+        << parameters.maximum_wheel_velocity << " m/s";
     log_info(ss.str());
 
     ss.str("");
     ss
-        << "  angular_velocity_maximum: "
+        << "  maximum_wheel_acceleration: "
         << std::setprecision(3) << std::fixed
-        << parameters.angular_velocity_maximum << " rad/s";
+        << parameters.maximum_wheel_acceleration << " m/s^2";
     log_info(ss.str());
 
     ss.str("");
     ss
-        << "  simulation_time_delta: "
-        << std::setprecision(3) << std::fixed
-        << parameters.time_delta << " s";
+        << "  wheel_distance: "
+        << std::setprecision(2) << std::fixed
+        << parameters.wheel_distance << " m";
     log_info(ss.str());
 
     ss.str("");

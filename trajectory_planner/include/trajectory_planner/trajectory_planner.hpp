@@ -32,11 +32,20 @@ public:
         // "measuring" the curvature, in meter.
         double inflation_5d_lookahead;
 
+        // The maximum velocity of a wheel of the vehicle, in meter/second.
+        double maximum_wheel_velocity;
+
+        // The maximum acceleration of a wheel of the vehicle, in meter/(second^2).
+        double maximum_wheel_acceleration;
+
+        // The distance between the two driving wheels of the vehicle, in meter.
+        double wheel_distance;
+
         // The maximum linear velocity of the vehicle, in meter/second.
-        double linear_velocity_maximum;
+        //double linear_velocity_maximum;
 
         // The maximum angular velocity of the vehicle, in radian/second.
-        double angular_velocity_maximum;
+        //double angular_velocity_maximum;
 
         // The number of steps to subdivide 'linear_velocity_maximum'.
         unsigned int linear_velocity_steps;
@@ -51,7 +60,7 @@ public:
         double angular_acceleration_maximum;
 
         // The time increment used during the simulation, in second.
-        double time_delta;
+        //double time_delta;
 
         // Wheter or not to do a multi-threaded search.
         bool multi_threaded;

@@ -73,9 +73,12 @@ TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_par
 
     nh_.getParam("inflation_5d_radius", result.inflation_5d_radius);
     nh_.getParam("inflation_5d_lookahead", result.inflation_5d_lookahead);
-    nh_.getParam("linear_velocity_maximum", result.linear_velocity_maximum);
-    nh_.getParam("angular_velocity_maximum", result.angular_velocity_maximum);
-    nh_.getParam("simulation_time_delta", result.time_delta);
+    nh_.getParam("maximum_wheel_velocity", result.maximum_wheel_velocity);
+    nh_.getParam("maximum_wheel_acceleration", result.maximum_wheel_acceleration);
+    nh_.getParam("wheel_distance", result.wheel_distance);
+    //nh_.getParam("linear_velocity_maximum", result.linear_velocity_maximum);
+    //nh_.getParam("angular_velocity_maximum", result.angular_velocity_maximum);
+    //nh_.getParam("simulation_time_delta", result.time_delta);
 
     int linear_velocity_steps;
     nh_.getParam("linear_velocity_steps", linear_velocity_steps);

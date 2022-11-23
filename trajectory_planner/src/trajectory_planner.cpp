@@ -601,19 +601,13 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
 
     // This object is used to do the simulation of the 5D movement.
     MotionModel motion_model(
-        parameters.time_delta,
-        map_resolution_,
-        costs_.angle_granularity(),
-        //MotionModel::VelocitySpacing::LOGARITHMIC,
-        //MotionModel::VelocitySpacing::LOGARITHMIC,
-        MotionModel::VelocitySpacing::LINEAR,
-        MotionModel::VelocitySpacing::LINEAR,
-        parameters.linear_velocity_maximum,
-        parameters.angular_velocity_maximum,
+        parameters.maximum_wheel_velocity,
+        parameters.maximum_wheel_acceleration,
+        parameters.wheel_distance,
+//        map_resolution_,
+//        costs_.angle_granularity(),
         parameters.linear_velocity_steps,
-        parameters.angular_velocity_steps,
-        parameters.linear_acceleration_maximum,
-        parameters.angular_acceleration_maximum);
+        parameters.angular_velocity_steps);
 
     log_motion_model(motion_model);
 
@@ -771,6 +765,55 @@ void TrajectoryPlanner::log_motion_model(
         << (motion_model.angular_steps().at(1) / motion_model.time_delta())
         << " rad/s^2";
     log_callback_(ss.str());
+
+    ss.str("");
+    ss
+        << "  time step: "
+        << std::setprecision(3) << std::fixed
+        << motion_model.time_delta()
+        << " s";
+    log_callback_(ss.str());
+
+    // The smallest distance and angle that can be traversed with the smallest
+    // linear/angular velocities in one simulation step.
+    double smallest_distance = motion_model.linear_steps().at(1) * motion_model.time_delta();
+    double smallest_angle = motion_model.angular_steps().at(1) * motion_model.time_delta();
+
+    ss.str("");
+    ss
+        << "  smallest travelled distance: "
+        << std::setprecision(3) << std::fixed
+        << smallest_distance
+        << " m";
+    log_callback_(ss.str());
+
+    // Warn if the smallest travelled distance does not make much progress on the
+    // given map.
+    if (smallest_distance < (0.5 * sqrt(2.0) * map_resolution_)) {
+        log_callback_("  warning: smallest travelled distance seems small for the map resolution");
+    }
+
+    ss.str("");
+    ss
+        << "  smallest travelled angle: "
+        << std::setprecision(3) << std::fixed
+        << smallest_angle
+        << " rad";
+    log_callback_(ss.str());
+
+    // Calculate the ideal angle granularity for the smallest possible angle.
+    int ideal_angle_granularity = 2 * M_PI / smallest_angle;
+
+    ss.str("");
+    ss
+        << "  ideal angle granularity: "
+        << ideal_angle_granularity;
+    log_callback_(ss.str());
+
+    // Warn if the angle granularity is off.
+    if (abs(ideal_angle_granularity - static_cast<int>(costs_.angle_granularity())) > 5) {
+        log_callback_("  warning: angle_granularity is not ideal");
+    }
 }
 
 }
