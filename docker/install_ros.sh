@@ -12,7 +12,7 @@ curl \
     -o /usr/share/keyrings/ros-archive-keyring.gpg
 
 # Configure APT, select packages.
-if [ "$ROS_VERSION" = "noetic" ]; then
+if [ "$ROS_VERSION" = "melodic" ] || [ "$ROS_VERSION" = "noetic" ]; then
     # ROS1
 
     REPOSITORY=http://packages.ros.org/ros/ubuntu
@@ -58,7 +58,7 @@ apt-get update
 apt-get install --yes -o APT::Update::Error-Mode=any $PACKAGES
 
 # Post-install stuff, prepare environment.
-if [ "$ROS_VERSION" = "noetic" ]; then
+if [ "$ROS_VERSION" = "melodic" ] || [ "$ROS_VERSION" = "noetic" ]; then
     # ROS1
     # Add some often used commands to the bash history.
     echo "catkin_make" >> ~/.bash_history

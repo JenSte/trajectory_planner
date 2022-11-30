@@ -25,7 +25,7 @@ V="$V --volume $SCRIPT_PATH/../trajectory_planner_plugin:/opt/trajectory_planner
 # Unfortunately, the catkin-tools ignore packages that container a file named
 # "COLCON_IGNORE", so it's not as easy as just putting "CATKIN_IGNORE" files
 # into ROS2 and "COLCON_IGNORE" files into ROS1 packages.
-if [ "$ROS_VERSION" = "noetic" ]; then
+if [ "$ROS_VERSION" = "melodic" ] || [ "$ROS_VERSION" = "noetic" ]; then
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_msgs_ros1:/opt/trajectory_planner_msgs_ros1"
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_plugin_ros1:/opt/trajectory_planner_plugin_ros1"
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_tools_ros1:/opt/trajectory_planner_tools_ros1"

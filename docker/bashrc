@@ -5,7 +5,10 @@ elif [ -f /opt/ws/devel/setup.bash ]; then
     echo "sourcing ROS1 workspace"
     source /opt/ws/devel/setup.bash
 else
-    if [ -f /opt/ros/noetic/setup.bash ]; then
+    if [ -f /opt/ros/melodic/setup.bash ]; then
+        echo "sourcing ROS1 'melodic' installation"
+        source /opt/ros/melodic/setup.bash
+    elif [ -f /opt/ros/noetic/setup.bash ]; then
         echo "sourcing ROS1 'noetic' installation"
         source /opt/ros/noetic/setup.bash
     elif [ -f /opt/ros/humble/setup.bash ]; then

@@ -8,7 +8,9 @@ SCRIPT_PATH=$(dirname `realpath "$0"`)
 source "$SCRIPT_PATH/config"
 
 # Select an apropriate base OS image depending on the ROS version.
-if [ "$ROS_VERSION" = "noetic" ] || [ "$ROS_VERSION" = "galactic" ]; then
+if [ "$ROS_VERSION" = "melodic" ]; then
+    BASE_IMAGE=ubuntu:bionic
+elif [ "$ROS_VERSION" = "noetic" ] || [ "$ROS_VERSION" = "galactic" ]; then
     BASE_IMAGE=ubuntu:focal
 else
     BASE_IMAGE=ubuntu:jammy
