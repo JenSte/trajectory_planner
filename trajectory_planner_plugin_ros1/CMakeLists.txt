@@ -137,3 +137,30 @@ install(TARGETS ${PROJECT_NAME}_plugin
 install(FILES trajectory_planner_plugin.xml
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+add_executable(${PROJECT_NAME}_node
+    src/trajectory_planner_node.cpp
+)
+
+target_include_directories(${PROJECT_NAME}_node
+    PRIVATE
+        "../trajectory_planner/include"
+        "../trajectory_planner_plugin/include"
+        "include"
+)
+target_include_directories(${PROJECT_NAME}_node
+    SYSTEM PRIVATE
+        ${Boost_INCLUDE_DIR}
+        ${OpenCV_INCLUDE_DIRS}
+        ${catkin_INCLUDE_DIRS}
+        PkgConfig::FFTW
+)
+
+target_link_libraries(${PROJECT_NAME}_node
+    ${PROJECT_NAME}_plugin
+    ${catkin_LIBRARIES}
+)
+
+install(TARGETS ${PROJECT_NAME}_node
+    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
