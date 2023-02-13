@@ -39,6 +39,34 @@ if [ "$ROS_VERSION" = "melodic" ] || [ "$ROS_VERSION" = "noetic" ]; then
     if [ -d "$SCRIPT_PATH/tuw_msgs" ]; then
         V="$V --volume $SCRIPT_PATH/tuw_msgs:/opt/tuw_msgs"
     fi
+    # https://github.com/tuw-robotics/tuw_global_planner.git
+    if [ -d "$SCRIPT_PATH/tuw_global_planner" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_global_planner:/opt/tuw_global_planner"
+    fi
+    # git@github.com:tuw-robotics/tuw_launches.git
+    if [ -d "$SCRIPT_PATH/tuw_launches" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_launches:/opt/tuw_launches"
+    fi
+    # git@github.com:tuw-robotics/tuw_rviz.git
+    if [ -d "$SCRIPT_PATH/tuw_rviz" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_rviz:/opt/tuw_rviz"
+    fi
+    # git@github.com:tuw-robotics/tuw_multi_robot.git
+    if [ -d "$SCRIPT_PATH/tuw_multi_robot" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_multi_robot:/opt/tuw_multi_robot"
+    fi
+    # git@github.com:tuw-robotics/tuw_geometry.git
+    if [ -d "$SCRIPT_PATH/tuw_geometry" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_geometry:/opt/tuw_geometry"
+    fi
+    # git@github.com:tuw-robotics/tuw_diffdrive.git
+    if [ -d "$SCRIPT_PATH/tuw_diffdrive" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_diffdrive:/opt/tuw_diffdrive"
+    fi
+    # git@github.com:tuw-robotics/tuw_control.git
+    if [ -d "$SCRIPT_PATH/tuw_control" ]; then
+        V="$V --volume $SCRIPT_PATH/tuw_control:/opt/tuw_control"
+    fi
 else
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_msgs_ros2:/opt/trajectory_planner_msgs_ros2"
     V="$V --volume $SCRIPT_PATH/../trajectory_planner_plugin_ros2:/opt/trajectory_planner_plugin_ros2"

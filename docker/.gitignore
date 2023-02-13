@@ -1,3 +1,10 @@
 tuw2_gazebo
+tuw_control
+tuw_diffdrive
 tuw_gazebo
+tuw_geometry
+tuw_global_planner
+tuw_launches
 tuw_msgs
+tuw_multi_robot
+tuw_rviz

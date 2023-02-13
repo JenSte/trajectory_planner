@@ -1,0 +1,73 @@
+<launch>
+    <!--
+        Start the navigation in a Gazeboo simulation using the TUW iws plugin.
+    -->
+
+    <param name="/use_sim_time" value="true"/>
+
+    <arg
+        name="map_name"
+        value="cave_2cm.yaml"
+        doc="The map to load."
+    />
+
+    <include
+        file="$(find tuw_gazebo_models)/launch/room_world.launch"/>
+
+    <!-- Robot model with the iws plugin. -->
+    <include
+        file="$(find tuw_gazebo_models)/launch/pioneer3dx/pioneer3dx.gazebo.launch">
+        <arg name="robot_name" value="/"/>
+        <arg name="position" value="-x 3.0 -y 5.0 -z 0.01"/>
+        <arg name="launch_ground_truth_robot_state_publisher" value="false"/>
+        <arg name="motor_plugin" value="diff_iws"/>
+        <arg name="differential_odom_source" value="world"/>
+    </include>
+
+    <!-- Fake localization, provides the pose topic for tuw_diffdrive_control. -->
+    <node
+        pkg="trajectory_planner_tools"
+        type="pose_from_odom.py"
+        name="pose_from_odom"
+        output="screen">
+        <remap from="odom" to="/ground_truth/odom"/>
+        <remap from="pose" to="/localization/pose"/>
+    </node>
+
+    <node
+        name="map_server"
+        pkg="map_server"
+        type="map_server"
+        output="screen"
+        args="$(find trajectory_planner_tools)/../map/$(arg map_name)"/>
+
+    <!-- Stand-alone trajectory planner node, publishes a path on a topic. -->
+    <node
+        pkg="trajectory_planner"
+        type="trajectory_planner_node"
+        name="trajectory_planner_node"
+        output="screen">
+        <rosparam
+            file="$(find trajectory_planner_tools)/config/path_following.yaml"
+            command="load"/>
+        <remap from="~goal" to="/move_base_simple/goal"/>
+        <remap from="~path" to="/global_planner/planner/plan"/>
+    </node>
+
+    <!-- Provides the "path_to_spline" service for the diffdrive control node. -->
+    <include file="$(find tuw_waypoint_to_spline)/launch/waypoint2spline.launch">
+        <arg name="robot_name" value="/"/>
+        <arg name="min_waypoint_distance" value="0.0"/>
+    </include>
+
+    <!-- Takes a path, approximates it and follows it. -->
+    <node
+        pkg="tuw_diffdrive_control"
+        type="tuw_diffdrive_control_node"
+        name="tuw_diffdrive_control_node"
+        output="screen">
+        <rosparam
+            file="$(find trajectory_planner_tools)/config/spline.yaml"
+            command="load"/>
+    </node>
+</launch>

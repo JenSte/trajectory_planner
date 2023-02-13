@@ -1,0 +1,30 @@
+costmap:
+  global_frame: map
+  robot_base_frame: base_link
+  update_frequency: 0.1
+  static_map: true
+  footprint: "[[0.17, 0.0], [0.13, 0.18], [-0.19, 0.18], [-0.26, 0], [-0.19, -0.18], [0.13, -0.18]]"
+
+TrajectoryPlanner:
+  angle_granularity: 120
+  inflation_radius: 2.5
+  cache_directory: "/tmp"
+  debug_directory: ""
+
+  # The maximum velocity of a wheel of the vehicle, in m/s.
+  maximum_wheel_velocity: 1.0
+
+  # The maximum acceleration of a wheel of the vehicle, in m/(s^2).
+  maximum_wheel_acceleration: 1.0
+
+  # The distance between the two driving wheels of the vehicle, in m.
+  wheel_distance: 0.34
+
+  linear_velocity_steps: 5
+  angular_velocity_steps: 5
+
+  inflation_5d_radius: 0.10
+  inflation_5d_lookahead: 0.5
+  heuristic: "depth"
+
+  multi_threaded: false

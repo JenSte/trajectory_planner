@@ -1,0 +1,10 @@
+wheel_mount_links         : [ "right_hub_mount"  , "left_hub_mount" ]
+wheel_joints              : [ "right_hub_joint"  , "left_hub_joint" ]
+
+wheel_radius              : 0.097
+wheel_displacement        : 0.33
+EKF_Pose_sigma_init_pr_ch : 0      # set to e.g. 0.1 if you want to online estimate the wheels radius / displacement
+updateRate                : 50
+
+use_localization          : true
+Base_ChFb_UsePoseFb       : true

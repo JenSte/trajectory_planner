@@ -18,9 +18,13 @@ if [ "$ROS_VERSION" = "melodic" ] || [ "$ROS_VERSION" = "noetic" ]; then
     REPOSITORY=http://packages.ros.org/ros/ubuntu
 
     PACKAGES="
+        libdxflib-dev
+        libgoogle-perftools-dev
         ros-${ROS_VERSION}-costmap-2d
         ros-${ROS_VERSION}-desktop-full
+        ros-${ROS_VERSION}-dwa-local-planner
         ros-${ROS_VERSION}-fake-localization
+        ros-${ROS_VERSION}-grid-map-ros
         ros-${ROS_VERSION}-map-server
         ros-${ROS_VERSION}-move-base
         ros-${ROS_VERSION}-nav-core
