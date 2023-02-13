@@ -46,6 +46,11 @@ bool TrajectoryPlannerPlugin::makePlan(
         path.poses.cend(),
         std::back_inserter(plan));
 
+    ros::Time now = ros::Time::now();
+    for (geometry_msgs::PoseStamped& pose: plan) {
+        pose.header.stamp = now + ros::Duration(pose.header.stamp.sec, pose.header.stamp.nsec);
+    }
+
     return !path.poses.empty();
 }
 
