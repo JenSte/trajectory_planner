@@ -205,7 +205,7 @@ void CostmapObserver::planner_update_thread_function(
                     costmap_ros_->getGlobalFrameID(),
                     costmap_2d->getResolution(),
                     costmap_2d->getOriginX(),
-                    costmap_2d->getOriginX()));
+                    costmap_2d->getOriginY()));
         }
 
         if (cost_map_callback_) {
@@ -215,7 +215,7 @@ void CostmapObserver::planner_update_thread_function(
                     costmap_ros_->getGlobalFrameID(),
                     costmap_2d->getResolution(),
                     costmap_2d->getOriginX(),
-                    costmap_2d->getOriginX()));
+                    costmap_2d->getOriginY()));
         }
 
         if (!planner_loaded && !debug_directory.empty()) {
