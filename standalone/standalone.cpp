@@ -91,17 +91,11 @@ int main()
     trajectory_planner::TrajectoryPlanner::PlanningParameters pp;
     pp.inflation_5d_radius = 0.2;
     pp.inflation_5d_lookahead = 0.5;
-
-    pp.linear_velocity_maximum = 0.5;
-    pp.angular_velocity_maximum = 0.5;
-
+    pp.maximum_wheel_velocity = 1.0;
+    pp.maximum_wheel_acceleration = 1.0;
+    pp.wheel_distance = 0.3;
     pp.linear_velocity_steps = 5;
-    pp.angular_velocity_steps = 4;
-
-    // pp.linear_acceleration_maximum =
-    // pp.angular_acceleration_maximum =
-
-    pp.time_delta = 0.1;
+    pp.angular_velocity_steps = 5;
     pp.multi_threaded = false;
     pp.heuristic_type = trajectory_planner::HeuristicType::DEPTH;
 
