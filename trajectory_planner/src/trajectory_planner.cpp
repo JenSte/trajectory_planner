@@ -42,8 +42,13 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     double resolution,
     double inflation_radius,
     const Polygon& footprint,
-    Buffer<double> occupancy_map)
+    Buffer<double> occupancy_map,
+    std::optional<Pose2D> internal_point)
 {
+    if (internal_point) {
+        crop_outer(log_callback, *internal_point, occupancy_map);
+    }
+
     Buffer<double> cost_map = create_cost_map(
         log_callback,
         multi_threaded,
@@ -101,6 +106,119 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
         std::move(cost_map),
         std::move(costs)));
     return planner;
+}
+
+void TrajectoryPlanner::crop_outer(
+    const LogCallback& log_callback,
+    Pose2D point,
+    Buffer<double>& map)
+{
+    if (point.x >= map.width()) {
+        std::ostringstream ss;
+        ss
+            << "X-coordinate of internal point (" << point.x
+            << ") too huge for a map of width " << map.width()
+            << ", not cropping out the internal part.";
+        log_callback(ss.str());
+        return;
+    }
+
+    if (point.y >= map.height()) {
+        std::ostringstream ss;
+        ss
+            << "Y-coordinate of internal point (" << point.y
+            << ") too huge for a map of height " << map.height()
+            << ", not cropping out the internal part.";
+        log_callback(ss.str());
+        return;
+    }
+
+    std::ostringstream ss;
+    ss
+        << "Cropping out internal space around pixel "
+        << point.x << "/" << point.y << "...";
+    log_callback(ss.str());
+
+    using set = std::unordered_set<Pose2D, boost::hash<Pose2D>>;
+
+    // Insert a given point 'p' into the set 's' if it is a valid
+    // coordinate on the map 'map' and the point is free.
+    auto insert_maybe = [&map](set& s, Pose2D p) {
+        if (p.x >= map.width()) {
+            return;
+        }
+
+        if (p.y >= map.height()) {
+            return;
+        }
+
+        const double pixel = map.at(p.x, p.y);
+        if (pixel > 0.5) {
+            return;
+        }
+
+        // Point is on the map and free.
+        s.insert(p);
+    };
+
+    // The pixels that are connected to 'point' with free space.
+    set internal;
+
+    // The pixels that are currently processed.
+    set frontier;
+
+    // The checks at the beginning of this function already made sure that the
+    // coordinates of 'point' are valid, but we only add it to the start set
+    // if it is actually unoccupied.
+    if (map.at(point.x, point.y) < 0.5) {
+        internal.insert(point);
+        frontier.insert(point);
+    } else {
+        log_callback("Given internal pixel is occupied!");
+    }
+
+    while (!frontier.empty()) {
+        // The candidates for the new frontier set when we go forward, all
+        // the neighbours of the current frontier. In this flood-fill implementation,
+        // we don't go diagonal, so that we do not "enter" spaces where only a
+        // free diagonal neighbour exists.
+        set candidates;
+        for (const Pose2D& f: frontier) {
+            // Go up/down/left/right for every pixel in 'frontier'.
+            insert_maybe(candidates, {f.x + 1, f.y});
+            insert_maybe(candidates, {f.x - 1, f.y});
+            insert_maybe(candidates, {f.x, f.y + 1});
+            insert_maybe(candidates, {f.x, f.y - 1});
+        }
+
+        frontier.clear();
+        for (const Pose2D& c: candidates) {
+            const auto it = internal.find(c);
+            if (it == internal.end()) {
+                frontier.insert(c);
+                internal.insert(c);
+            }
+        }
+    }
+
+    if (!internal.empty()) {
+        std::ostringstream ss;
+        ss
+            << "Interal part of map contains " << internal.size() << " pixels.";
+        log_callback(ss.str());
+    } else {
+        log_callback("Map is empty after attempting to crop out inner part.");
+    }
+
+    for (unsigned int x = 0; x < map.width(); x++) {
+        for (unsigned int y = 0; y < map.height(); y++) {
+            const auto it = internal.find({x, y});
+            if (it == internal.end()) {
+                // This pixel is not in the 'internal' set, so paint it black.
+                map.at(x, y) = 1.0;
+            }
+        }
+    }
 }
 
 Buffer<double> TrajectoryPlanner::create_cost_map(

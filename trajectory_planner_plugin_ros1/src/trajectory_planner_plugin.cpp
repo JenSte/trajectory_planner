@@ -24,6 +24,15 @@ void TrajectoryPlannerPlugin::initialize(
     nh_.getParam("cache_directory", cache_directory);
     nh_.getParam("debug_directory", debug_directory);
 
+    std::optional<Point> internal_point;
+    if (nh_.hasParam("internal_point_x") && nh_.hasParam("internal_point_y")) {
+        double x, y;
+        nh_.getParam("internal_point_x", x);
+        nh_.getParam("internal_point_y", y);
+
+        internal_point = Point(x, y);
+    }
+
     costmap_ros_ = costmap_ros;
 
     costmap_observer_.watch_costmap(
@@ -31,6 +40,7 @@ void TrajectoryPlannerPlugin::initialize(
         inflation_radius,
         cache_directory,
         debug_directory,
+        internal_point,
         costmap_ros_);
 }
 

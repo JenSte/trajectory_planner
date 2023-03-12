@@ -40,6 +40,7 @@ public:
         double inflation_radius,
         const std::string& cache_directory,
         const std::string& debug_directory,
+        std::optional<Point> internal_point,
         convert::CostmapROSPointer costmap);
 
     // Stop watching the costmap.
@@ -101,6 +102,10 @@ private:
 
     // Callback to publish the costmap the planner creates.
     OccupancyGridCallback cost_map_callback_;
+
+    // An optional coordinate which, if given, defines a point inside the
+    // room to plan. Used to crop out that room, to make planning more efficient.
+    std::optional<Point> internal_point_;
 
     // The costmap this object is watching.
     convert::CostmapROSPointer costmap_ros_;

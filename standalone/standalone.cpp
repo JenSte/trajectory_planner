@@ -61,6 +61,9 @@ int main()
         }
     }
 
+    std::optional<trajectory_planner::Pose2D> internal_point;
+    internal_point = trajectory_planner::Pose2D{100, 200};
+
     std::cout << "creating planner\n";
     auto timestamp_start = std::chrono::steady_clock::now();
     std::unique_ptr<trajectory_planner::TrajectoryPlanner> planner =
@@ -72,7 +75,8 @@ int main()
             resolution,
             inflation_radius,
             footprint,
-            std::move(map));
+            std::move(map),
+            internal_point);
     std::chrono::duration<double> creation_duration =
         std::chrono::steady_clock::now() - timestamp_start;
 

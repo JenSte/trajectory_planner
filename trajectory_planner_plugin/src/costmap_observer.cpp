@@ -38,6 +38,7 @@ void CostmapObserver::watch_costmap(
     double inflation_radius,
     const std::string& cache_directory,
     const std::string& debug_directory,
+    std::optional<Point> internal_point,
     convert::CostmapROSPointer costmap)
 {
     if (angle_granularity < 1) {
@@ -86,6 +87,7 @@ void CostmapObserver::watch_costmap(
         << debug_directory << "'";
     log_info_(ss.str());
 
+    internal_point_ = internal_point;
     costmap_ros_ = costmap;
 
     planner_update_thread_quit_ = false;
@@ -347,6 +349,15 @@ std::unique_ptr<TrajectoryPlanner> CostmapObserver::create_planner(
     std::chrono::time_point<std::chrono::steady_clock> timestamp_end;
     std::chrono::duration<double> duration;
 
+    std::optional<Pose2D> internal_point;
+    if (internal_point_) {
+        // If given, convert the coorindate of the internal point to pixels.
+        unsigned int x, y;
+        costmap_2d->worldToMap(
+            std::get<0>(*internal_point_), std::get<1>(*internal_point_), x, y);
+        internal_point = Pose2D{x, y};
+    }
+
     timestamp_start = std::chrono::steady_clock::now();
     std::unique_ptr<TrajectoryPlanner> planner = TrajectoryPlanner::create_planner(
         log_callback,
@@ -356,7 +367,8 @@ std::unique_ptr<TrajectoryPlanner> CostmapObserver::create_planner(
         costmap_2d->getResolution(),
         inflation_radius,
         footprint,
-        convert::create_occupancy_map(costmap_2d));
+        convert::create_occupancy_map(costmap_2d),
+        internal_point);
     timestamp_end = std::chrono::steady_clock::now();
 
     duration = timestamp_end - timestamp_start;

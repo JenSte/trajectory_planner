@@ -92,8 +92,8 @@ public:
         double resolution,
         double inflation_radius,
         const Polygon& footprint,
-        Buffer<double> occupancy_map
-    );
+        Buffer<double> occupancy_map,
+        std::optional<Pose2D> internal_point);
 
     // Load a planner from a file created by 'store()'.
     static std::unique_ptr<TrajectoryPlanner> load_planner(
@@ -139,6 +139,14 @@ private:
         Buffer<double> occupancy_map,
         Buffer<double> cost_map,
         Costs costs);
+
+    // Modify the map so that it only contains the free space around 'point'
+    // (coordinates in raw pixel coordinates). Other "rooms" that are not connected
+    // by free pixels with 'point' are marked as inaccessible.
+    static void crop_outer(
+        const LogCallback& log_callback,
+        Pose2D point,
+        Buffer<double>& map);
 
     // Create the "cost map" by inflating the occupancy map, using an exponential
     // decay function.

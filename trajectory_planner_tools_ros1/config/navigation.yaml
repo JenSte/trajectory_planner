@@ -28,6 +28,11 @@ TrajectoryPlanner:
   cache_directory: "/tmp"
   debug_directory: "/tmp"
 
+  # The coordinate of an "internal" point on the map, everything not connected
+  # via free space is removed from the map (optional).
+  #internal_point_x: 2.0
+  #internal_point_y: 3.0
+
   # The maximum velocity of a wheel of the vehicle, in m/s.
   maximum_wheel_velocity: 1.0
 
