@@ -320,7 +320,7 @@ std::vector<Pose5D> neighbours(
 
     angle_index %= costs.angle_granularity();
 
-    if (costs.get_cost(x, y, angle_index) < (0.5 * Costs::invalid_cost)) {
+    if (costs.get_3d_cost(x, y, angle_index) < (0.5 * Costs::invalid_cost_3d)) {
         // The new pose is not valid.
         return {};
     }

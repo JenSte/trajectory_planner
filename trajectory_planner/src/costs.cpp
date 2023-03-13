@@ -5,10 +5,10 @@
 namespace trajectory_planner
 {
 
-const double Costs::invalid_cost = -1.0;
+const double Costs::invalid_cost_3d = -1.0;
 
-const Costs::CostType Costs::internal_invalid_cost =
-    std::numeric_limits<Costs::CostType>::max();
+const Costs::CostType3D Costs::internal_invalid_cost_3d =
+    std::numeric_limits<Costs::CostType3D>::max();
 
 Costs::Costs(
     unsigned int angle_granularity,
@@ -21,44 +21,44 @@ Costs::Costs(
     }
 }
 
-void Costs::set_cost(
+void Costs::set_3d_cost(
     unsigned int x,
     unsigned int y,
     unsigned int angle_index,
     double cost)
 {
-    auto it = costs_.find(std::make_pair(x, y));
-    if (it == costs_.end()) {
+    auto it = costs_3d_.find(std::make_pair(x, y));
+    if (it == costs_3d_.end()) {
         // There is no entry for this X/Y location. Add a vector with all
         // orientations, except the given one, set to the invalid value.
-        CostVector cv = CostVector(angle_granularity_, internal_invalid_cost);
-        cv.at(angle_index) = double_cost_to_internal_cost(cost);
-        costs_[std::make_pair(x, y)] = cv;
+        CostVector3D cv = CostVector3D(angle_granularity_, internal_invalid_cost_3d);
+        cv.at(angle_index) = double_cost_to_internal_cost_3d(cost);
+        costs_3d_[std::make_pair(x, y)] = cv;
     } else {
         // There is already a cost vector for this X/Y location, update it.
-        it->second.at(angle_index) = double_cost_to_internal_cost(cost);
+        it->second.at(angle_index) = double_cost_to_internal_cost_3d(cost);
     }
 }
 
-double Costs::get_cost(
+double Costs::get_3d_cost(
     unsigned int x,
     unsigned int y,
     unsigned int angle_index) const
 {
-    auto it = costs_.find(std::make_pair(x, y));
-    if (it == costs_.end()) {
+    auto it = costs_3d_.find(std::make_pair(x, y));
+    if (it == costs_3d_.end()) {
         // No entry for this X/Y location.
-        return invalid_cost;
+        return invalid_cost_3d;
     }
 
     // Return the cost value for the given orientation.
-    return internal_cost_to_double_cost(it->second.at(angle_index));
+    return internal_cost_3d_to_double_cost(it->second.at(angle_index));
 }
 
-double Costs::get_cost(
+double Costs::get_3d_cost(
     const Pose& pose) const
 {
-    return get_cost(pose.x, pose.y, pose.angle_index);
+    return get_3d_cost(pose.x, pose.y, pose.angle_index);
 }
 
 unsigned int Costs::angle_granularity() const
@@ -79,9 +79,9 @@ Costs Costs::intersect(
     for (const Pose2D& pose: poses) {
         const Location location(pose.x, pose.y);
 
-        auto it = costs_.find(location);
-        if (it != costs_.end()) {
-            result.costs_[location] = it->second;
+        auto it = costs_3d_.find(location);
+        if (it != costs_3d_.end()) {
+            result.costs_3d_[location] = it->second;
         }
     }
 
@@ -91,25 +91,25 @@ Costs Costs::intersect(
 void Costs::export_poses(
     std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const
 {
-    for (const auto& it: costs_) {
+    for (const auto& it: costs_3d_) {
         poses_set.insert(Pose2D{std::get<0>(it.first), std::get<1>(it.first)});
     }
 }
 
-double Costs::internal_cost_to_double_cost(
-    const CostType c) const
+double Costs::internal_cost_3d_to_double_cost(
+    const CostType3D c) const
 {
-    if (c == internal_invalid_cost) {
-        return invalid_cost;
+    if (c == internal_invalid_cost_3d) {
+        return invalid_cost_3d;
     }
 
-    return static_cast<double>(c) / static_cast<double>(internal_invalid_cost - 1);
+    return static_cast<double>(c) / static_cast<double>(internal_invalid_cost_3d - 1);
 }
 
-Costs::CostType Costs::double_cost_to_internal_cost(
+Costs::CostType3D Costs::double_cost_to_internal_cost_3d(
     const double c) const
 {
-    return (internal_invalid_cost - 1) * c;
+    return (internal_invalid_cost_3d - 1) * c;
 }
 
 }

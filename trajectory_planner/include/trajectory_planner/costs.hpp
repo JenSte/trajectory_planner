@@ -32,7 +32,7 @@ public:
         unsigned int goal_turn_penalty_distance);
 
     // Store the cost value of a pose.
-    void set_cost(
+    void set_3d_cost(
         unsigned int x,
         unsigned int y,
         unsigned int angle_index,
@@ -40,14 +40,14 @@ public:
 
     // Return the cost value of a pose.
     //
-    // If the cost of the given pose has never been set, 'invalid_cost' is returned.
-    double get_cost(
+    // If the cost of the given pose has never been set, 'invalid_cost_3d' is returned.
+    double get_3d_cost(
         unsigned int x,
         unsigned int y,
         unsigned int angle_index) const;
 
     // Convenience overload.
-    double get_cost(
+    double get_3d_cost(
         const Pose& pose) const;
 
     // Return the number of steps the whole circle is divided in.
@@ -66,23 +66,23 @@ public:
         std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const;
 
     // Value used for positions that can not be occupied.
-    static const double invalid_cost;
+    static const double invalid_cost_3d;
 
 private:
 
     // The data type to store the cost values internally.
-    using CostType = uint16_t;
+    using CostType3D = uint16_t;
 
     // Data type to hold the costs for a location on the map. The length of this
     // vector is 'angle_granularity_', for orientations that can not be occupied
-    // the value is set to 'internal_invalid_cost'.
-    using CostVector = std::vector<CostType>;
+    // the value is set to 'internal_invalid_cost_3d'.
+    using CostVector3D = std::vector<CostType3D>;
 
     // Data type to hold the X and Y coordinates.
     using Location = std::pair<unsigned int, unsigned int>;
 
     // The value for marking an invalid orientation in a 'CostVector'.
-    static const CostType internal_invalid_cost;
+    static const CostType3D internal_invalid_cost_3d;
 
     // Number of steps to divide the whole circle with.
     unsigned int angle_granularity_;
@@ -91,14 +91,14 @@ private:
     unsigned int goal_turn_penalty_distance_;
 
     // Stores the cost values.
-    std::unordered_map<Location, CostVector, boost::hash<Location>> costs_;
+    std::unordered_map<Location, CostVector3D, boost::hash<Location>> costs_3d_;
 
     // Convert the internal cost type to a double value.
-    double internal_cost_to_double_cost(
-        CostType c) const;
+    double internal_cost_3d_to_double_cost(
+        CostType3D c) const;
 
     // Convert a double value to the internal cost type.
-    CostType double_cost_to_internal_cost(
+    CostType3D double_cost_to_internal_cost_3d(
         double c) const;
 
     // Serialization support.
@@ -108,7 +108,7 @@ private:
     {
         ar & angle_granularity_;
         ar & goal_turn_penalty_distance_;
-        ar & costs_;
+        ar & costs_3d_;
     }
 };
 

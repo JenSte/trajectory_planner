@@ -486,7 +486,7 @@ Costs TrajectoryPlanner::create_costs(
     Costs costs(angle_granularity, goal_turn_penalty_distance);
     for (const auto& it: angle_costs) {
         for (const auto& v: it.second) {
-            costs.set_cost(
+            costs.set_3d_cost(
                 std::get<0>(v),
                 std::get<1>(v),
                 it.first,
@@ -653,8 +653,8 @@ void TrajectoryPlanner::dump_orientation_maps(
                 size_t row = height - 1 - y;
                 size_t column = x;
 
-                double cost = costs_.get_cost(x, y, angle_index);
-                if (cost < (0.5 * Costs::invalid_cost)) {
+                double cost = costs_.get_3d_cost(x, y, angle_index);
+                if (cost < (0.5 * Costs::invalid_cost_3d)) {
                     // Non-occupied pose.
                     canvas.at<unsigned char>(row, column) = 0;
                 } else {
@@ -677,8 +677,8 @@ void TrajectoryPlanner::dump_orientation_maps(
                 size_t column = x;
 
                 // Color non-occupied cells white.
-                double cost = costs_.get_cost(x, y, angle_index);
-                if (cost < (0.5 * Costs::invalid_cost)) {
+                double cost = costs_.get_3d_cost(x, y, angle_index);
+                if (cost < (0.5 * Costs::invalid_cost_3d)) {
                     color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(255, 255, 255);
                 }
 
@@ -709,11 +709,11 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     const Pose& start,
     const Pose& goal) const
 {
-    if (costs_.get_cost(start) < (0.5 * Costs::invalid_cost)) {
+    if (costs_.get_3d_cost(start) < (0.5 * Costs::invalid_cost_3d)) {
         throw std::invalid_argument("Start pose is not valid.");
     }
 
-    if (costs_.get_cost(goal) < (0.5 * Costs::invalid_cost)) {
+    if (costs_.get_3d_cost(goal) < (0.5 * Costs::invalid_cost_3d)) {
         throw std::invalid_argument("Goal pose is not valid.");
     }
 

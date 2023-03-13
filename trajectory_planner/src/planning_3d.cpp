@@ -214,8 +214,8 @@ boost::container::static_vector<Pose3D, 8> neighbours(
 
     auto add_neighbour = [&result, &costs, &lut](Pose3D p) {
         const unsigned int angle_index = lut.at(p.movement);
-        const double cost = costs.get_cost(p.x, p.y, angle_index);
-        if (!(cost < (0.5 * Costs::invalid_cost))) {
+        const double cost = costs.get_3d_cost(p.x, p.y, angle_index);
+        if (!(cost < (0.5 * Costs::invalid_cost_3d))) {
             // This pose is in the costs object.
             result.emplace_back(std::move(p));
         }
@@ -254,8 +254,8 @@ Pose3D refine_pose(
 
     // Make sure the new pose, with an orientation rounded to a
     // more granular value is also valid.
-    const double cost = costs.get_cost(pose.x, pose.y, lut.at(movement_index));
-    if (cost < (0.5 * Costs::invalid_cost)) {
+    const double cost = costs.get_3d_cost(pose.x, pose.y, lut.at(movement_index));
+    if (cost < (0.5 * Costs::invalid_cost_3d)) {
         std::ostringstream ss;
         ss
             << std::setprecision(2)
@@ -333,7 +333,7 @@ double calculate_movemement_cost(
     };
 
     // The value on the costmap at the 'to' pose.
-    const double to_cost = costs.get_cost(to.x, to.y, lut.at(to.movement));
+    const double to_cost = costs.get_3d_cost(to.x, to.y, lut.at(to.movement));
 
     if (from.movement == to.movement) {
         // The orientation stayed the same: pure forward/backward movement.
