@@ -83,6 +83,7 @@ add_library(${PROJECT_NAME}_plugin SHARED
     "../trajectory_planner/src/planning_3d.cpp"
     "../trajectory_planner/src/planning_5d.cpp"
     "../trajectory_planner/src/trajectory_planner.cpp"
+    "../trajectory_planner/src/trajectory_planner_debug_images.cpp"
     "../trajectory_planner/src/types.cpp"
     "../trajectory_planner_plugin/include/trajectory_planner_plugin/convert.hpp"
     "../trajectory_planner_plugin/include/trajectory_planner_plugin/costmap_observer.hpp"

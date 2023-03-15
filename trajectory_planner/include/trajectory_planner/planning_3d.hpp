@@ -23,6 +23,30 @@ using MovementIndex = unsigned int;
 // have (0 .. movement_index_count - 1).
 const MovementIndex movement_index_count = 16;
 
+// The angles in radians that correspond to a 3D movement index.
+const double angle_lut[movement_index_count] = {
+    // 1st quadrant.
+    atan2(0, 1),
+    atan2(1, 2),
+    atan2(1, 1),
+    atan2(2, 1),
+    // 2nd quadrant.
+    atan2(1, 0),
+    atan2(2, -1),
+    atan2(1, -1),
+    atan2(1, -2),
+    // 3rd quadrant.
+    atan2(0, -1),
+    atan2(-1, -2),
+    atan2(-1, -1),
+    atan2(-2, -1),
+    // 4th quadrant.
+    atan2(-1, 0),
+    atan2(-2, 1),
+    atan2(-1, 1),
+    atan2(-1, 2)
+};
+
 // A pose as used by the three dimensional planner.
 struct Pose3D
 {
@@ -62,12 +86,6 @@ struct Pose3D
 // A path planned by the three dimensional planner.
 using Path3D = std::vector<Pose3D>;
 
-// The type of a lookup table used to convert between the movement indices
-// of the 3D planner and the (more granular) angle indices used by the
-// trajectory planner (in particular it's 'Costs' object). This table can
-// be indexed by a movement index to get the corresponding angle index.
-using AngleIndexLUT = std::array<unsigned int, movement_index_count>;
-
 // The heuristic used by the 3D planner is the 2D distance from the goal.
 using HeuristicMap = std::unordered_map<Pose2D, double, boost::hash<Pose2D>>;
 
@@ -99,10 +117,6 @@ struct SearchResult3D
     OpenedNodesMap opened_nodes;
 };
 
-// Create a lookup table for a given angle granularity.
-AngleIndexLUT create_lookup_table(
-    unsigned int angle_granularity);
-
 // Create the data structure containting the heuristic values.
 HeuristicMap create_heuristic_map(
     const Costs& costs,
@@ -120,7 +134,6 @@ std::tuple<Pose3D, Pose3D> turn_neighbours(
 // costs object.
 boost::container::static_vector<Pose3D, 8> neighbours(
     const Costs& costs,
-    const AngleIndexLUT& lut,
     const Pose3D& pose);
 
 // Round a pose from the trajectory planner to a pose of the 3D planner, and
@@ -128,7 +141,6 @@ boost::container::static_vector<Pose3D, 8> neighbours(
 // pose is not valid.
 Pose3D refine_pose(
     const Costs& costs,
-    const AngleIndexLUT& lut,
     const Pose& pose);
 
 // Plan between two poses in three dimensions.

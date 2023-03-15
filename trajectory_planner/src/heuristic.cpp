@@ -54,7 +54,7 @@ DepthHeuristic::DepthHeuristic(
     frontier.insert(Pose2D{goal.x, goal.y});
 
     std::unordered_set<Pose2D, boost::hash<Pose2D>> remaining;
-    search_space.export_poses(remaining);
+    search_space.export_5d_poses(remaining);
     remaining.erase(Pose2D{goal.x, goal.y});
 
     while (!remaining.empty()) {
@@ -125,7 +125,7 @@ PathHeuristic::PathHeuristic(
     }
 
     std::unordered_set<Pose2D, boost::hash<Pose2D>> poses;
-    search_space.export_poses(poses);
+    search_space.export_5d_poses(poses);
 
     for (const Pose2D& pose: poses) {
         double closest_neighbour_distance = std::numeric_limits<double>::max();

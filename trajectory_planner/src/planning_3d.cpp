@@ -14,42 +14,6 @@ namespace {
 namespace trajectory_planner::three
 {
 
-AngleIndexLUT create_lookup_table(
-    unsigned int angle_granularity)
-{
-    // Denominator to convert an angle to the corresponding
-    // angle index of the trajectory planner.
-    const double denom = (2 * M_PI) / angle_granularity;
-
-    // Make sure an angle is between 0 and 2 * pi.
-    auto pos = [](const double angle) {
-        return (angle < 0.0) ? (angle + 2 * M_PI) : angle;
-    };
-
-    return {
-        // 1st quadrant.
-        static_cast<unsigned int>(std::round(pos(atan2(0, 1)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(1, 2)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(1, 1)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(2, 1)) / denom)),
-        // 2nd quadrant.
-        static_cast<unsigned int>(std::round(pos(atan2(1, 0)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(2, -1)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(1, -1)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(1, -2)) / denom)),
-        // 3rd quadrant.
-        static_cast<unsigned int>(std::round(pos(atan2(0, -1)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(-1, -2)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(-1, -1)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(-2, -1)) / denom)),
-        // 4th quadrant.
-        static_cast<unsigned int>(std::round(pos(atan2(-1, 0)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(-2, 1)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(-1, 1)) / denom)),
-        static_cast<unsigned int>(std::round(pos(atan2(-1, 2)) / denom))
-    };
-}
-
 HeuristicMap create_heuristic_map(
     const Costs& costs,
     const Pose3D& goal)
@@ -62,7 +26,7 @@ HeuristicMap create_heuristic_map(
 
     // The set of all unprocessed poses.
     std::unordered_set<Pose2D, boost::hash<Pose2D>> remaining;
-    costs.export_poses(remaining);
+    costs.export_3d_poses(remaining);
 
     // At the start, the values for the goal poses is known.
     result[Pose2D{goal.x, goal.y}] = 0.0;
@@ -207,14 +171,12 @@ std::tuple<Pose3D, Pose3D, Pose3D, Pose3D> move_turn_neighbours(
 
 boost::container::static_vector<Pose3D, 8> neighbours(
     const Costs& costs,
-    const AngleIndexLUT& lut,
     const Pose3D& pose)
 {
     boost::container::static_vector<Pose3D, 8> result;
 
-    auto add_neighbour = [&result, &costs, &lut](Pose3D p) {
-        const unsigned int angle_index = lut.at(p.movement);
-        const double cost = costs.get_3d_cost(p.x, p.y, angle_index);
+    auto add_neighbour = [&result, &costs](Pose3D p) {
+        const double cost = costs.get_3d_cost(p.x, p.y, p.movement);
         if (!(cost < (0.5 * Costs::invalid_cost_3d))) {
             // This pose is in the costs object.
             result.emplace_back(std::move(p));
@@ -240,7 +202,6 @@ boost::container::static_vector<Pose3D, 8> neighbours(
 
 Pose3D refine_pose(
     const Costs& costs,
-    const AngleIndexLUT& lut,
     const Pose& pose)
 {
     const double angle = pose.angle_index * (2 * M_PI) / costs.angle_granularity();
@@ -254,7 +215,7 @@ Pose3D refine_pose(
 
     // Make sure the new pose, with an orientation rounded to a
     // more granular value is also valid.
-    const double cost = costs.get_3d_cost(pose.x, pose.y, lut.at(movement_index));
+    const double cost = costs.get_3d_cost(pose.x, pose.y, movement_index);
     if (cost < (0.5 * Costs::invalid_cost_3d)) {
         std::ostringstream ss;
         ss
@@ -262,8 +223,7 @@ Pose3D refine_pose(
             << "Refined 3D pose is not valid ("
             << "angle_index = " << pose.angle_index << ", "
             << "angle = " << angle << " rad, "
-            << "movement_index = " << movement_index << ", "
-            << "rounded angle_index = " << lut.at(movement_index) << ")";
+            << "movement_index = " << movement_index << ")";
         throw std::runtime_error(ss.str());
     }
 
@@ -271,18 +231,12 @@ Pose3D refine_pose(
 }
 
 double normalized_angle_distance(
-    const AngleIndexLUT& lut,
-    unsigned int angle_granularity,
     const unsigned int movement_index_a,
     const unsigned int movement_index_b)
 {
-    // The angle indices (5D) that correspond to the movement indices (3D).
-    const unsigned int angle_index_a = lut.at(movement_index_a);
-    const unsigned int angle_index_b = lut.at(movement_index_b);
-
     // The actual orientation angles in radians.
-    const double a = angle_index_a * (2 * M_PI) / angle_granularity;
-    const double b = angle_index_b * (2 * M_PI) / angle_granularity;
+    const double a = angle_lut[movement_index_a];
+    const double b = angle_lut[movement_index_b];
 
     // The difference between the two orientations, from -pi to pi.
     const double diff = atan2(sin(a - b), cos(a - b));
@@ -294,7 +248,6 @@ double normalized_angle_distance(
 
 double calculate_movemement_cost(
     const Costs& costs,
-    const AngleIndexLUT& lut,
     const Pose3D& goal_pose,
     const Pose3D& from,
     const Pose3D& to)
@@ -312,7 +265,7 @@ double calculate_movemement_cost(
     };
 
     // Calculate the costs of turning on the spot.
-    auto pure_turn_cost = [&costs, &lut, &goal_pose](const Pose3D& from, const Pose3D& to, double cost_value) {
+    auto pure_turn_cost = [&costs, &goal_pose](const Pose3D& from, const Pose3D& to, double cost_value) {
         // Turning on the spot. We calculate the distance to the goal, and apply
         // a penalty for poses close to the goal. This is so that turns near the
         // goal are discouraged as turning often causes the robot to deviate from
@@ -326,14 +279,13 @@ double calculate_movemement_cost(
             goal_penalty = 2.0;
         }
 
-        const double angle_distance = normalized_angle_distance(
-            lut, costs.angle_granularity(), from.movement, to.movement);
+        const double angle_distance = normalized_angle_distance(from.movement, to.movement);
 
         return goal_penalty * (1.0 + angle_factor * angle_distance) * (1.0 + cost_value);
     };
 
     // The value on the costmap at the 'to' pose.
-    const double to_cost = costs.get_3d_cost(to.x, to.y, lut.at(to.movement));
+    const double to_cost = costs.get_3d_cost(to.x, to.y, to.movement);
 
     if (from.movement == to.movement) {
         // The orientation stayed the same: pure forward/backward movement.
@@ -363,9 +315,7 @@ double calculate_movemement_cost(
 }
 
 double calculate_heuristic(
-    const Costs& costs,
     const HeuristicMap& heuristic_map,
-    const AngleIndexLUT& lut,
     const Pose3D& goal_pose,
     const Pose3D& pose)
 {
@@ -385,8 +335,7 @@ double calculate_heuristic(
 
     // Calculate the normalized angle differenct between the orientation of the
     // pose and the goal pose.
-    const double angle_distance = normalized_angle_distance(
-        lut, costs.angle_granularity(), pose.movement, goal_pose.movement);
+    const double angle_distance = normalized_angle_distance(pose.movement, goal_pose.movement);
 
     // Compare to 'pure_movement_cost()': If we drive only forward, without ever
     // turning, far from every obstacle, so that the cost of a cell is 0.0:
@@ -405,12 +354,10 @@ SearchResult3D plan(
     const Pose& start,
     const Pose& goal)
 {
-    AngleIndexLUT lut = create_lookup_table(costs.angle_granularity());
-
     // Convert the poses for the trajectory planner to the (more granular
     // in regard to the orientation) poses used here.
-    Pose3D start_pose = refine_pose(costs, lut, start);
-    Pose3D goal_pose = refine_pose(costs, lut, goal);
+    Pose3D start_pose = refine_pose(costs, start);
+    Pose3D goal_pose = refine_pose(costs, goal);
 
     // The main heuristic for the 3D search is the distance to the goal, calculated
     // by flood-filling the 3D search space in 2D. While it takes some time to
@@ -422,16 +369,16 @@ SearchResult3D plan(
         return goal_pose == pose;
     };
 
-    auto get_neighbours = [&costs, &lut](const Pose3D& pose) {
-        return neighbours(costs, lut, pose);
+    auto get_neighbours = [&costs](const Pose3D& pose) {
+        return neighbours(costs, pose);
     };
 
-    auto movement_cost = [&costs, &lut, &goal_pose](const Pose3D& pose, const Pose3D& neighbour) {
-        return calculate_movemement_cost(costs, lut, goal_pose, pose, neighbour);
+    auto movement_cost = [&costs, &goal_pose](const Pose3D& pose, const Pose3D& neighbour) {
+        return calculate_movemement_cost(costs, goal_pose, pose, neighbour);
     };
 
-    auto heuristic = [&costs, &lut, &goal_pose, &heuristic_map](const Pose3D& pose) {
-        return calculate_heuristic(costs, heuristic_map, lut, goal_pose, pose);
+    auto heuristic = [&costs, &goal_pose, &heuristic_map](const Pose3D& pose) {
+        return calculate_heuristic(heuristic_map, goal_pose, pose);
     };
 
     using a_star_type = AStar<
@@ -457,7 +404,12 @@ SearchResult3D plan(
     // and create the heuristic vector.
     const Path3D& path = std::get<0>(a_star_result);
     for (const Pose3D& pose: path) {
-        result.path.push_back(Pose{pose.x, pose.y, lut[pose.movement]});
+        const double angle = angle_lut[pose.movement];
+
+        int angle_index = angle / (2 * M_PI / costs.angle_granularity());
+        angle_index %= costs.angle_granularity();
+
+        result.path.push_back(Pose{pose.x, pose.y, static_cast<unsigned int>(angle_index)});
         result.heuristic.push_back(heuristic(pose));
     }
 

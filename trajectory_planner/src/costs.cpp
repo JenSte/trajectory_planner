@@ -24,7 +24,7 @@ Costs::Costs(
 void Costs::set_3d_cost(
     unsigned int x,
     unsigned int y,
-    unsigned int angle_index,
+    unsigned int movement_index,
     double cost)
 {
     auto it = costs_3d_.find(std::make_pair(x, y));
@@ -32,18 +32,18 @@ void Costs::set_3d_cost(
         // There is no entry for this X/Y location. Add a vector with all
         // orientations, except the given one, set to the invalid value.
         CostVector3D cv = CostVector3D(angle_granularity_, internal_invalid_cost_3d);
-        cv.at(angle_index) = double_cost_to_internal_cost_3d(cost);
+        cv.at(movement_index) = double_cost_to_internal_cost_3d(cost);
         costs_3d_[std::make_pair(x, y)] = cv;
     } else {
         // There is already a cost vector for this X/Y location, update it.
-        it->second.at(angle_index) = double_cost_to_internal_cost_3d(cost);
+        it->second.at(movement_index) = double_cost_to_internal_cost_3d(cost);
     }
 }
 
 double Costs::get_3d_cost(
     unsigned int x,
     unsigned int y,
-    unsigned int angle_index) const
+    unsigned int movement_index) const
 {
     auto it = costs_3d_.find(std::make_pair(x, y));
     if (it == costs_3d_.end()) {
@@ -52,13 +52,35 @@ double Costs::get_3d_cost(
     }
 
     // Return the cost value for the given orientation.
-    return internal_cost_3d_to_double_cost(it->second.at(angle_index));
+    return internal_cost_3d_to_double_cost(it->second.at(movement_index));
 }
 
-double Costs::get_3d_cost(
-    const Pose& pose) const
+void Costs::set_5d_cost(
+    unsigned int x,
+    unsigned int y,
+    unsigned int angle_index)
 {
-    return get_3d_cost(pose.x, pose.y, pose.angle_index);
+    auto it = costs_5d_.find(std::make_pair(x, y));
+    if (it == costs_5d_.end()) {
+        CostVector5D cv = CostVector5D(angle_granularity_, false);
+        cv.at(angle_index) = true;
+        costs_5d_[std::make_pair(x, y)] = cv;
+    } else {
+        it->second.at(angle_index) = true;
+    }
+}
+
+bool Costs::get_5d_cost(
+    unsigned int x,
+    unsigned int y,
+    unsigned int angle_index) const
+{
+    auto it = costs_5d_.find(std::make_pair(x, y));
+    if (it == costs_5d_.end()) {
+        return false;
+    }
+
+    return it->second.at(angle_index);
 }
 
 unsigned int Costs::angle_granularity() const
@@ -79,19 +101,32 @@ Costs Costs::intersect(
     for (const Pose2D& pose: poses) {
         const Location location(pose.x, pose.y);
 
-        auto it = costs_3d_.find(location);
-        if (it != costs_3d_.end()) {
-            result.costs_3d_[location] = it->second;
+        auto it_3d = costs_3d_.find(location);
+        if (it_3d != costs_3d_.end()) {
+            result.costs_3d_[location] = it_3d->second;
+        }
+
+        auto it_5d = costs_5d_.find(location);
+        if (it_5d != costs_5d_.end()) {
+            result.costs_5d_[location] = it_5d->second;
         }
     }
 
     return result;
 }
 
-void Costs::export_poses(
+void Costs::export_3d_poses(
     std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const
 {
     for (const auto& it: costs_3d_) {
+        poses_set.insert(Pose2D{std::get<0>(it.first), std::get<1>(it.first)});
+    }
+}
+
+void Costs::export_5d_poses(
+    std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const
+{
+    for (const auto& it: costs_5d_) {
         poses_set.insert(Pose2D{std::get<0>(it.first), std::get<1>(it.first)});
     }
 }

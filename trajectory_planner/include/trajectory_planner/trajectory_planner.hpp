@@ -225,14 +225,21 @@ private:
         int footprint_size,
         double theta);
 
-    // Get the cost values from the given maps.
-    static std::vector<std::tuple<size_t, size_t, double>> extract_costs(
+    // Get the 3D cost values from the given maps.
+    static std::vector<std::tuple<size_t, size_t, double>> extract_costs_3d(
         size_t map_width,
         size_t map_height,
         size_t offset,
         unsigned int footprint_covered_pixels,
         const Buffer<double>& convoluted_occupancy_map,
         const Buffer<double>& convoluted_cost_map);
+
+    // Get the 5D cost (occupancy) values from the given map.
+    static std::vector<std::tuple<size_t, size_t>> extract_costs_5d(
+        size_t map_width,
+        size_t map_height,
+        size_t offset,
+        const Buffer<double>& convoluted_occupancy_map);
 
     // Print some details of the motion model to the log.
     void log_motion_model(

@@ -19,7 +19,11 @@ namespace trajectory_planner
 //
 // The X and Y coordiantes are positive integer values, and the angle is
 // represented as a positive integer value that denotes the number of
-// fractions of the whole circle.
+// fractions of the whole circle. For the values of theta (strictly speaking, the
+// integer values corresponding to these angles) an integer value is stored holding
+// an actual cost value. For the angles values ('0' to 'angle_granularity - 1') that
+// are used by the 5D planner only a single bit that describes if the robot can be
+// placed at this pose.
 class Costs
 {
 public:
@@ -46,9 +50,20 @@ public:
         unsigned int y,
         unsigned int angle_index) const;
 
-    // Convenience overload.
-    double get_3d_cost(
-        const Pose& pose) const;
+    // Mark the given pose as able to place the robot on.
+    void set_5d_cost(
+        unsigned int x,
+        unsigned int y,
+        unsigned int angle_index);
+
+    // Get the information if the robot can be placed on a given pose.
+    //
+    // If the result of this function is 'true', the robot can be placed on
+    // the pose, otherwise not.
+    bool get_5d_cost(
+        unsigned int x,
+        unsigned int y,
+        unsigned int angle_index) const;
 
     // Return the number of steps the whole circle is divided in.
     unsigned int angle_granularity() const;
@@ -61,8 +76,14 @@ public:
     Costs intersect(
         std::vector<Pose2D> poses) const;
 
-    // Inserts all 2D poses that are contained in the cost structure into the given set.
-    void export_poses(
+    // Inserts all coordinates of the 3D poses that are contained in the cost structure
+    // into the given set.
+    void export_3d_poses(
+        std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const;
+
+    // Inserts all coordinates of the 5D poses that are contained in the cost structure
+    // into the given set.
+    void export_5d_poses(
         std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const;
 
     // Value used for positions that can not be occupied.
@@ -78,6 +99,11 @@ private:
     // the value is set to 'internal_invalid_cost_3d'.
     using CostVector3D = std::vector<CostType3D>;
 
+    // The data type used to hold the occupancy data used by the 5D planner.
+    // These vectors are 'angle_granularity_' long and hold a bit for each angle
+    // that describes if the robot can be placed at this angle.
+    using CostVector5D = std::vector<bool>;
+
     // Data type to hold the X and Y coordinates.
     using Location = std::pair<unsigned int, unsigned int>;
 
@@ -90,8 +116,11 @@ private:
     // Cell distance to the goal to apply a penalty on pure turns.
     unsigned int goal_turn_penalty_distance_;
 
-    // Stores the cost values.
+    // Stores the cost values for the 3D planner.
     std::unordered_map<Location, CostVector3D, boost::hash<Location>> costs_3d_;
+
+    // Stores the cost (occupancy) values for the 5D planner.
+    std::unordered_map<Location, CostVector5D, boost::hash<Location>> costs_5d_;
 
     // Convert the internal cost type to a double value.
     double internal_cost_3d_to_double_cost(
@@ -109,6 +138,7 @@ private:
         ar & angle_granularity_;
         ar & goal_turn_penalty_distance_;
         ar & costs_3d_;
+        ar & costs_5d_;
     }
 };
 
