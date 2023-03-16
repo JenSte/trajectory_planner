@@ -41,7 +41,7 @@ void store_3d_path_image(
 
 void store_5d_path_image(
     boost::gil::rgb8_image_t floorplan_image,
-    const trajectory_planner::five::SegmentSearchResult segment,
+    const trajectory_planner::five::SegmentSearchResult& segment,
     const std::string& filename)
 {
     auto view = boost::gil::view(floorplan_image);

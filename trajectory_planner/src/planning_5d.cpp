@@ -254,7 +254,7 @@ Costs inflate_path(
     return costs.intersect(subset);
 }
 
-std::shared_ptr<Heuristic> create_heuristic(
+std::unique_ptr<Heuristic> create_heuristic(
     HeuristicType heuristic_type,
     const Pose5D& goal,
     const Path& path,
@@ -262,19 +262,19 @@ std::shared_ptr<Heuristic> create_heuristic(
 {
     switch (heuristic_type) {
         case HeuristicType::EUCLIDEAN:
-            return std::make_shared<EuclideanHeuristic>(goal);
+            return std::make_unique<EuclideanHeuristic>(goal);
 
         case HeuristicType::MANHATTAN:
-            return std::make_shared<ManhattanHeuristic>(goal);
+            return std::make_unique<ManhattanHeuristic>(goal);
 
         case HeuristicType::DEPTH:
-            return std::make_shared<DepthHeuristic>(goal, search_space);
+            return std::make_unique<DepthHeuristic>(goal, search_space);
 
         case HeuristicType::PATH:
-            return std::make_shared<PathHeuristic>(path, search_space);
+            return std::make_unique<PathHeuristic>(path, search_space);
 
         default:
-            return std::make_shared<NoneHeuristic>();
+            return std::make_unique<NoneHeuristic>();
     };
 }
 
@@ -480,7 +480,7 @@ SegmentSearchResult plan_movement_segment(
         return cell_distance + sqrt(error * angle_error) + low_speed_penalty;
     };
 
-    std::shared_ptr<Heuristic> heuristic =
+    std::unique_ptr<Heuristic> heuristic =
         create_heuristic(heuristic_type, goal, segment.path, search_space);
     auto heuristic_callback = [&heuristic](const Pose5D& pose) {
         return heuristic->value(pose);

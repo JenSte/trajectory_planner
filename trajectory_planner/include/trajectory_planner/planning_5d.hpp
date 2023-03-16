@@ -58,7 +58,7 @@ struct SegmentSearchResult
     Costs costs;
 
     // The heuristic object used for planning this segment.
-    std::shared_ptr<Heuristic> heuristic;
+    std::unique_ptr<Heuristic> heuristic;
 };
 
 // Data type returned from the search in 5D space.
@@ -84,7 +84,7 @@ CircleCoordinates circle_coordinates(
     unsigned int pixel_radius);
 
 // Return a heuristic object matching the given type.
-std::shared_ptr<Heuristic> create_heuristic(
+std::unique_ptr<Heuristic> create_heuristic(
     HeuristicType heuristic_type,
     const Pose5D& goal,
     const Path& path,
