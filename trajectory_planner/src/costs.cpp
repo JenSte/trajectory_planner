@@ -93,18 +93,13 @@ unsigned int Costs::goal_turn_penalty_distance() const
     return goal_turn_penalty_distance_;
 }
 
-Costs Costs::intersect(
+Costs Costs::intersect_5d_costs(
     std::vector<Pose2D> poses) const
 {
     Costs result(angle_granularity_, goal_turn_penalty_distance_);
 
     for (const Pose2D& pose: poses) {
         const Location location(pose.x, pose.y);
-
-        auto it_3d = costs_3d_.find(location);
-        if (it_3d != costs_3d_.end()) {
-            result.costs_3d_[location] = it_3d->second;
-        }
 
         auto it_5d = costs_5d_.find(location);
         if (it_5d != costs_5d_.end()) {

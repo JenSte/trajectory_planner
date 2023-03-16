@@ -251,7 +251,7 @@ Costs inflate_path(
     std::sort(subset.begin(), subset.end());
     subset.erase(std::unique(subset.begin(), subset.end()), subset.end());
 
-    return costs.intersect(subset);
+    return costs.intersect_5d_costs(subset);
 }
 
 std::unique_ptr<Heuristic> create_heuristic(
@@ -395,7 +395,7 @@ SegmentSearchResult plan_turn_segment(
 {
     // As we are turning on the spot, only this one pose is the search space.
     std::vector<Pose2D> subset{Pose2D{segment.path.at(0).x, segment.path.at(0).y}};
-    Costs search_space = costs.intersect(subset);
+    Costs search_space = costs.intersect_5d_costs(subset);
 
     Path5D path;
     for (const Pose& pose: segment.path) {

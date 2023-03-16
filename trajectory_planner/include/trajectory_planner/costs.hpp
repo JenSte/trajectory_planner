@@ -71,9 +71,10 @@ public:
     // Return a distance in cells to the goal to apply a turn penaltiy.
     unsigned int goal_turn_penalty_distance() const;
 
-    // Create an intersection between the costs in this object and the
-    // coordinates passed in.
-    Costs intersect(
+    // Intersect the 5D costs stored in this object with the passed coordinates. All
+    // costs (occupancy) values in the result will be set to "occupied" if the pose
+    // was not in the input argument. The 3D costs in the returned object are all empty.
+    Costs intersect_5d_costs(
         std::vector<Pose2D> poses) const;
 
     // Inserts all coordinates of the 3D poses that are contained in the cost structure
