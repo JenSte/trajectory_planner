@@ -44,6 +44,7 @@ add_executable(${PROJECT_NAME}
     "../trajectory_planner/src/planning_3d.cpp"
     "../trajectory_planner/src/planning_5d.cpp"
     "../trajectory_planner/src/trajectory_planner.cpp"
+    "../trajectory_planner/src/trajectory_planner_costs.cpp"
     "../trajectory_planner/src/trajectory_planner_debug_images.cpp"
     "../trajectory_planner/src/types.cpp"
     "standalone.cpp"
