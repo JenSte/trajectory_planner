@@ -87,7 +87,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
     Buffer<double> cost_map(occupancy_map.width(), occupancy_map.height());
     draw_text(cost_map, "Cost map not available for planners loaded from cache.");
 
-    Costs costs(0, 1);
+    Costs costs(0, 0, 0, 1);
     try {
         // Load the costs object.
         boost::archive::binary_iarchive ia(istream);
@@ -540,7 +540,11 @@ Costs TrajectoryPlanner::create_costs(
     log_callback(ss.str());
 
     // Take all the costs and put them in one data structure.
-    Costs costs(angle_granularity, goal_turn_penalty_distance);
+    Costs costs(
+        padded_width,
+        padded_height,
+        angle_granularity,
+        goal_turn_penalty_distance);
 
     log_callback("Combining 3D cost layers...");
     for (const auto& it: costs_3d) {

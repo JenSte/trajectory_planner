@@ -32,6 +32,8 @@ public:
     // circle (2 * PI) is divided in. 'goal_turn_penalty_distance' is the distance to
     // the goal (in cells) for which a penalty to turn shall be applied.
     Costs(
+        size_t floorplan_width,
+        size_t floorplan_height,
         unsigned int angle_granularity,
         unsigned int goal_turn_penalty_distance);
 
@@ -101,18 +103,32 @@ private:
     using CostVector3D = std::vector<CostType3D>;
 
     // The data type used to hold the occupancy data used by the 5D planner.
-    // These vectors are 'angle_granularity_' long and hold a bit for each angle
-    // that describes if the robot can be placed at this angle.
+    //
+    // These vectors have the size 'floorplan_width * floorplan_height' and each
+    // element holds the information if the robot can be placed ('true') at a
+    // given X/Y coordinate or not.
     using CostVector5D = std::vector<bool>;
 
     // Data type to hold the X and Y coordinates.
     using Location = std::pair<unsigned int, unsigned int>;
+
+    // Create a vector of 5D cost vectors, all resized to the appropriate sizes.
+    std::vector<CostVector5D> initialize_5d_costs(
+        size_t width,
+        size_t height,
+        unsigned int angle_granularity) const;
 
     // The value for marking an invalid orientation in a 'CostVector'.
     static const CostType3D internal_invalid_cost_3d;
 
     // Number of steps to divide the whole circle with.
     unsigned int angle_granularity_;
+
+    // The width of the floorplan this object holds the costs for.
+    size_t floorplan_width_;
+
+    // The height of the floorplan this object holds the costs for.
+    size_t floorplan_height_;
 
     // Cell distance to the goal to apply a penalty on pure turns.
     unsigned int goal_turn_penalty_distance_;
@@ -121,7 +137,10 @@ private:
     std::unordered_map<Location, CostVector3D, boost::hash<Location>> costs_3d_;
 
     // Stores the cost (occupancy) values for the 5D planner.
-    std::unordered_map<Location, CostVector5D, boost::hash<Location>> costs_5d_;
+    //
+    // Maps angle indices for the orientation of the robot to a 5D cost vector,
+    // that holds the occupancy data for the given orientation.
+    std::vector<CostVector5D> costs_5d_;
 
     // Convert the internal cost type to a double value.
     double internal_cost_3d_to_double_cost(
