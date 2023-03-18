@@ -5,11 +5,10 @@
 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/vector.hpp>
 
 #include <cstdint>
-#include <unordered_map>
+#include <limits>
 #include <unordered_set>
 
 namespace trajectory_planner
@@ -28,6 +27,26 @@ class Costs
 {
 public:
 
+    // The data type to store the cost values used by the 3D planner.
+    //
+    // Values for variables of this type are in the range from '0' to
+    // 'invalid_3d_cost - 1', 'invalid_3d_cost' is used to mark invalid poses.
+    using CostType3D = uint8_t;
+
+    // Value used to denote that the robot can not be placed on a given coordinate.
+    static constexpr CostType3D invalid_3d_cost = std::numeric_limits<CostType3D>::max();
+
+    // The data type used to hold the costs for a single orientation used by the
+    // 3D planner.
+    using CostVector3D = std::vector<CostType3D>;
+
+    // The data type used to hold the occupancy data used by the 5D planner.
+    //
+    // These vectors have the size 'floorplan_width * floorplan_height' and each
+    // element holds the information if the robot can be placed ('true') at a
+    // given X/Y coordinate or not.
+    using CostVector5D = std::vector<bool>;
+
     // Initialize a cost object. 'angle_granularity' is the number of steps the whole
     // circle (2 * PI) is divided in. 'goal_turn_penalty_distance' is the distance to
     // the goal (in cells) for which a penalty to turn shall be applied.
@@ -37,26 +56,43 @@ public:
         unsigned int angle_granularity,
         unsigned int goal_turn_penalty_distance);
 
-    // Store the cost value of a pose.
-    void set_3d_cost(
-        unsigned int x,
-        unsigned int y,
-        unsigned int angle_index,
-        double cost);
+    // Create a 3D cost vector, correctly sized and initialized to the invalid cost value.
+    CostVector3D create_3d_cost_vector() const;
+
+    // Set the 3D cost vector for a given orientation.
+    void set_3d_cost_vector(
+        unsigned int movement_index,
+        CostVector3D cost_vector);
 
     // Return the cost value of a pose.
     //
     // If the cost of the given pose has never been set, 'invalid_cost_3d' is returned.
-    double get_3d_cost(
+    CostType3D get_3d_cost(
         unsigned int x,
         unsigned int y,
         unsigned int angle_index) const;
 
-    // Mark the given pose as able to place the robot on.
-    void set_5d_cost(
+    // Store the value at a given position in the given cost vector.
+    void set_3d_cost(
+        CostVector3D& cost_vector,
         unsigned int x,
         unsigned int y,
-        unsigned int angle_index);
+        double cost) const;
+
+    // Convert a value of the type used to store the 3D costs to a double.
+    static double cost_3d_to_double(
+        const CostType3D c)
+    {
+        return static_cast<double>(c) / static_cast<double>(invalid_3d_cost - 1);
+    }
+
+    // Create a 5D cost vector, correctly sized and initialized to 'false'.
+    CostVector5D create_5d_cost_vector() const;
+
+    // Set the 5D cost vector for a given angle index.
+    void set_5d_cost_vector(
+        unsigned int angle_index,
+        CostVector5D cost_vector);
 
     // Get the information if the robot can be placed on a given pose.
     //
@@ -66,6 +102,12 @@ public:
         unsigned int x,
         unsigned int y,
         unsigned int angle_index) const;
+
+    // Mark the value at a given position as being able to hold the robot.
+    void set_5d_cost(
+        CostVector5D& cost_vector,
+        unsigned int x,
+        unsigned int y) const;
 
     // Return the number of steps the whole circle is divided in.
     unsigned int angle_granularity() const;
@@ -89,37 +131,19 @@ public:
     void export_5d_poses(
         std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const;
 
-    // Value used for positions that can not be occupied.
-    static const double invalid_cost_3d;
+    // Return the width of the floorplan.
+    size_t width() const
+    {
+        return floorplan_width_;
+    }
+
+    // Return the height of the floorplan.
+    size_t height() const
+    {
+        return floorplan_height_;
+    }
 
 private:
-
-    // The data type to store the cost values internally.
-    using CostType3D = uint16_t;
-
-    // Data type to hold the costs for a location on the map. The length of this
-    // vector is 'angle_granularity_', for orientations that can not be occupied
-    // the value is set to 'internal_invalid_cost_3d'.
-    using CostVector3D = std::vector<CostType3D>;
-
-    // The data type used to hold the occupancy data used by the 5D planner.
-    //
-    // These vectors have the size 'floorplan_width * floorplan_height' and each
-    // element holds the information if the robot can be placed ('true') at a
-    // given X/Y coordinate or not.
-    using CostVector5D = std::vector<bool>;
-
-    // Data type to hold the X and Y coordinates.
-    using Location = std::pair<unsigned int, unsigned int>;
-
-    // Create a vector of 5D cost vectors, all resized to the appropriate sizes.
-    std::vector<CostVector5D> initialize_5d_costs(
-        size_t width,
-        size_t height,
-        unsigned int angle_granularity) const;
-
-    // The value for marking an invalid orientation in a 'CostVector'.
-    static const CostType3D internal_invalid_cost_3d;
 
     // Number of steps to divide the whole circle with.
     unsigned int angle_granularity_;
@@ -134,21 +158,16 @@ private:
     unsigned int goal_turn_penalty_distance_;
 
     // Stores the cost values for the 3D planner.
-    std::unordered_map<Location, CostVector3D, boost::hash<Location>> costs_3d_;
+    //
+    // Maps an movement index as used by the 3D planner to a vector containing
+    // the costs of placing the robot on a given coordinate.
+    std::vector<CostVector3D> costs_3d_;
 
     // Stores the cost (occupancy) values for the 5D planner.
     //
     // Maps angle indices for the orientation of the robot to a 5D cost vector,
     // that holds the occupancy data for the given orientation.
     std::vector<CostVector5D> costs_5d_;
-
-    // Convert the internal cost type to a double value.
-    double internal_cost_3d_to_double_cost(
-        CostType3D c) const;
-
-    // Convert a double value to the internal cost type.
-    CostType3D double_cost_to_internal_cost_3d(
-        double c) const;
 
     // Serialization support.
     friend class boost::serialization::access;

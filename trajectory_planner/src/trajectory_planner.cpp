@@ -286,13 +286,8 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     const Pose& start,
     const Pose& goal) const
 {
-    if (!costs_.get_5d_cost(start.x, start.y, start.angle_index)) {
-        throw std::invalid_argument("Start pose is not valid.");
-    }
-
-    if (!costs_.get_5d_cost(goal.x, goal.y, goal.angle_index)) {
-        throw std::invalid_argument("Goal pose is not valid.");
-    }
+    check_pose(start, "start");
+    check_pose(goal, "goal");
 
     // This object is used to do the simulation of the 5D movement.
     MotionModel motion_model(
@@ -348,6 +343,31 @@ void TrajectoryPlanner::store(
 {
     boost::archive::binary_oarchive oa(ostream);
     oa << costs_;
+}
+
+void TrajectoryPlanner::check_pose(
+    const Pose& pose,
+    const std::string& pose_name) const
+{
+    if (!(pose.x < costs_.width())) {
+        std::ostringstream ss;
+        ss
+            << "X coordinate (" << pose.x << ") of the " << pose_name
+            << " pose exceeds map's width (" << costs_.width() << ").";
+        throw std::invalid_argument(ss.str());
+    }
+
+    if (!(pose.y < costs_.height())) {
+        std::ostringstream ss;
+        ss
+            << "Y coordinate (" << pose.y << ") of the " << pose_name
+            << " pose exceeds map's height (" << costs_.height() << ").";
+        throw std::invalid_argument(ss.str());
+    }
+
+    if (!costs_.get_5d_cost(pose.x, pose.y, pose.angle_index)) {
+        throw std::invalid_argument("The " + pose_name + " pose is not valid.");
+    }
 }
 
 unsigned int TrajectoryPlanner::calculate_footprint_size(

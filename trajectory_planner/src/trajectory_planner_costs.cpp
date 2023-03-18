@@ -186,16 +186,25 @@ Costs TrajectoryPlanner::create_costs(
     plan_forward.execute(occupancy_map_padded, occupancy_map_spectrum);
     plan_forward.execute(cost_map_padded, cost_map_spectrum);
 
-    // The mutex used to protect access to the two data structures below.
+    // Use a value that is proportional to the size of the footprint to select
+    // poses close to the goal.
+    const unsigned int goal_turn_penalty_distance = footprint_pixel_size / 2;
+    std::ostringstream ss;
+    ss
+        << std::setprecision(2) << std::fixed
+        << "Goal turn penalty distance: "
+        << (goal_turn_penalty_distance * resolution) << " m";
+    log_callback(ss.str());
+
+    // The mutex used to protect access to 'costs'.
     std::mutex costs_mutex;
 
-    // The "calculated" 3D costs are accumulated in this object. The map key is the 3D
-    // orientation, the values in the map are (x, y, cell-cost) tuples for this orientation.
-    std::unordered_map<unsigned int, std::vector<std::tuple<size_t, size_t, double>>> costs_3d;
-
-    // The occupancy data used by the 5D planner. The map key is the 5D angle index,
-    // the values in the map are (x, y) tuples where it is possible to place the robot.
-    std::unordered_map<unsigned int, std::vector<std::tuple<size_t, size_t>>> costs_5d;
+    // Take all the costs and put them in one data structure.
+    Costs costs(
+        padded_width,
+        padded_height,
+        angle_granularity,
+        goal_turn_penalty_distance);
 
     // Process the footprint: For a given orientation, the robot's footprint is drawn
     // and then FFT transformed. Then, both spectrums of the maps (occupancy map and
@@ -246,27 +255,27 @@ Costs TrajectoryPlanner::create_costs(
         // the cells where the robot can be placed (5D case), and store the costs
         // for this orientation for further processing in the main thread.
         if (three_dimensional) {
-            std::vector<std::tuple<size_t, size_t, double>> costs =
-                extract_costs_3d(
-                    occupancy_map.width(),
-                    occupancy_map.height(),
-                    footprint_pixel_size / 2,
-                    covered_pixels,
-                    result_buffer_1,
-                    result_buffer_2);
+            Costs::CostVector3D cost_vector = extract_costs_3d(
+                costs,
+                occupancy_map.width(),
+                occupancy_map.height(),
+                footprint_pixel_size / 2,
+                covered_pixels,
+                result_buffer_1,
+                result_buffer_2);
 
             std::lock_guard<std::mutex> lock(costs_mutex);
-            costs_3d.emplace(index, std::move(costs));
+            costs.set_3d_cost_vector(index, std::move(cost_vector));
         } else {
-            std::vector<std::tuple<size_t, size_t>> costs =
-                extract_costs_5d(
-                    occupancy_map.width(),
-                    occupancy_map.height(),
-                    footprint_pixel_size / 2,
-                    result_buffer_1);
+            Costs::CostVector5D cost_vector = extract_costs_5d(
+                costs,
+                occupancy_map.width(),
+                occupancy_map.height(),
+                footprint_pixel_size / 2,
+                result_buffer_1);
 
             std::lock_guard<std::mutex> lock(costs_mutex);
-            costs_5d.emplace(index, std::move(costs));
+            costs.set_5d_cost_vector(index, std::move(cost_vector));
         }
     };
 
@@ -292,10 +301,10 @@ Costs TrajectoryPlanner::create_costs(
         const double angle_d = angle_a + atan2(2, 1);
 
         if (multi_threaded) {
-            boost::asio::post(*pool, [process_footprint, angle_a, q]{ process_footprint(true, angle_a, q * 4); });
-            boost::asio::post(*pool, [process_footprint, angle_b, q]{ process_footprint(true, angle_b, q * 4 + 1); });
-            boost::asio::post(*pool, [process_footprint, angle_c, q]{ process_footprint(true, angle_c, q * 4 + 2); });
-            boost::asio::post(*pool, [process_footprint, angle_d, q]{ process_footprint(true, angle_d, q * 4 + 3); });
+            boost::asio::post(*pool, [&process_footprint, angle_a, q]{ process_footprint(true, angle_a, q * 4); });
+            boost::asio::post(*pool, [&process_footprint, angle_b, q]{ process_footprint(true, angle_b, q * 4 + 1); });
+            boost::asio::post(*pool, [&process_footprint, angle_c, q]{ process_footprint(true, angle_c, q * 4 + 2); });
+            boost::asio::post(*pool, [&process_footprint, angle_d, q]{ process_footprint(true, angle_d, q * 4 + 3); });
         } else {
             process_footprint(true, angle_a, q * 4);
             process_footprint(true, angle_b, q * 4 + 1);
@@ -311,7 +320,7 @@ Costs TrajectoryPlanner::create_costs(
 
         if (multi_threaded) {
             boost::asio::post(
-                *pool, [process_footprint, angle, ai]{
+                *pool, [&process_footprint, angle, ai]{
                     process_footprint(false, angle, ai);
                 });
         } else {
@@ -321,44 +330,6 @@ Costs TrajectoryPlanner::create_costs(
 
     if (multi_threaded) {
         pool->join();
-    }
-
-    // Use a value that is proportional to the size of the footprint to select
-    // poses close to the goal.
-    const unsigned int goal_turn_penalty_distance = footprint_pixel_size / 2;
-    std::ostringstream ss;
-    ss
-        << std::setprecision(2) << std::fixed
-        << "Goal turn penalty distance: "
-        << (goal_turn_penalty_distance * resolution) << " m";
-    log_callback(ss.str());
-
-    // Take all the costs and put them in one data structure.
-    Costs costs(
-        padded_width,
-        padded_height,
-        angle_granularity,
-        goal_turn_penalty_distance);
-
-    log_callback("Combining 3D cost layers...");
-    for (const auto& it: costs_3d) {
-        for (const auto& v: it.second) {
-            costs.set_3d_cost(
-                std::get<0>(v),
-                std::get<1>(v),
-                it.first,
-                std::get<2>(v));
-        }
-    }
-
-    log_callback("Combining 5D cost layers...");
-    for (const auto& it: costs_5d) {
-        for (const auto& v: it.second) {
-            costs.set_5d_cost(
-                std::get<0>(v),
-                std::get<1>(v),
-                it.first);
-        }
     }
 
     return costs;
@@ -432,7 +403,8 @@ unsigned int TrajectoryPlanner::draw_footprint(
     return std::max(1u, black);
 }
 
-std::vector<std::tuple<size_t, size_t, double>> TrajectoryPlanner::extract_costs_3d(
+Costs::CostVector3D TrajectoryPlanner::extract_costs_3d(
+    const Costs& costs,
     size_t map_width,
     size_t map_height,
     size_t offset,
@@ -460,7 +432,7 @@ std::vector<std::tuple<size_t, size_t, double>> TrajectoryPlanner::extract_costs
     // multiplied by the size of the input.
     const double fft_factor = (map_width + 2 * offset - 1) * (map_height + 2 * offset - 1);
 
-    std::vector<std::tuple<size_t, size_t, double>> result;
+    Costs::CostVector3D result = costs.create_3d_cost_vector();
 
     for (size_t y = 0; y < map_height; y++) {
         for (size_t x = 0; x < map_width; x++) {
@@ -483,7 +455,7 @@ std::vector<std::tuple<size_t, size_t, double>> TrajectoryPlanner::extract_costs
                 // a different number of pixels for different orientations.
                 cost /= footprint_covered_pixels;
 
-                result.emplace_back(std::make_tuple(x, y, cost));
+                costs.set_3d_cost(result, x, y, cost);
             }
         }
     }
@@ -491,7 +463,8 @@ std::vector<std::tuple<size_t, size_t, double>> TrajectoryPlanner::extract_costs
     return result;
 }
 
-std::vector<std::tuple<size_t, size_t>> TrajectoryPlanner::extract_costs_5d(
+Costs::CostVector5D TrajectoryPlanner::extract_costs_5d(
+    const Costs& costs,
     size_t map_width,
     size_t map_height,
     size_t offset,
@@ -505,12 +478,12 @@ std::vector<std::tuple<size_t, size_t>> TrajectoryPlanner::extract_costs_5d(
         throw std::runtime_error("Convoluted occupancy map has wrong height.");
     }
 
-    std::vector<std::tuple<size_t, size_t>> result;
+    Costs::CostVector5D result = costs.create_5d_cost_vector();
 
     for (size_t y = 0; y < map_height; y++) {
         for (size_t x = 0; x < map_width; x++) {
             if (convoluted_occupancy_map.at(x + offset, y + offset) < 0.5) {
-                result.emplace_back(std::make_tuple(x, y));
+                costs.set_5d_cost(result, x, y);
             }
         }
     }

@@ -65,6 +65,9 @@ void store_5d_path_image(
     boost::gil::write_view(filename, view, boost::gil::png_tag());
 }
 
+#define MULTI_THREADED false
+//#define MULTI_THREADED true
+
 int main()
 {
     unsigned int angle_granularity = 128;
@@ -110,7 +113,7 @@ int main()
     std::unique_ptr<trajectory_planner::TrajectoryPlanner> planner =
         trajectory_planner::TrajectoryPlanner::create_planner(
             log_callback,
-            false,
+            MULTI_THREADED,
             "",
             angle_granularity,
             resolution,
@@ -141,7 +144,7 @@ int main()
     pp.wheel_distance = 0.3;
     pp.linear_velocity_steps = 5;
     pp.angular_velocity_steps = 5;
-    pp.multi_threaded = false;
+    pp.multi_threaded = MULTI_THREADED;
     pp.heuristic_type = trajectory_planner::HeuristicType::DEPTH;
 
     trajectory_planner::Pose start{

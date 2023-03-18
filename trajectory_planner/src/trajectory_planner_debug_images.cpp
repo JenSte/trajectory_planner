@@ -29,13 +29,15 @@ void output_3d_orientation_map(
             size_t row = height - 1 - y;
             size_t column = x;
 
-            double cost = costs.get_3d_cost(x, y, index_3d);
-            if (cost < (0.5 * trajectory_planner::Costs::invalid_cost_3d)) {
+            const trajectory_planner::Costs::CostType3D cost =
+                costs.get_3d_cost(x, y, index_3d);
+            if (cost == trajectory_planner::Costs::invalid_3d_cost) {
                 // Non-occupied pose.
                 canvas.at<unsigned char>(row, column) = 0;
             } else {
                 // Valid location, create a tone that corresponds to the cost.
-                unsigned int grey = 255 * cost;
+                double c = trajectory_planner::Costs::cost_3d_to_double(cost);
+                unsigned int grey = 255 * c;
                 grey = std::max(0u, std::min(255u, grey));
                 canvas.at<unsigned char>(row, column) = grey;
             }
@@ -53,8 +55,9 @@ void output_3d_orientation_map(
             size_t column = x;
 
             // Color non-occupied cells white.
-            double cost = costs.get_3d_cost(x, y, index_3d);
-            if (cost < (0.5 * trajectory_planner::Costs::invalid_cost_3d)) {
+            const trajectory_planner::Costs::CostType3D cost =
+                costs.get_3d_cost(x, y, index_3d);
+            if (cost == trajectory_planner::Costs::invalid_3d_cost) {
                 color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(255, 255, 255);
             }
 

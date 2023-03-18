@@ -5,11 +5,6 @@
 namespace trajectory_planner
 {
 
-const double Costs::invalid_cost_3d = -1.0;
-
-const Costs::CostType3D Costs::internal_invalid_cost_3d =
-    std::numeric_limits<Costs::CostType3D>::max();
-
 Costs::Costs(
     size_t floorplan_width,
     size_t floorplan_height,
@@ -19,53 +14,95 @@ Costs::Costs(
     , floorplan_width_(floorplan_width)
     , floorplan_height_(floorplan_height)
     , goal_turn_penalty_distance_(goal_turn_penalty_distance)
-    , costs_5d_(initialize_5d_costs(floorplan_width, floorplan_height, angle_granularity))
 {
     if (0 == goal_turn_penalty_distance_) {
         throw std::runtime_error("Goal turn penalty distance is zero.");
     }
 }
 
-void Costs::set_3d_cost(
-    unsigned int x,
-    unsigned int y,
-    unsigned int movement_index,
-    double cost)
+Costs::CostVector3D Costs::create_3d_cost_vector() const
 {
-    auto it = costs_3d_.find(std::make_pair(x, y));
-    if (it == costs_3d_.end()) {
-        // There is no entry for this X/Y location. Add a vector with all
-        // orientations, except the given one, set to the invalid value.
-        CostVector3D cv = CostVector3D(angle_granularity_, internal_invalid_cost_3d);
-        cv.at(movement_index) = double_cost_to_internal_cost_3d(cost);
-        costs_3d_[std::make_pair(x, y)] = cv;
-    } else {
-        // There is already a cost vector for this X/Y location, update it.
-        it->second.at(movement_index) = double_cost_to_internal_cost_3d(cost);
-    }
+    return CostVector3D(floorplan_width_ * floorplan_height_, invalid_3d_cost);
 }
 
-double Costs::get_3d_cost(
+void Costs::set_3d_cost_vector(
+    unsigned int movement_index,
+    CostVector3D cost_vector)
+{
+    if (!(costs_3d_.size() > movement_index)) {
+        costs_3d_.resize(movement_index + 1);
+    }
+
+    costs_3d_.at(movement_index) = std::move(cost_vector);
+}
+
+Costs::CostType3D Costs::get_3d_cost(
     unsigned int x,
     unsigned int y,
     unsigned int movement_index) const
 {
-    auto it = costs_3d_.find(std::make_pair(x, y));
-    if (it == costs_3d_.end()) {
-        // No entry for this X/Y location.
-        return invalid_cost_3d;
+    if (!(x < floorplan_width_)) {
+        std::ostringstream ss;
+        ss
+            << "Costs::get_3d_cost(): x value of " << x
+            << " is bigger than floorplan_width_ of " << floorplan_width_ << ".";
+        throw std::runtime_error(ss.str());
     }
 
-    // Return the cost value for the given orientation.
-    return internal_cost_3d_to_double_cost(it->second.at(movement_index));
+    if (!(y < floorplan_height_)) {
+        std::ostringstream ss;
+        ss
+            << "Costs::get_3d_cost(): y value of " << y
+            << " is bigger than floorplan_height_ of " << floorplan_height_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    return costs_3d_.at(movement_index).at(x + floorplan_width_ * y);
 }
 
-void Costs::set_5d_cost(
+void Costs::set_3d_cost(
+    CostVector3D& cost_vector,
     unsigned int x,
     unsigned int y,
-    unsigned int angle_index)
+    double cost) const
 {
-    costs_5d_.at(angle_index).at(x + floorplan_width_ * y) = true;
+    if (!(x < floorplan_width_)) {
+        std::ostringstream ss;
+        ss
+            << "Costs::set_3d_cost(): x value of " << x
+            << " is bigger than floorplan_width_ of " << floorplan_width_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    if (!(y < floorplan_height_)) {
+        std::ostringstream ss;
+        ss
+            << "Costs::set_3d_cost(): y value of " << y
+            << " is bigger than floorplan_height_ of " << floorplan_height_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    // Convert double value to the type used to store the cost values.
+    double capped_cost = std::max(0.0, std::min(1.0, cost));
+    CostType3D c = (invalid_3d_cost - 1) * capped_cost;
+
+    cost_vector.at(x + floorplan_width_ * y) = c;
+}
+
+Costs::CostVector5D Costs::create_5d_cost_vector() const
+{
+    return CostVector5D(floorplan_width_ * floorplan_height_, false);
+}
+
+void Costs::set_5d_cost_vector(
+    unsigned int angle_index,
+    CostVector5D cost_vector)
+{
+    if (!(costs_5d_.size() > angle_index)) {
+        costs_5d_.resize(angle_index + 1);
+    }
+
+    costs_5d_.at(angle_index) = std::move(cost_vector);
 }
 
 bool Costs::get_5d_cost(
@@ -73,7 +110,47 @@ bool Costs::get_5d_cost(
     unsigned int y,
     unsigned int angle_index) const
 {
+    if (!(x < floorplan_width_)) {
+        std::ostringstream ss;
+        ss
+            << "Costs::get_5d_cost(): x value of " << x
+            << " is bigger than floorplan_width_ of " << floorplan_width_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    if (!(y < floorplan_height_)) {
+        std::ostringstream ss;
+        ss
+            << "Costs::get_5d_cost(): y value of " << y
+            << " is bigger than floorplan_height_ of " << floorplan_height_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
     return costs_5d_.at(angle_index).at(x + floorplan_width_ * y);
+}
+
+void Costs::set_5d_cost(
+    CostVector5D& cost_vector,
+    unsigned int x,
+    unsigned int y) const
+{
+    if (!(x < floorplan_width_)) {
+        std::ostringstream ss;
+        ss
+            << "Costs::set_5d_cost(): x value of " << x
+            << " is bigger than floorplan_width_ of " << floorplan_width_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    if (!(y < floorplan_height_)) {
+        std::ostringstream ss;
+        ss
+            << "Costs::set_5d_cost(): y value of " << y
+            << " is bigger than floorplan_height_ of " << floorplan_height_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    cost_vector.at(x + floorplan_width_ * y) = true;
 }
 
 unsigned int Costs::angle_granularity() const
@@ -92,10 +169,14 @@ Costs Costs::intersect_5d_costs(
     Costs result(
         floorplan_width_, floorplan_height_, angle_granularity_, goal_turn_penalty_distance_);
 
+    for (unsigned int ai = 0; ai < angle_granularity_; ai++) {
+        result.set_5d_cost_vector(ai, result.create_5d_cost_vector());
+    }
+
     for (const Pose2D& pose: poses) {
         for (unsigned int ai = 0; ai < angle_granularity_; ai++) {
             if (get_5d_cost(pose.x, pose.y, ai)) {
-                result.set_5d_cost(pose.x, pose.y, ai);
+                result.set_5d_cost(result.costs_5d_.at(ai), pose.x, pose.y);
             }
         }
     }
@@ -106,8 +187,21 @@ Costs Costs::intersect_5d_costs(
 void Costs::export_3d_poses(
     std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const
 {
-    for (const auto& it: costs_3d_) {
-        poses_set.insert(Pose2D{std::get<0>(it.first), std::get<1>(it.first)});
+    for (unsigned int x = 0; x < floorplan_width_; x++) {
+        for (unsigned int y = 0; y < floorplan_height_; y++) {
+            bool b = false;
+
+            for (const auto& v: costs_3d_) {
+                if (v.at(x + floorplan_width_ * y)) {
+                    b = true;
+                    break;
+                }
+            }
+
+            if (b) {
+                poses_set.insert(Pose2D{x, y});
+            }
+        }
     }
 }
 
@@ -130,36 +224,6 @@ void Costs::export_5d_poses(
             }
         }
     }
-}
-
-std::vector<Costs::CostVector5D> Costs::initialize_5d_costs(
-    size_t width,
-    size_t height,
-    unsigned int angle_granularity) const
-{
-    std::vector<CostVector5D> result(angle_granularity);
-
-    for (CostVector5D& v: result) {
-        v.resize(width * height, false);
-    }
-
-    return result;
-}
-
-double Costs::internal_cost_3d_to_double_cost(
-    const CostType3D c) const
-{
-    if (c == internal_invalid_cost_3d) {
-        return invalid_cost_3d;
-    }
-
-    return static_cast<double>(c) / static_cast<double>(internal_invalid_cost_3d - 1);
-}
-
-Costs::CostType3D Costs::double_cost_to_internal_cost_3d(
-    const double c) const
-{
-    return (internal_invalid_cost_3d - 1) * c;
 }
 
 }

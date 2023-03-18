@@ -198,6 +198,11 @@ private:
     // The costs for all valid poses.
     const Costs costs_;
 
+    // Check if a pose is valid, raise an exception if not.
+    void check_pose(
+        const Pose& pose,
+        const std::string& pose_name) const;
+
     // Return the size, in pixels, of a canvas that is big enough to
     // hold the given footprint polygon in all orientations.
     static unsigned int calculate_footprint_size(
@@ -226,7 +231,8 @@ private:
         double theta);
 
     // Get the 3D cost values from the given maps.
-    static std::vector<std::tuple<size_t, size_t, double>> extract_costs_3d(
+    static Costs::CostVector3D extract_costs_3d(
+        const Costs& costs,
         size_t map_width,
         size_t map_height,
         size_t offset,
@@ -235,7 +241,8 @@ private:
         const Buffer<double>& convoluted_cost_map);
 
     // Get the 5D cost (occupancy) values from the given map.
-    static std::vector<std::tuple<size_t, size_t>> extract_costs_5d(
+    static Costs::CostVector5D extract_costs_5d(
+        const Costs& costs,
         size_t map_width,
         size_t map_height,
         size_t offset,
