@@ -116,7 +116,7 @@ public:
     unsigned int angle_granularity() const;
 
     // Write debug images that show the stored costs (one image for each orientation).
-    void dump_orientation_maps(
+    void write_debug_images(
         const std::string& prefix) const;
 
     // Plan a route from 'start' to 'goal'.

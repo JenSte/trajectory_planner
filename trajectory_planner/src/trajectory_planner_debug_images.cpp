@@ -12,6 +12,53 @@
 namespace
 {
 
+// Output an image that shows the inflated floorplan.
+void output_inflated_occupancy_map(
+    const trajectory_planner::Buffer<double>& occupancy_map,
+    const trajectory_planner::Buffer<double>& cost_map,
+    const std::string& prefix)
+{
+    size_t width = occupancy_map.width();
+    size_t height = occupancy_map.height();
+
+    cv::Mat canvas = cv::Mat::zeros(height, width, CV_8UC1);
+
+    for (size_t y = 0; y < height; y++) {
+        for (size_t x = 0; x < width; x++) {
+            size_t row = height - 1 - y;
+            size_t column = x;
+
+            double cost = cost_map.at(x, y);
+            cost = std::max(0.0, std::min(1.0, cost));
+
+            canvas.at<unsigned char>(row, column) = 255 * cost;
+        }
+    }
+
+    // Output a black/white version of this image, makes it easier to inspect
+    // the raw pixel values with an image viewer.
+    cv::imwrite(prefix + "bw.png", canvas);
+
+    // Convert the grayscale values to colors.
+    cv::Mat color_image;
+    cv::applyColorMap(canvas, color_image, cv::COLORMAP_JET);
+
+    // Do another pass over the colored image and tidy it up a bit.
+    for (size_t y = 0; y < height; y++) {
+        for (size_t x = 0; x < width; x++) {
+            size_t row = height - 1 - y;
+            size_t column = x;
+
+            // Draw the obstacles in black.
+            if (occupancy_map.at(x, y) > 0.5) {
+                color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(0, 0, 0);
+            }
+        }
+    }
+
+    cv::imwrite(prefix + "color.png", color_image);
+}
+
 // Output an image that shows the cost values used by the 3D planner.
 void output_3d_orientation_map(
     const trajectory_planner::Buffer<double>& occupancy_map,
@@ -114,17 +161,30 @@ void output_5d_orientation_map(
 namespace trajectory_planner
 {
 
-void TrajectoryPlanner::dump_orientation_maps(
+void TrajectoryPlanner::write_debug_images(
     const std::string& prefix) const
 {
     boost::asio::thread_pool pool(std::thread::hardware_concurrency());
+
+    boost::asio::post(
+        pool,
+        [prefix, this]{
+            output_inflated_occupancy_map(
+                this->original_occupancy_map_,
+                this->cost_map_,
+                prefix + "inflated_occupancy_map_");
+        });
 
     // Maps showing the 3D costs.
     for (unsigned int i = 0; i < three::movement_index_count; i++) {
         boost::asio::post(
             pool,
             [i, prefix, this]{
-                output_3d_orientation_map(this->original_occupancy_map_, this->costs_, i, prefix);
+                output_3d_orientation_map(
+                    this->original_occupancy_map_,
+                    this->costs_,
+                    i,
+                    prefix + "orientation_");
             }
         );
     }
@@ -134,7 +194,11 @@ void TrajectoryPlanner::dump_orientation_maps(
         boost::asio::post(
             pool,
             [ai, prefix, this]{
-                output_5d_orientation_map(this->original_occupancy_map_, this->costs_, ai, prefix);
+                output_5d_orientation_map(
+                    this->original_occupancy_map_,
+                    this->costs_,
+                    ai,
+                    prefix + "orientation_");
             }
         );
     }

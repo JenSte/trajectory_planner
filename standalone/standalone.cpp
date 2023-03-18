@@ -130,8 +130,8 @@ int main()
     }
 
     if (WRITE_DEBUG_IMAGES) {
-        std::cout << "writing debug maps\n";
-        planner->dump_orientation_maps("/tmp/standalone_orientation_");
+        std::cout << "writing debug images\n";
+        planner->write_debug_images("/tmp/standalone_");
     }
 
     std::cout << "planning\n";
