@@ -86,12 +86,48 @@ struct Pose3D
 // A path planned by the three dimensional planner.
 using Path3D = std::vector<Pose3D>;
 
-// The heuristic used by the 3D planner is the 2D distance from the goal.
-using HeuristicMap = std::unordered_map<Pose2D, double, boost::hash<Pose2D>>;
+// Holds the heuristic values used by the 3D planner.
+class HeuristicMap
+{
+public:
+
+    // Create a HeuristMap instance.
+    HeuristicMap(
+        const Costs& costs,
+        const Pose3D& goal);
+
+    // Return the heuristic value of a given pose.
+    double get_value(
+        unsigned int x,
+        unsigned int y) const;
+
+private:
+
+    // Set the heuristic value of a coordinate.
+    void set_value(
+        unsigned int x,
+        unsigned int y,
+        double value);
+
+    // The width of the cost object this object was created from.
+    size_t width_;
+
+    // The height of the cost object this object was created from.
+    size_t height_;
+
+    // The heuristic used by the 3D planner is the 2D distance from the goal.
+    std::vector<double> values_;
+};
 
 // Data type returned from the search in 3D space.
 struct SearchResult3D
 {
+    SearchResult3D(
+        HeuristicMap heuristic_map)
+        : heuristic_map(std::move(heuristic_map))
+    {
+    }
+
     // The result of the path search, converted back to the data type used by
     // the trajectory planner.
     Path path;
@@ -116,11 +152,6 @@ struct SearchResult3D
     using OpenedNodesMap = std::unordered_map<Pose2D, unsigned int, boost::hash<Pose2D>>;
     OpenedNodesMap opened_nodes;
 };
-
-// Create the data structure containting the heuristic values.
-HeuristicMap create_heuristic_map(
-    const Costs& costs,
-    const Pose3D& goal);
 
 // Return the two neighbour candidates for a given pose when moving forward/backward.
 std::tuple<Pose3D, Pose3D> linear_neighbours(

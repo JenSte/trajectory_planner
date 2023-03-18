@@ -14,13 +14,13 @@ namespace {
 namespace trajectory_planner::three
 {
 
-HeuristicMap create_heuristic_map(
+HeuristicMap::HeuristicMap(
     const Costs& costs,
     const Pose3D& goal)
+    : width_(costs.width())
+    , height_(costs.height())
+    , values_(width_ * height_, std::nan(""))
 {
-    // The result of this function, maps poses to the distance to the goal.
-    HeuristicMap result;
-
     // The list of nodes that are between the processed and unprocessed poses.
     std::unordered_set<Pose2D, boost::hash<Pose2D>> frontier;
 
@@ -29,7 +29,7 @@ HeuristicMap create_heuristic_map(
     costs.export_3d_poses(remaining);
 
     // At the start, the values for the goal poses is known.
-    result[Pose2D{goal.x, goal.y}] = 0.0;
+    set_value(goal.x, goal.y, 0.0);
     frontier.insert(Pose2D{goal.x, goal.y});
     remaining.erase(Pose2D{goal.x, goal.y});
 
@@ -74,7 +74,7 @@ HeuristicMap create_heuristic_map(
         for (const Pose2D& c: candidates) {
             if (remaining.erase(c) == 1) {
                 // If 'remaining.erase()' returns 1, the candidate 'c' was in remaining.
-                result[c] = iteration;
+                set_value(c.x, c.y, iteration);
                 new_frontier.insert(c);
             }
         }
@@ -87,8 +87,53 @@ HeuristicMap create_heuristic_map(
         old_frontier = std::move(frontier);
         frontier = std::move(new_frontier);
     }
+}
 
-    return result;
+double HeuristicMap::get_value(
+    unsigned int x,
+    unsigned int y) const
+{
+    if (!(x < width_)) {
+        std::ostringstream ss;
+        ss
+            << "HeuristicMap::get_value(): x value of " << x
+            << " is bigger than the map width of " << width_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    if (!(y < height_)) {
+        std::ostringstream ss;
+        ss
+            << "HeuristicMap::get_value(): y value of " << y
+            << " is bigger than the map height of " << height_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    return values_.at(x + width_ * y);
+}
+
+void HeuristicMap::set_value(
+    unsigned int x,
+    unsigned int y,
+    double value)
+{
+    if (!(x < width_)) {
+        std::ostringstream ss;
+        ss
+            << "HeuristicMap::set_value(): x value of " << x
+            << " is bigger than the map width of " << width_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    if (!(y < height_)) {
+        std::ostringstream ss;
+        ss
+            << "HeuristicMap::set_value(): y value of " << y
+            << " is bigger than the map height of " << height_ << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    values_.at(x + width_ * y) = value;
 }
 
 std::tuple<Pose3D, Pose3D> linear_neighbours(
@@ -320,15 +365,11 @@ double calculate_heuristic(
     const Pose3D& goal_pose,
     const Pose3D& pose)
 {
-    double goal_distance = 0.0;
-
-    const auto it = heuristic_map.find(Pose2D{pose.x, pose.y});
-    if (it != heuristic_map.end()) {
-        goal_distance = it->second;
-    } else {
+    double goal_distance = heuristic_map.get_value(pose.x, pose.y);
+    if (std::isnan(goal_distance)) {
         // A fallback if the pose is not in 'heuristic_map'. In this case there is
         // probably no path to the goal in the search space (otherwise the heuristic
-        // map calculation would include the pose), so we could also this earlier.
+        // map calculation would include the pose), so we could also detect this earlier.
         const double dx = static_cast<double>(goal_pose.x) - static_cast<double>(pose.x);
         const double dy = static_cast<double>(goal_pose.y) - static_cast<double>(pose.y);
         goal_distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
@@ -364,7 +405,7 @@ SearchResult3D plan(
     // by flood-filling the 3D search space in 2D. While it takes some time to
     // pre-calculate these values before doing the actual search, it pays of on
     // large maps, and does not take much time on small maps.
-    HeuristicMap heuristic_map = create_heuristic_map(costs, goal_pose);
+    HeuristicMap heuristic_map(costs, goal_pose);
 
     auto goal_reached = [&goal_pose](const Pose3D& pose) {
         return goal_pose == pose;
@@ -398,8 +439,7 @@ SearchResult3D plan(
         heuristic,
         start_pose);
 
-    SearchResult3D result;
-    result.heuristic_map = std::move(heuristic_map);
+    SearchResult3D result(std::move(heuristic_map));
 
     // Convert the 3D path back to a path for the trajectory planner
     // and create the heuristic vector.
@@ -411,7 +451,7 @@ SearchResult3D plan(
         angle_index %= costs.angle_granularity();
 
         result.path.push_back(Pose{pose.x, pose.y, static_cast<unsigned int>(angle_index)});
-        result.heuristic.push_back(heuristic(pose));
+        result.heuristic.push_back(result.heuristic_map.get_value(pose.x, pose.y));
     }
 
     // Create the costs vector in the result. This is done by iterating over
