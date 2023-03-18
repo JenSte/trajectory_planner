@@ -17,126 +17,48 @@ namespace trajectory_planner
 
 Buffer<double> TrajectoryPlanner::create_cost_map(
     const LogCallback& log_callback,
-    const bool multi_threaded,
     const double resolution,
     const double inflation_radius,
     const Buffer<double>& occupancy_map)
 {
-    // The radius of the biggest circle we draw, in pixels.
-    const unsigned int pixel_radius =
-        std::max(2u, static_cast<unsigned int>(inflation_radius / resolution));
+    log_callback("Inflating obstacles on map...");
 
-    // The height and width of the canvas we draw the circles on.
-    const unsigned int mask_pixel_size = 2 * pixel_radius;
+    size_t width = occupancy_map.width();
+    size_t height = occupancy_map.height();
 
-    const size_t padded_width = fast_fft_size(occupancy_map.width() + mask_pixel_size - 1);
-    const size_t padded_height = fast_fft_size(occupancy_map.height() + mask_pixel_size - 1);
+    // The "source" argument for OpenCV's 'distanceTransform()' function, a bitmap
+    // containing black for obstacles and white for free space.
+    cv::Mat bw(height, width, CV_8UC1);
+    for (size_t y = 0; y < height; y ++) {
+        for (size_t x = 0; x < width; x ++) {
+            if (occupancy_map.at(x, y) > 0.5) {
+                // Position is occupied in the occupancy map, draw black.
+                bw.at<unsigned char>(y, x) = 0;
+            } else {
+                // Position not occupied, draw white.
+                bw.at<unsigned char>(y, x) = 255;
+            }
+        }
+    }
 
-    Buffer<double> dummy_buffer(padded_width, padded_height);
-    FFTPlan plan_forward = FFTPlan::plan_forward(dummy_buffer);
-    FFTPlan plan_backward = FFTPlan::plan_backward(dummy_buffer);
+    // Fill the pixels in 'dist' with the distance value to the next obstacle.
+    cv::Mat dist(height, width, CV_32FC1);
+    cv::distanceTransform(bw, dist, cv::DIST_L2, cv::DIST_MASK_5);
 
-    Buffer<double> occupancy_map_padded =
-        zero_pad(occupancy_map, padded_width, padded_height);
-
-    Buffer<fftw_complex> occupancy_map_spectrum(
-        plan_forward.frequency_domain_width(),
-        plan_forward.frequency_domain_height());
-    plan_forward.execute(occupancy_map_padded, occupancy_map_spectrum);
-
-    // Stores the cost calculated in the threads.
-    std::vector<Buffer<double>> cost_images;
-    std::mutex cost_images_mutex;
-
-    // Calculate the combined costs for a given number of radius values. Each thread
-    // processes a number of radii (instead of posting a function for each radius
-    // to the thread pool), so that the combining of the result of multiple radii can
-    // also done in parallel in the threads.
-    auto process_work = [&](const std::vector<unsigned int>& work) {
-        // The result (the maximum of all layers) for all radii that are passed in
-        // is placed here.
-        Buffer<double> result(occupancy_map.width(), occupancy_map.height());
-
-        // Buffer to draw a circle on, that is then convoluted with the occupancy
-        // map. (Also used for the result of the inverse FFT.)
-        Buffer<double> mask_image(padded_width, padded_height);
-
-        // Holds the result of the FFT of the circle.
-        Buffer<fftw_complex> mask_image_spectrum(
-            plan_forward.frequency_domain_width(),
-            plan_forward.frequency_domain_height());
-
-        // For each radius value, a circle is drawn on 'mask_image' and then convoluted
-        // with the occupancy map. From the result, each cell is checked if it is
-        // within 'radius' distance of something on the occupancy map, and the result
-        // is combined in 'result'.
-        for (const unsigned int radius: work) {
-            mask_image.set_zero();
-            draw_circle(mask_image, mask_pixel_size, radius);
-
-            // Convolute the circle with the occupancy map.
-            plan_forward.execute(mask_image, mask_image_spectrum);
-            multiply_buffers(mask_image_spectrum, occupancy_map_spectrum);
-            plan_backward.execute(mask_image_spectrum, mask_image);
+    // Calculate the cost values from the distance values.
+    Buffer<double> cost_map(width, height);
+    for (size_t y = 0; y < height; y ++) {
+        for (size_t x = 0; x < width; x ++) {
+            // The distance, in pixels from the closest black pixel, multiplied
+            // with the map's resolution, to get a value in meter.
+            const double distance_meter = dist.at<float>(y, x) * resolution;
+            if (distance_meter > inflation_radius) {
+                continue;
+            }
 
             // The cost falls off from 1.0 next to an obstacle to nearly 0.0.
-            const double cost = exp((-5.0 * radius) / pixel_radius);
-
-            for (size_t y = 0; y < result.height(); y++) {
-                for (size_t x = 0; x < result.width(); x++) {
-                    // Get the value that is offset by the center coordinate of the circle.
-                    const double pixel_value = mask_image.at(x + pixel_radius, y + pixel_radius);
-
-                    if (pixel_value > 0.5) {
-                        result.at(x, y) = std::max(result.at(x, y), cost);
-                    }
-                }
-            }
-        }
-
-        std::lock_guard<std::mutex> lock(cost_images_mutex);
-        cost_images.emplace_back(std::move(result));
-    };
-
-    log_callback("Creating inflation layers...");
-
-    // The number of threads that are used (if threading is requested).
-    const unsigned int threads = std::thread::hardware_concurrency();
-
-    std::unique_ptr<boost::asio::thread_pool> pool;
-    if (multi_threaded) {
-        pool = std::make_unique<boost::asio::thread_pool>(threads);
-    }
-
-    // Distribute the work on the threads.
-    std::vector<std::vector<unsigned int>> work(threads);
-    for (unsigned int r = 0; r < pixel_radius; r++) {
-        work.at(r % threads).push_back(r);
-    }
-
-    for (const std::vector<unsigned int>& w: work) {
-        if (multi_threaded) {
-            boost::asio::post(*pool, [&process_work, &w]{ process_work(w); });
-        } else {
-            process_work(w);
-        }
-    }
-
-    if (multi_threaded) {
-        pool->join();
-    }
-
-    log_callback("Combining inflation layers...");
-
-    // Combine the buffers containing the costs.
-    Buffer<double> cost_map(occupancy_map.width(), occupancy_map.height());
-
-    // Combine all the resulting cost images into one.
-    for (const Buffer<double>& ci: cost_images) {
-        for (size_t y = 0; y < cost_map.height(); y ++) {
-            for (size_t x = 0; x < cost_map.width(); x ++) {
-                cost_map.at(x, y) = std::max(cost_map.at(x, y), ci.at(x, y));
-            }
+            const double cost = exp(-5.0 * distance_meter / inflation_radius);
+            cost_map.at(x, y) = cost;
         }
     }
 

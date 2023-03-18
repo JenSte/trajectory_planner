@@ -45,7 +45,6 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
 
     Buffer<double> cost_map = create_cost_map(
         log_callback,
-        multi_threaded,
         resolution,
         inflation_radius,
         occupancy_map);
