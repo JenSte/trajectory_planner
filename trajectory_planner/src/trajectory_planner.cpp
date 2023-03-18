@@ -301,6 +301,7 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     log_motion_model(motion_model);
 
     // Plan in three dimensions.
+    log_callback_("Starting 3D search...");
     auto timestamp_start = std::chrono::steady_clock::now();
     three::SearchResult3D result_3d = three::plan(costs_, start, goal);
     auto timestamp_end = std::chrono::steady_clock::now();
@@ -314,6 +315,7 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     log_callback_(ss.str());
 
     // Plan in five dimensions.
+    log_callback_("Starting 5D search...");
     timestamp_start = std::chrono::steady_clock::now();
     five::SearchResult5D result_5d = five::plan(
         parameters.multi_threaded,
