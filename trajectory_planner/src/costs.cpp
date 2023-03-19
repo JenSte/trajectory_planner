@@ -192,7 +192,7 @@ void Costs::export_3d_poses(
             bool b = false;
 
             for (const auto& v: costs_3d_) {
-                if (v.at(x + floorplan_width_ * y)) {
+                if (v.at(x + floorplan_width_ * y) != invalid_3d_cost) {
                     b = true;
                     break;
                 }
