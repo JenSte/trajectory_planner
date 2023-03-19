@@ -14,7 +14,7 @@ namespace {
 namespace trajectory_planner::three
 {
 
-HeuristicMap::HeuristicMap(
+Heuristic::Heuristic(
     const Costs& costs,
     const Pose3D& goal)
     : width_(costs.width())
@@ -89,14 +89,14 @@ HeuristicMap::HeuristicMap(
     }
 }
 
-double HeuristicMap::get_value(
+double Heuristic::get_value(
     unsigned int x,
     unsigned int y) const
 {
     if (!(x < width_)) {
         std::ostringstream ss;
         ss
-            << "HeuristicMap::get_value(): x value of " << x
+            << "Heuristic::get_value(): x value of " << x
             << " is bigger than the map width of " << width_ << ".";
         throw std::runtime_error(ss.str());
     }
@@ -104,7 +104,7 @@ double HeuristicMap::get_value(
     if (!(y < height_)) {
         std::ostringstream ss;
         ss
-            << "HeuristicMap::get_value(): y value of " << y
+            << "Heuristic::get_value(): y value of " << y
             << " is bigger than the map height of " << height_ << ".";
         throw std::runtime_error(ss.str());
     }
@@ -112,7 +112,7 @@ double HeuristicMap::get_value(
     return values_.at(x + width_ * y);
 }
 
-void HeuristicMap::set_value(
+void Heuristic::set_value(
     unsigned int x,
     unsigned int y,
     double value)
@@ -120,7 +120,7 @@ void HeuristicMap::set_value(
     if (!(x < width_)) {
         std::ostringstream ss;
         ss
-            << "HeuristicMap::set_value(): x value of " << x
+            << "Heuristic::set_value(): x value of " << x
             << " is bigger than the map width of " << width_ << ".";
         throw std::runtime_error(ss.str());
     }
@@ -128,7 +128,7 @@ void HeuristicMap::set_value(
     if (!(y < height_)) {
         std::ostringstream ss;
         ss
-            << "HeuristicMap::set_value(): y value of " << y
+            << "Heuristic::set_value(): y value of " << y
             << " is bigger than the map height of " << height_ << ".";
         throw std::runtime_error(ss.str());
     }
@@ -361,13 +361,13 @@ double calculate_movemement_cost(
 }
 
 double calculate_heuristic(
-    const HeuristicMap& heuristic_map,
+    const Heuristic& heuristic,
     const Pose3D& goal_pose,
     const Pose3D& pose)
 {
-    double goal_distance = heuristic_map.get_value(pose.x, pose.y);
+    double goal_distance = heuristic.get_value(pose.x, pose.y);
     if (std::isnan(goal_distance)) {
-        // A fallback if the pose is not in 'heuristic_map'. In this case there is
+        // A fallback if the pose is not in 'heuristic'. In this case there is
         // probably no path to the goal in the search space (otherwise the heuristic
         // map calculation would include the pose), so we could also detect this earlier.
         const double dx = static_cast<double>(goal_pose.x) - static_cast<double>(pose.x);
@@ -405,7 +405,7 @@ SearchResult3D plan(
     // by flood-filling the 3D search space in 2D. While it takes some time to
     // pre-calculate these values before doing the actual search, it pays of on
     // large maps, and does not take much time on small maps.
-    HeuristicMap heuristic_map(costs, goal_pose);
+    Heuristic heuristic(costs, goal_pose);
 
     auto goal_reached = [&goal_pose](const Pose3D& pose) {
         return goal_pose == pose;
@@ -419,8 +419,8 @@ SearchResult3D plan(
         return calculate_movemement_cost(costs, goal_pose, pose, neighbour);
     };
 
-    auto heuristic = [&costs, &goal_pose, &heuristic_map](const Pose3D& pose) {
-        return calculate_heuristic(heuristic_map, goal_pose, pose);
+    auto heuristic_callback = [&costs, &goal_pose, &heuristic](const Pose3D& pose) {
+        return calculate_heuristic(heuristic, goal_pose, pose);
     };
 
     using a_star_type = AStar<
@@ -428,18 +428,18 @@ SearchResult3D plan(
         decltype(goal_reached),
         decltype(get_neighbours),
         decltype(movement_cost),
-        decltype(heuristic),
-        true>;
+        decltype(heuristic_callback),
+        false>;
 
     a_star_type a_star;
     a_star_type::search_result a_star_result = a_star.search(
         goal_reached,
         get_neighbours,
         movement_cost,
-        heuristic,
+        heuristic_callback,
         start_pose);
 
-    SearchResult3D result(std::move(heuristic_map));
+    SearchResult3D result(std::move(heuristic));
 
     // Convert the 3D path back to a path for the trajectory planner
     // and create the heuristic vector.
@@ -451,7 +451,7 @@ SearchResult3D plan(
         angle_index %= costs.angle_granularity();
 
         result.path.push_back(Pose{pose.x, pose.y, static_cast<unsigned int>(angle_index)});
-        result.heuristic.push_back(result.heuristic_map.get_value(pose.x, pose.y));
+        result.path_heuristic.push_back(result.heuristic.get_value(pose.x, pose.y));
     }
 
     // Create the costs vector in the result. This is done by iterating over

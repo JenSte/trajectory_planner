@@ -87,12 +87,12 @@ struct Pose3D
 using Path3D = std::vector<Pose3D>;
 
 // Holds the heuristic values used by the 3D planner.
-class HeuristicMap
+class Heuristic
 {
 public:
 
-    // Create a HeuristMap instance.
-    HeuristicMap(
+    // Create a new Heuristic instance.
+    Heuristic(
         const Costs& costs,
         const Pose3D& goal);
 
@@ -123,8 +123,8 @@ private:
 struct SearchResult3D
 {
     SearchResult3D(
-        HeuristicMap heuristic_map)
-        : heuristic_map(std::move(heuristic_map))
+        Heuristic heuristic)
+        : heuristic(std::move(heuristic))
     {
     }
 
@@ -134,14 +134,14 @@ struct SearchResult3D
 
     // Contains the heuristic value for every pose in the path (vector has
     // the exact same length as 'path').
-    std::vector<double> heuristic;
+    std::vector<double> path_heuristic;
 
     // The cost values of the poses along the path (vector has the exact same
     // length as 'path').
     std::vector<double> cost;
 
     // The data structure that contains the pre-calculated 2D heuristic values.
-    HeuristicMap heuristic_map;
+    Heuristic heuristic;
 
     // Describes the cells the search algorithm looked at during the search. This
     // maps the 2D coordinates to the number of orientations that were checked
