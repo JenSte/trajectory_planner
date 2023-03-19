@@ -87,6 +87,8 @@ Heuristic::Heuristic(
         old_frontier = std::move(frontier);
         frontier = std::move(new_frontier);
     }
+
+    maximum_value_ = iteration;
 }
 
 double Heuristic::get_value(

@@ -101,6 +101,12 @@ public:
         unsigned int x,
         unsigned int y) const;
 
+    // Return the biggest contained heuristic value.
+    double maximum_value() const
+    {
+        return maximum_value_;
+    }
+
 private:
 
     // Set the heuristic value of a coordinate.
@@ -117,6 +123,9 @@ private:
 
     // The heuristic used by the 3D planner is the 2D distance from the goal.
     std::vector<double> values_;
+
+    // The maximum distance in 'values_'.
+    double maximum_value_;
 };
 
 // Data type returned from the search in 3D space.

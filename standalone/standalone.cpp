@@ -21,49 +21,6 @@
 #define GOAL_Y_METER 4.5
 #define GOAL_THETA_DEGREE 180
 
-// Whether or not to write debug images out to '/tmp/'.
-#define WRITE_DEBUG_IMAGES false
-void store_3d_path_image(
-    boost::gil::rgb8_image_t floorplan_image,
-    const trajectory_planner::Path& path,
-    const std::string& filename)
-{
-    auto view = boost::gil::view(floorplan_image);
-
-    for (const trajectory_planner::Pose& pose: path) {
-        boost::gil::rgb8_view_t::x_iterator row =
-            view.row_begin(view.height() - 1 - pose.y);
-        row[pose.x] = boost::gil::rgb8_pixel_t{3, 252, 44};
-    }
-
-    boost::gil::write_view(filename, view, boost::gil::png_tag());
-}
-
-void store_5d_path_image(
-    boost::gil::rgb8_image_t floorplan_image,
-    const trajectory_planner::five::SegmentSearchResult& segment,
-    const std::string& filename)
-{
-    auto view = boost::gil::view(floorplan_image);
-
-    // Draw the inflated 3D path.
-    std::unordered_set<trajectory_planner::Pose2D, boost::hash<trajectory_planner::Pose2D>> cost_poses;
-    segment.costs.export_5d_poses(cost_poses);
-    for (const trajectory_planner::Pose2D& pose: cost_poses) {
-        boost::gil::rgb8_view_t::x_iterator row =
-            view.row_begin(view.height() - 1 - pose.y);
-        row[pose.x] = boost::gil::rgb8_pixel_t{0, 102, 255};
-    }
-
-    // Draw the 5D path on top.
-    for (const trajectory_planner::Pose5D& pose: segment.path) {
-        boost::gil::rgb8_view_t::x_iterator row =
-            view.row_begin(view.height() - 1 - pose.y);
-        row[pose.x] = boost::gil::rgb8_pixel_t{252, 3, 194};
-    }
-
-    boost::gil::write_view(filename, view, boost::gil::png_tag());
-}
 
 #define MULTI_THREADED false
 //#define MULTI_THREADED true
@@ -181,29 +138,7 @@ int main()
             << "planning took " << planning_duration.count() << " sec.\n";
 
         if (WRITE_DEBUG_IMAGES) {
-            boost::gil::rgb8_image_t color_image(image.dimensions());
-            boost::gil::copy_pixels(
-                boost::gil::color_converted_view<boost::gil::rgb8_pixel_t>(
-                    boost::gil::view(image)),
-                boost::gil::view(color_image));
-
-            // Mark the 3D path on the image.
-            store_3d_path_image(
-                color_image,
-                result.search_result_3d.path,
-                "/tmp/standalone_3d_path.png");
-
-            for (size_t i = 0; i < result.search_result_5d.segment.size(); i++) {
-                std::ostringstream ss;
-                ss
-                    << "/tmp/standalone_5d_path_"
-                    << std::setfill('0') << std::setw(3) << i << ".png";
-
-                store_5d_path_image(
-                    color_image,
-                    result.search_result_5d.segment[i],
-                    ss.str());
-            }
+            planner->write_result_debug_images(result, "/tmp/standalone_result_");
         }
     } catch (const std::exception& e) {
         std::cerr << "error while planning: " << e.what() << std::endl;

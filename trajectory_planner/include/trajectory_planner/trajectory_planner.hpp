@@ -119,6 +119,11 @@ public:
     void write_debug_images(
         const std::string& prefix) const;
 
+    // Write debug images that show the details of the 3D and 5D search results.
+    void write_result_debug_images(
+        const Result& result,
+        const std::string& prefix) const;
+
     // Plan a route from 'start' to 'goal'.
     Result plan(
         const PlanningParameters& parameters,
