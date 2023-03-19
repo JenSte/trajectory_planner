@@ -12,6 +12,32 @@
 namespace
 {
 
+// Put a text on the image.
+void write_text(
+    cv::Mat& image,
+    int column,
+    int row,
+    const std::string& text)
+{
+    const cv::Vec3b black(0, 0, 0);
+    const cv::Point origin(column, row);
+
+    cv::putText(image, text, origin, cv::FONT_HERSHEY_PLAIN, 1.0, black, 1, cv::LINE_AA);
+}
+
+// Add some rows to the given image and add a text to it.
+void extend_and_label_image(
+    cv::Mat& image,
+    std::string label)
+{
+    cv::Vec3b white(255, 255, 255);
+
+    const int old_height = image.rows;
+    image.resize(old_height + 56, white);
+
+    write_text(image, 10, old_height + 24, label);
+}
+
 // Output an image that shows the inflated floorplan.
 void output_inflated_occupancy_map(
     const trajectory_planner::Buffer<double>& occupancy_map,
@@ -35,9 +61,6 @@ void output_inflated_occupancy_map(
         }
     }
 
-    // Output a black/white version of this image, makes it easier to inspect
-    // the raw pixel values with an image viewer.
-    cv::imwrite(prefix + "bw.png", canvas);
 
     // Convert the grayscale values to colors.
     cv::Mat color_image;
@@ -56,6 +79,12 @@ void output_inflated_occupancy_map(
         }
     }
 
+    extend_and_label_image(canvas, "3D inflated occupancy map, black/white");
+    extend_and_label_image(color_image, "3D inflated occupancy map");
+
+    // Output a black/white version of this image, makes it easier to inspect
+    // the raw pixel values with an image viewer, and a RGB version.
+    cv::imwrite(prefix + "bw.png", canvas);
     cv::imwrite(prefix + "color.png", color_image);
 }
 
@@ -115,7 +144,14 @@ void output_3d_orientation_map(
         }
     }
 
+    extend_and_label_image(color_image, "3D costmap");
+
     std::stringstream ss;
+    ss
+        << "Orientation: " << index_3d;
+    write_text(color_image, 10, height + 46, ss.str());
+
+    ss.str("");
     ss << prefix << std::setw(3) << std::setfill('0') << index_3d << ".png";
     cv::imwrite(ss.str(), color_image);
 }
@@ -151,7 +187,14 @@ void output_5d_orientation_map(
         }
     }
 
+    extend_and_label_image(canvas, "5D occupancy map");
+
     std::stringstream ss;
+    ss
+        << "Orientation: " << angle_index;
+    write_text(canvas, 10, height + 46, ss.str());
+
+    ss.str("");
     ss << prefix << "map_5d_" << std::setw(3) << std::setfill('0') << angle_index << ".png";
     cv::imwrite(ss.str(), canvas);
 }
@@ -204,6 +247,8 @@ void output_result_3d_heuristic_image(
         }
     }
 
+    extend_and_label_image(color_image, "3D heuristic");
+
     cv::imwrite(filename, color_image);
 }
 
@@ -217,15 +262,23 @@ void output_result_3d_opened_nodes_image(
 
     cv::Mat canvas = cv::Mat::zeros(height, width, CV_8UC1);
 
+    // Return the grayscale value for a given number of node visits.
+    auto color = [](unsigned int visited) -> unsigned char {
+        double grey = visited;
+        grey /= trajectory_planner::three::movement_index_count;
+        grey = std::max(0.0, std::min(1.0, grey));
+
+        return 100 + 155 * grey;
+    };
+
+    size_t total_opened = 0;
+
     for (const auto it: opened_nodes) {
         const size_t row = height - 1 - it.first.y;
         const size_t column = it.first.x;
 
-        const unsigned int visited = it.second;
-        double grey = visited / trajectory_planner::three::movement_index_count;
-        grey = std::max(0.0, std::min(1.0, grey));
-
-        canvas.at<unsigned char>(row, column) = 100 + 155 * grey;
+        total_opened += it.second;
+        canvas.at<unsigned char>(row, column) = color(it.second);
     }
 
     // Convert the grayscale values to colors.
@@ -250,6 +303,23 @@ void output_result_3d_opened_nodes_image(
             }
         }
     }
+
+    extend_and_label_image(color_image, "3D opened nodes");
+
+    for (unsigned int c = 1; c <= 16; c++) {
+        cv::Mat m(10, 10, CV_8UC1, color(c));
+        cv::Mat n;
+        cv::applyColorMap(m, n, cv::COLORMAP_JET);
+
+        cv::Rect rect(width - 20 - (160 - c * n.cols), height + 10, n.cols, n.rows);
+        cv::Mat roi(color_image, rect);
+        n.copyTo(roi);
+    }
+
+    std::stringstream ss;
+    ss
+        << "Total opened nodes: " << total_opened;
+    write_text(color_image, 10, height + 46, ss.str());
 
     cv::imwrite(filename, color_image);
 }
@@ -283,6 +353,8 @@ void output_result_3d_path_image(
             }
         }
     }
+
+    extend_and_label_image(color_image, "3D path");
 
     cv::imwrite(filename, color_image);
 }
@@ -327,6 +399,8 @@ void output_result_5d_path_image(
             }
         }
     }
+
+    extend_and_label_image(color_image, "5D path (on inflated 3D path)");
 
     cv::imwrite(filename, color_image);
 }
