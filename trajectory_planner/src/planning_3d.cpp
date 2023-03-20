@@ -20,6 +20,7 @@ Heuristic::Heuristic(
     : width_(costs.width())
     , height_(costs.height())
     , values_(width_ * height_, std::nan(""))
+    , maximum_value_(0.0)
 {
     // The list of nodes that are between the processed and unprocessed poses.
     std::unordered_set<Pose2D, boost::hash<Pose2D>> frontier;
@@ -36,13 +37,7 @@ Heuristic::Heuristic(
     // The frontier of the last iteration.
     std::unordered_set<Pose2D, boost::hash<Pose2D>> old_frontier;
 
-    // The number of iterations the loop below already ran, also the current
-    // distance to the goal.
-    unsigned int iteration = 0;
-
-    for (;;) {
-        iteration++;
-
+    while (!frontier.empty()) {
         // Candidates for the new frontier are all neighbours (direct or diagnoal)
         // of the current frontier set.
         std::unordered_set<Pose2D, boost::hash<Pose2D>> candidates;
@@ -74,21 +69,49 @@ Heuristic::Heuristic(
         for (const Pose2D& c: candidates) {
             if (remaining.erase(c) == 1) {
                 // If 'remaining.erase()' returns 1, the candidate 'c' was in remaining.
-                set_value(c.x, c.y, iteration);
                 new_frontier.insert(c);
-            }
-        }
 
-        if (new_frontier.empty()) {
-            // No more new cells that are next to the current frontier, done.
-            break;
+                // The corner coordinates of a 3x3 region with the candidate in the
+                // middle, capped to the limits of the map.
+                size_t x_min = c.x > 1 ? c.x - 1 : c.x;
+                size_t x_max = c.x < width_ - 1 ? c.x + 1 : c.x;
+                size_t y_min = c.y > 1 ? c.y - 1 : c.y;
+                size_t y_max = c.y < height_ - 1 ? c.y + 1 : c.y;
+
+                // Search for the
+                double smallest_value = std::numeric_limits<double>::max();
+                for (size_t x = x_min; x <= x_max; x++) {
+                    for (size_t y = y_min; y <= y_max; y++) {
+                        const double neighbour_value = get_value(x, y);
+                        if (!std::isnan(neighbour_value)) {
+                            // The distance going from the neighbour to the candidate
+                            // is either "1.0" when the neighbour is on the same row
+                            // or column, or "sqrt(2.0)" for diagonal neighbours.
+                            const double dist = ((x == c.x) || (y == c.y)) ? 1.0 : sqrt(2.0);
+
+                            // Store the smallest of all neighbouring values.
+                            smallest_value = std::min(smallest_value, neighbour_value + dist);
+                        }
+                    }
+                }
+
+                // Because there is at least one neighbour (a node in 'frontier' that
+                // led us to 'candidate'), this value is not the maximum double value
+                // any more. Also, we can end up here multiple times for the same pose
+                // (the same pose as candidates from different elements in frontier),
+                // but this is also fine as the already updated neighbour can not have
+                // a smaller value as the frontier node, so this calculation will return
+                // the same value in this case.
+                set_value(c.x, c.y, smallest_value);
+
+                // Also update the maximum value for all poses in the heuristic.
+                maximum_value_ = std::max(maximum_value_, smallest_value);
+            }
         }
 
         old_frontier = std::move(frontier);
         frontier = std::move(new_frontier);
     }
-
-    maximum_value_ = iteration;
 }
 
 double Heuristic::get_value(
