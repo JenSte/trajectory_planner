@@ -146,9 +146,14 @@ void output_3d_orientation_map(
 
     extend_and_label_image(color_image, "3D costmap");
 
+    const double deg = index_3d * 360.0 / trajectory_planner::three::movement_index_count;
+    const double rad = index_3d * 2 * M_PI / trajectory_planner::three::movement_index_count;
+
     std::stringstream ss;
     ss
-        << "Orientation: " << index_3d;
+        << "Orientation: " << index_3d << "/" << trajectory_planner::three::movement_index_count
+        << " (" << std::fixed << std::setprecision(1) << deg
+        << " deg, " << std::setprecision(2) << rad << " rad)";
     write_text(color_image, 10, height + 46, ss.str());
 
     ss.str("");
@@ -189,9 +194,14 @@ void output_5d_orientation_map(
 
     extend_and_label_image(canvas, "5D occupancy map");
 
+    const double deg = angle_index * 360.0 / costs.angle_granularity();
+    const double rad = angle_index * 2 * M_PI / costs.angle_granularity();
+
     std::stringstream ss;
     ss
-        << "Orientation: " << angle_index;
+        << "Orientation: " << angle_index << "/" << costs.angle_granularity()
+        << " (" << std::fixed << std::setprecision(1) << deg
+        << " deg, " << std::setprecision(2) << rad << " rad)";
     write_text(canvas, 10, height + 46, ss.str());
 
     ss.str("");
@@ -202,6 +212,7 @@ void output_5d_orientation_map(
 void output_result_3d_heuristic_image(
     const trajectory_planner::three::Heuristic& heuristic,
     const trajectory_planner::Buffer<double>& occupancy_map,
+    double map_resolution,
     const std::string& filename)
 {
     size_t width = occupancy_map.width();
@@ -248,6 +259,13 @@ void output_result_3d_heuristic_image(
     }
 
     extend_and_label_image(color_image, "3D heuristic");
+
+    std::stringstream ss;
+    ss
+        << "Max. distance to goal: "
+        << std::fixed << std::setprecision(2) << heuristic.maximum_value()
+        << " px / " << heuristic.maximum_value() * map_resolution << " m";
+    write_text(color_image, 10, height + 46, ss.str());
 
     cv::imwrite(filename, color_image);
 }
@@ -464,6 +482,7 @@ void TrajectoryPlanner::write_result_debug_images(
     output_result_3d_heuristic_image(
         result.search_result_3d.heuristic,
         original_occupancy_map_,
+        map_resolution_,
         prefix + "3d_heuristic.png");
 
     // Show the nodes (only the X/Y coordinates, not the orientation, obviously) that
