@@ -123,8 +123,8 @@ Costs TrajectoryPlanner::create_costs(
 
     // Take all the costs and put them in one data structure.
     Costs costs(
-        padded_width,
-        padded_height,
+        occupancy_map.width(),
+        occupancy_map.height(),
         angle_granularity,
         goal_turn_penalty_distance);
 
