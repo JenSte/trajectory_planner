@@ -16,6 +16,34 @@
 namespace trajectory_planner::five
 {
 
+// Stores the total costs along a path to a cell during an A* search.
+class TotalCostsMap
+{
+public:
+
+    // Set the total cost value for a pose.
+    void set(const Pose5D& pose, double cost)
+    {
+        total_costs_[pose] = cost;
+    }
+
+    // Return the total cost to the pose, or infinity if the pose is not in the object.
+    double get(const Pose5D& pose) const
+    {
+        const auto it = total_costs_.find(pose);
+        if (it == total_costs_.end()) {
+            return std::numeric_limits<double>::infinity();
+        }
+
+        return it->second;
+    }
+
+private:
+
+    // Maps the 5D poses to the total costs to this pose.
+    std::unordered_map<Pose5D, double, boost::hash<Pose5D>> total_costs_;
+};
+
 std::vector<Segment> split_path(
     unsigned int angle_granularity,
     const Path& path)
@@ -492,17 +520,19 @@ SegmentSearchResult plan_movement_segment(
         decltype(get_neighbours),
         decltype(movement_cost),
         decltype(heuristic_callback),
+        TotalCostsMap,
         false>;
 
+    TotalCostsMap total_costs;
+
     a_star_type a_star;
-    a_star_type::search_result a_star_result = a_star.search(
+    const Path5D path = a_star.search(
         goal_reached,
         get_neighbours,
         movement_cost,
         heuristic_callback,
-        start);
-
-    const Path5D& path = std::get<0>(a_star_result);
+        start,
+        total_costs);
 
     // Create the heuristic values for each pose of the path.
     std::vector<double> path_heuristics;

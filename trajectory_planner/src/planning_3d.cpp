@@ -14,6 +14,80 @@ namespace {
 namespace trajectory_planner::three
 {
 
+// Stores the total costs along a path to a cell during an A* search.
+class TotalCostsMap
+{
+    // Used to hold the total costs for the 16 different orientations of a cell.
+    using cost_array = std::array<float, movement_index_count>;
+
+public:
+
+    // Initializes a new 'TotalCostsMap' object.
+    TotalCostsMap(
+        size_t width,
+        size_t height)
+        : width_(width)
+        , height_(height)
+        , total_costs_(width * height)
+    {
+        // The std::array<> used to hold the total costs for each cell does
+        // not have a constructor, so we have to do the initialization this way.
+        for (cost_array& cv: total_costs_) {
+            for (float& f: cv) {
+                f = std::numeric_limits<float>::infinity();
+            }
+        }
+    }
+
+    // Set the total cost value for a pose.
+    void set(const Pose3D& pose, double cost)
+    {
+        total_costs_.at(pose.x + width_ * pose.y).at(pose.movement) = cost;
+    }
+
+    // Return the total cost to the pose, or infinity if the pose is not in the object.
+    double get(const Pose3D& pose) const
+    {
+        return total_costs_.at(pose.x + width_ * pose.y).at(pose.movement);
+    }
+
+    // Count and return the number a 2D cell was looked at during the search.
+    SearchResult3D::OpenedNodesMap count_opened_nodes() const
+    {
+        SearchResult3D::OpenedNodesMap result;
+
+        for (size_t x = 0; x < width_; x++) {
+            for (size_t y = 0; y < height_; y++) {
+                // Count the number of cost values that were modified at least once
+                // (are not infinite any more) in the cost array for this cell.
+                const cost_array& vc = total_costs_.at(x + width_ * y);
+                unsigned int c = std::count_if(vc.begin(), vc.end(), [](float f) {
+                    return std::isfinite(f);
+                });
+
+                // Only cells where at least one orientation was looked at are included
+                // in the result set.
+                if (c != 0) {
+                    result[Pose2D{static_cast<unsigned>(x), static_cast<unsigned>(y)}] = c;
+                }
+            }
+        }
+
+        return result;
+    }
+
+private:
+
+    // The width of the map this object holds the total costs for.
+    size_t width_;
+
+    // The height of the map this object holds the total costs for.
+    size_t height_;
+
+    // Holds the total costs to a given node from the start node of a search.
+    std::vector<cost_array> total_costs_;
+};
+
 Heuristic::Heuristic(
     const Costs& costs,
     const Pose3D& goal)
@@ -468,21 +542,25 @@ SearchResult3D plan(
         decltype(get_neighbours),
         decltype(movement_cost),
         decltype(heuristic_callback),
+        TotalCostsMap,
         false>;
 
+    TotalCostsMap total_costs(costs.width(), costs.height());
+
     a_star_type a_star;
-    a_star_type::search_result a_star_result = a_star.search(
+    const Path3D path = a_star.search(
         goal_reached,
         get_neighbours,
         movement_cost,
         heuristic_callback,
-        start_pose);
+        start_pose,
+        total_costs);
 
     SearchResult3D result(std::move(heuristic));
+    result.opened_nodes = total_costs.count_opened_nodes();
 
     // Convert the 3D path back to a path for the trajectory planner
     // and create the heuristic vector.
-    const Path3D& path = std::get<0>(a_star_result);
     for (const Pose3D& pose: path) {
         const double angle = angle_lut[pose.movement];
 
@@ -505,18 +583,6 @@ SearchResult3D plan(
         result.cost.push_back(cost);
     }
     std::reverse(result.cost.begin(), result.cost.end());
-
-    // Count the orientations for all cells visited.
-    for (const Pose3D& node: std::get<1>(a_star_result)) {
-        auto it = result.opened_nodes.find(Pose2D{node.x, node.y});
-        if (it == result.opened_nodes.end()) {
-            // The first time we come accross this X/Y coordinate.
-            result.opened_nodes[Pose2D{node.x, node.y}] = 1;
-        } else {
-            // This coordinate is already known to the resulting map.
-            it->second++;
-        }
-    }
 
     return result;
 }

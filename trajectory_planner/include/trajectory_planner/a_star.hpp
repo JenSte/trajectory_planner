@@ -90,6 +90,7 @@ template<
     typename GetNeighbours,
     typename MovementCost,
     typename Heuristic,
+    typename TotalCostsMap,
     bool UseClosedSet
 > class AStar
 {
@@ -98,23 +99,16 @@ public:
     // Set type to hold all the nodes that were "opened" during the search.
     using NodesSet = std::unordered_set<Node, boost::hash<Node>>;
 
-    // The type returned from the 'search()' function. The first element of the tuple
-    // is the path (can be empty if no path is found), while the second element holds
-    // all the nodes that the algorithm "opened".
-    using search_result = std::tuple<std::vector<Node>, NodesSet>;
-
     // Map type to store the predecessors of nodes.
     using PredecessorsMap = std::unordered_map<Node, Node, boost::hash<Node>>;
 
-    // Map type to store the costs of nodes.
-    using TotalCostsMap = std::unordered_map<Node, double, boost::hash<Node>>;
-
-    search_result search(
+    std::vector<Node> search(
         const GoalReached& goal_reached,
         const GetNeighbours& get_neighbours,
         const MovementCost& movement_cost,
         const Heuristic& heuristic,
-        const Node& start)
+        const Node& start,
+        TotalCostsMap& total_costs)
     {
         // The "open" nodes to process.
         PriorityQueue<Node> open_nodes;
@@ -127,17 +121,13 @@ public:
         // Maps nodes to their predecessor on the path back to the start node.
         PredecessorsMap predecessors;
 
-        // Maps a node to the cost of the best known path from the start to that node.
-        TotalCostsMap total_costs;
-        total_costs[start] = 0.0;
+        total_costs.set(start, 0.0);
 
         while (!open_nodes.empty()) {
             Node node = open_nodes.pop();
 
             if (goal_reached(node)) {
-                return std::make_tuple(
-                    reconstruct_path(predecessors, node),
-                    opened_nodes(total_costs));
+                return reconstruct_path(predecessors, node);
             }
 
             if (UseClosedSet) {
@@ -153,34 +143,20 @@ public:
                 }
 
                 // The path cost if we would enter the neighbour via the current node.
-                double total_cost =
-                    get_total_cost(total_costs, node) + movement_cost(node, neighbour);
-                if (total_cost < get_total_cost(total_costs, neighbour)) {
+                double total_cost = total_costs.get(node) + movement_cost(node, neighbour);
+                if (total_cost < total_costs.get(neighbour)) {
                     predecessors[neighbour] = node;
-                    total_costs[neighbour] = total_cost;
+                    total_costs.set(neighbour, total_cost);
                     open_nodes.push(neighbour, total_cost + heuristic(neighbour));
                 }
             }
         }
 
         // No path found.
-        return std::make_tuple(std::vector<Node>(), opened_nodes(total_costs));
+        return std::vector<Node>();
     }
 
 private:
-
-    // Return the total cost in the map, or infinity if the node is not in the map.
-    double get_total_cost(
-        const TotalCostsMap& total_costs,
-        const Node& node)
-    {
-        const auto it = total_costs.find(node);
-        if (it == total_costs.end()) {
-            return std::numeric_limits<double>::infinity();
-        }
-
-        return it->second;
-    }
 
     std::vector<Node> reconstruct_path(
         const PredecessorsMap& predecessors,
@@ -200,21 +176,6 @@ private:
         }
 
         std::reverse(std::begin(result), std::end(result));
-        return result;
-    }
-
-    // Create a set that contains all nodes that the algorithm looked at.
-    NodesSet opened_nodes(
-        const TotalCostsMap& total_costs)
-    {
-        NodesSet result;
-
-        std::transform(
-            total_costs.begin(),
-            total_costs.end(),
-            std::inserter(result, result.end()),
-            [](const auto& pair){ return pair.first; });
-
         return result;
     }
 };
