@@ -184,27 +184,6 @@ Costs Costs::intersect_5d_costs(
     return result;
 }
 
-void Costs::export_3d_poses(
-    std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const
-{
-    for (unsigned int x = 0; x < floorplan_width_; x++) {
-        for (unsigned int y = 0; y < floorplan_height_; y++) {
-            bool b = false;
-
-            for (const auto& v: costs_3d_) {
-                if (v.at(x + floorplan_width_ * y) != invalid_3d_cost) {
-                    b = true;
-                    break;
-                }
-            }
-
-            if (b) {
-                poses_set.insert(Pose2D{x, y});
-            }
-        }
-    }
-}
-
 void Costs::export_5d_poses(
     std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const
 {

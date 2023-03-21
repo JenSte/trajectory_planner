@@ -121,11 +121,6 @@ public:
     Costs intersect_5d_costs(
         std::vector<Pose2D> poses) const;
 
-    // Inserts all coordinates of the 3D poses that are contained in the cost structure
-    // into the given set.
-    void export_3d_poses(
-        std::unordered_set<Pose2D, boost::hash<Pose2D>>& poses_set) const;
-
     // Inserts all coordinates of the 5D poses that are contained in the cost structure
     // into the given set.
     void export_5d_poses(
