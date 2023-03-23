@@ -578,7 +578,8 @@ double calculate_heuristic(
 SearchResult3D plan(
     const Costs& costs,
     const Pose& start,
-    const Pose& goal)
+    const Pose& goal,
+    bool extract_opened_nodes)
 {
     // Convert the poses for the trajectory planner to the (more granular
     // in regard to the orientation) poses used here.
@@ -631,7 +632,9 @@ SearchResult3D plan(
         predecessors);
 
     SearchResult3D result(std::move(heuristic));
-    result.opened_nodes = total_costs.count_opened_nodes();
+    if (extract_opened_nodes) {
+        result.opened_nodes = total_costs.count_opened_nodes();
+    }
 
     // Convert the 3D path back to a path for the trajectory planner
     // and create the heuristic vector.

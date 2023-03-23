@@ -67,6 +67,13 @@ public:
 
         // The heuristic to use for the 5D search.
         HeuristicType heuristic_type;
+
+        // Whether or not to extract the coordinates that were "opened"
+        // during the 3D planning. If 'false', the 'opened_nodes' member
+        // of the 'SearchResult3D' is empty. These values are only of
+        // interest when debugging the planner and plotting the search
+        // results.
+        bool extract_3d_opened_nodes;
     };
 
     // The result returned by a call to 'plan()'.

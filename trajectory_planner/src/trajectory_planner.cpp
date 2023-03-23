@@ -303,7 +303,8 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     // Plan in three dimensions.
     log_callback_("Starting 3D search...");
     auto timestamp_start = std::chrono::steady_clock::now();
-    three::SearchResult3D result_3d = three::plan(costs_, start, goal);
+    three::SearchResult3D result_3d = three::plan(
+        costs_, start, goal, parameters.extract_3d_opened_nodes);
     auto timestamp_end = std::chrono::steady_clock::now();
     std::chrono::duration<double> duration = timestamp_end - timestamp_start;
 

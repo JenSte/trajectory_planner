@@ -103,6 +103,7 @@ int main()
     pp.angular_velocity_steps = 5;
     pp.multi_threaded = MULTI_THREADED;
     pp.heuristic_type = trajectory_planner::HeuristicType::DEPTH;
+    pp.extract_3d_opened_nodes = WRITE_DEBUG_IMAGES;
 
     trajectory_planner::Pose start{
         static_cast<unsigned int>(START_X_METER / resolution),

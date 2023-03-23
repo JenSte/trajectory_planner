@@ -122,6 +122,8 @@ TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_par
             "' (planning will be slow).");
     }
 
+    result.extract_3d_opened_nodes = false;
+
     return result;
 }
 

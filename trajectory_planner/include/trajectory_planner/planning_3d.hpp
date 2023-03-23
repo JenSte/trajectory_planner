@@ -187,7 +187,8 @@ Pose3D refine_pose(
 SearchResult3D plan(
     const Costs& costs,
     const Pose& start,
-    const Pose& goal);
+    const Pose& goal,
+    bool extract_opened_nodes);
 }
 
 #endif
