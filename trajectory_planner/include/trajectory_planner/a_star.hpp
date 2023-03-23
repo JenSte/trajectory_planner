@@ -91,6 +91,7 @@ template<
     typename MovementCost,
     typename Heuristic,
     typename TotalCostsMap,
+    typename PredecessorsMap,
     bool UseClosedSet
 > class AStar
 {
@@ -99,16 +100,14 @@ public:
     // Set type to hold all the nodes that were "opened" during the search.
     using NodesSet = std::unordered_set<Node, boost::hash<Node>>;
 
-    // Map type to store the predecessors of nodes.
-    using PredecessorsMap = std::unordered_map<Node, Node, boost::hash<Node>>;
-
     std::vector<Node> search(
         const GoalReached& goal_reached,
         const GetNeighbours& get_neighbours,
         const MovementCost& movement_cost,
         const Heuristic& heuristic,
         const Node& start,
-        TotalCostsMap& total_costs)
+        TotalCostsMap& total_costs,
+        PredecessorsMap& predecessors)
     {
         // The "open" nodes to process.
         PriorityQueue<Node> open_nodes;
@@ -118,16 +117,13 @@ public:
         // again. Only used if the 'UseClosedSet' template argument is true.
         NodesSet closed_set;
 
-        // Maps nodes to their predecessor on the path back to the start node.
-        PredecessorsMap predecessors;
-
         total_costs.set(start, 0.0);
 
         while (!open_nodes.empty()) {
             Node node = open_nodes.pop();
 
             if (goal_reached(node)) {
-                return reconstruct_path(predecessors, node);
+                return reconstruct_path(predecessors, start, node);
             }
 
             if (UseClosedSet) {
@@ -145,7 +141,7 @@ public:
                 // The path cost if we would enter the neighbour via the current node.
                 double total_cost = total_costs.get(node) + movement_cost(node, neighbour);
                 if (total_cost < total_costs.get(neighbour)) {
-                    predecessors[neighbour] = node;
+                    predecessors.set(neighbour, node);
                     total_costs.set(neighbour, total_cost);
                     open_nodes.push(neighbour, total_cost + heuristic(neighbour));
                 }
@@ -160,19 +156,14 @@ private:
 
     std::vector<Node> reconstruct_path(
         const PredecessorsMap& predecessors,
+        const Node& start_node,
         const Node& end_node)
     {
         std::vector<Node> result;
         result.push_back(end_node);
 
-        for (;;) {
-            const auto it = predecessors.find(result.back());
-            if (it == predecessors.end()) {
-                // Done, we reached the start of the path.
-                break;
-            }
-
-            result.push_back(it->second);
+        while (!(result.back() == start_node)) {
+            result.push_back(predecessors.get(result.back()));
         }
 
         std::reverse(std::begin(result), std::end(result));

@@ -44,6 +44,31 @@ private:
     std::unordered_map<Pose5D, double, boost::hash<Pose5D>> total_costs_;
 };
 
+// Stores the predecessor for a pose in the A* search.
+class PredecessorsMap
+{
+public:
+
+    // Set the predecessor of a pose.
+    void set(
+        const Pose5D& pose,
+        const Pose5D& predecessor)
+    {
+        predecessors_[pose] = predecessor;
+    }
+
+    // Get the predecessor of a pose.
+    Pose5D get(
+        const Pose5D& pose) const
+    {
+        return predecessors_.at(pose);
+    }
+
+private:
+
+    std::unordered_map<Pose5D, Pose5D, boost::hash<Pose5D>> predecessors_;
+};
+
 std::vector<Segment> split_path(
     unsigned int angle_granularity,
     const Path& path)
@@ -521,9 +546,11 @@ SegmentSearchResult plan_movement_segment(
         decltype(movement_cost),
         decltype(heuristic_callback),
         TotalCostsMap,
+        PredecessorsMap,
         false>;
 
     TotalCostsMap total_costs;
+    PredecessorsMap predecessors;
 
     a_star_type a_star;
     const Path5D path = a_star.search(
@@ -532,7 +559,8 @@ SegmentSearchResult plan_movement_segment(
         movement_cost,
         heuristic_callback,
         start,
-        total_costs);
+        total_costs,
+        predecessors);
 
     // Create the heuristic values for each pose of the path.
     std::vector<double> path_heuristics;

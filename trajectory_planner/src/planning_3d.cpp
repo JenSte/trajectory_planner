@@ -88,6 +88,77 @@ private:
     std::vector<cost_array> total_costs_;
 };
 
+// Stores the predecessor for a pose in the A* search.
+class PredecessorsMap
+{
+public:
+
+    // Initializes a new 'PredecessorMap' object.
+    PredecessorsMap(
+        size_t width,
+        size_t height)
+        : width_(width)
+        , height_(height)
+        , predecessors_(width * height)
+    {
+    }
+
+    // Set the predecessor of a pose.
+    void set(
+        const Pose3D& pose,
+        const Pose3D& predecessor)
+    {
+        // Because the 3D planner can only "move" a very limited distance in
+        // the search space in one step (+/- 2 for X/Y coordinates and +/- 1
+        // for the movement value), we pack the delta values to the predecessor
+        // pose into one byte and store the information this way.
+
+        int dx = static_cast<int>(pose.x) - static_cast<int>(predecessor.x);
+        int dy = static_cast<int>(pose.y) - static_cast<int>(predecessor.y);
+        int dm = static_cast<int>(pose.movement) - static_cast<int>(predecessor.movement);
+
+        dx += 3;
+        dy += 3;
+        dm += 1;
+
+        uint8_t b = (dm << 6) | (dy << 3) | dx;
+
+        predecessors_.at(pose.x + width_ * pose.y).at(pose.movement) = b;
+    }
+
+    // Get the predecessor of a pose.
+    Pose3D get(
+        const Pose3D& pose) const
+    {
+        uint8_t b = predecessors_.at(pose.x + width_ * pose.y).at(pose.movement);
+
+        int dx = b & 0x07;
+        int dy = (b >> 3) & 0x07;
+        int dm = (b >> 6) & 0x03;
+
+        dx -= 3;
+        dy -= 3;
+        dm -= 1;
+
+        return Pose3D{pose.x - dx, pose.y - dy, (pose.movement - dm) % movement_index_count};
+    }
+
+private:
+
+    // The width of the map this object holds the total costs for.
+    size_t width_;
+
+    // The height of the map this object holds the total costs for.
+    size_t height_;
+
+    // For each orientation a single byte is stored that contains
+    // the delta values to the predecessor pose.
+    using predecessor_array = std::array<uint8_t, movement_index_count>;
+
+    // Stores the delta values for a pose to the predecessor.
+    std::vector<predecessor_array> predecessors_;
+};
+
 Heuristic::Heuristic(
     const Costs& costs,
     const Pose3D& goal)
@@ -543,9 +614,11 @@ SearchResult3D plan(
         decltype(movement_cost),
         decltype(heuristic_callback),
         TotalCostsMap,
+        PredecessorsMap,
         false>;
 
     TotalCostsMap total_costs(costs.width(), costs.height());
+    PredecessorsMap predecessors(costs.width(), costs.height());
 
     a_star_type a_star;
     const Path3D path = a_star.search(
@@ -554,7 +627,8 @@ SearchResult3D plan(
         movement_cost,
         heuristic_callback,
         start_pose,
-        total_costs);
+        total_costs,
+        predecessors);
 
     SearchResult3D result(std::move(heuristic));
     result.opened_nodes = total_costs.count_opened_nodes();
