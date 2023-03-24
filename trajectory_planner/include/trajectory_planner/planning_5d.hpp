@@ -2,8 +2,8 @@
 #define TRAJECTORY_PLANNER_PLANNING_5D_HPP
 
 #include "trajectory_planner/costs.hpp"
-#include "trajectory_planner/heuristic.hpp"
 #include "trajectory_planner/motion_model.hpp"
+#include "trajectory_planner/planning_5d_heuristic.hpp"
 
 // The functions in this name space implement a "five dimensional" search. This
 // means that the search happens in on cells (X, Y, Theta, linear velodicty, angular

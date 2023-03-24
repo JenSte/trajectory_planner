@@ -31,20 +31,20 @@ add_executable(${PROJECT_NAME}
     "../trajectory_planner/include/trajectory_planner/convolution.hpp"
     "../trajectory_planner/include/trajectory_planner/costs.hpp"
     "../trajectory_planner/include/trajectory_planner/depth_heuristic.hpp"
-    "../trajectory_planner/include/trajectory_planner/heuristic.hpp"
     "../trajectory_planner/include/trajectory_planner/motion_model.hpp"
     "../trajectory_planner/include/trajectory_planner/planning_3d.hpp"
     "../trajectory_planner/include/trajectory_planner/planning_5d.hpp"
+    "../trajectory_planner/include/trajectory_planner/planning_5d_heuristic.hpp"
     "../trajectory_planner/include/trajectory_planner/trajectory_planner.hpp"
     "../trajectory_planner/include/trajectory_planner/types.hpp"
     "../trajectory_planner/src/buffer.cpp"
     "../trajectory_planner/src/convolution.cpp"
     "../trajectory_planner/src/costs.cpp"
     "../trajectory_planner/src/depth_heuristic.cpp"
-    "../trajectory_planner/src/heuristic.cpp"
     "../trajectory_planner/src/motion_model.cpp"
     "../trajectory_planner/src/planning_3d.cpp"
     "../trajectory_planner/src/planning_5d.cpp"
+    "../trajectory_planner/src/planning_5d_heuristic.cpp"
     "../trajectory_planner/src/trajectory_planner.cpp"
     "../trajectory_planner/src/trajectory_planner_costs.cpp"
     "../trajectory_planner/src/trajectory_planner_debug_images.cpp"
@@ -76,8 +76,10 @@ target_compile_options(${PROJECT_NAME}
         "-g"
         "-march=native"
         "-mtune=native"
+	"-O3"
+	"-ftree-vectorize"
 )
 
-#set_property(TARGET ${PROJECT_NAME}
-#    PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE
-#)
+set_property(TARGET ${PROJECT_NAME}
+    PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE
+)

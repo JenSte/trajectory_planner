@@ -1,4 +1,4 @@
-#include "trajectory_planner/heuristic.hpp"
+#include "trajectory_planner/planning_5d_heuristic.hpp"
 
 #include <limits>
 
