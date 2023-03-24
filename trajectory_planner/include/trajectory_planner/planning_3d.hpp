@@ -2,6 +2,7 @@
 #define TRAJECTORY_PLANNER_PLANNING_3D_HPP
 
 #include "trajectory_planner/costs.hpp"
+#include "trajectory_planner/depth_heuristic.hpp"
 
 #include <boost/container/static_vector.hpp>
 #include <boost/container_hash/hash.hpp>
@@ -86,53 +87,11 @@ struct Pose3D
 // A path planned by the three dimensional planner.
 using Path3D = std::vector<Pose3D>;
 
-// Holds the heuristic values used by the 3D planner.
-class Heuristic
-{
-public:
-
-    // Create a new Heuristic instance.
-    Heuristic(
-        const Costs& costs,
-        const Pose3D& goal);
-
-    // Return the heuristic value of a given pose.
-    double get_value(
-        unsigned int x,
-        unsigned int y) const;
-
-    // Return the biggest contained heuristic value.
-    double maximum_value() const
-    {
-        return maximum_value_;
-    }
-
-private:
-
-    // Set the heuristic value of a coordinate.
-    void set_value(
-        unsigned int x,
-        unsigned int y,
-        double value);
-
-    // The width of the cost object this object was created from.
-    size_t width_;
-
-    // The height of the cost object this object was created from.
-    size_t height_;
-
-    // The heuristic used by the 3D planner is the 2D distance from the goal.
-    std::vector<double> values_;
-
-    // The maximum distance in 'values_'.
-    double maximum_value_;
-};
-
 // Data type returned from the search in 3D space.
 struct SearchResult3D
 {
     SearchResult3D(
-        Heuristic heuristic)
+        DepthHeuristic heuristic)
         : heuristic(std::move(heuristic))
     {
     }
@@ -150,7 +109,7 @@ struct SearchResult3D
     std::vector<double> cost;
 
     // The data structure that contains the pre-calculated 2D heuristic values.
-    Heuristic heuristic;
+    DepthHeuristic heuristic;
 
     // Describes the cells the search algorithm looked at during the search. This
     // maps the 2D coordinates to the number of orientations that were checked

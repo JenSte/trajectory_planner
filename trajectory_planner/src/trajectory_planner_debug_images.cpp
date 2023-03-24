@@ -210,7 +210,7 @@ void output_5d_orientation_map(
 }
 
 void output_result_3d_heuristic_image(
-    const trajectory_planner::three::Heuristic& heuristic,
+    const trajectory_planner::DepthHeuristic& heuristic,
     const trajectory_planner::Buffer<double>& occupancy_map,
     double map_resolution,
     const std::string& filename)
