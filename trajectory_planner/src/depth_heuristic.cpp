@@ -7,7 +7,8 @@ namespace trajectory_planner
 
 DepthHeuristic::DepthHeuristic(
     const Costs& costs,
-    const Pose2D& goal)
+    const Pose2D& goal,
+    bool costs_3d)
     : width_(costs.width())
     , height_(costs.height())
     , values_(width_ * height_, std::nan(""))
@@ -58,13 +59,22 @@ DepthHeuristic::DepthHeuristic(
                 continue;
             }
 
-            // Check if there is a cost value for this cell, for any of the
-            // 3D planner's orientations.
+            // Check if there is a cost value for this cell.
             bool in_costs = false;
-            for (three::MovementIndex mi = 0; mi < three::movement_index_count; mi++) {
-                if (costs.get_3d_cost(c.x, c.y, mi) != Costs::invalid_3d_cost) {
-                    in_costs = true;
-                    break;
+
+            if (costs_3d) {
+                for (three::MovementIndex mi = 0; mi < three::movement_index_count; mi++) {
+                    if (costs.get_3d_cost(c.x, c.y, mi) != Costs::invalid_3d_cost) {
+                        in_costs = true;
+                        break;
+                    }
+                }
+            } else {
+                for (unsigned int ai = 0; ai < costs.angle_granularity(); ai++) {
+                    if (costs.get_5d_cost(c.x, c.y, ai)) {
+                        in_costs = true;
+                        break;
+                    }
                 }
             }
 

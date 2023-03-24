@@ -13,9 +13,15 @@ class DepthHeuristic
 public:
 
     // Create a new DepthHeuristic instance.
+    //
+    // Takes the valid poses from 'costs', starting at 'goal', and
+    // then calculates the distance to the goal pose for all reachable
+    // poses. 'costs_3d' determines if the 3D or 5D costs from the
+    // 'costs' object is used to determine if a pose is valid.
     DepthHeuristic(
         const Costs& costs,
-        const Pose2D& goal);
+        const Pose2D& goal,
+        bool costs_3d);
 
     // Return the heuristic value of a given pose.
     double get_value(

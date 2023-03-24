@@ -429,7 +429,7 @@ SearchResult3D plan(
     // by flood-filling the 3D search space in 2D. While it takes some time to
     // pre-calculate these values before doing the actual search, it pays of on
     // large maps, and does not take much time on small maps.
-    DepthHeuristic heuristic(costs, Pose2D{goal_pose.x, goal_pose.y});
+    DepthHeuristic heuristic(costs, Pose2D{goal_pose.x, goal_pose.y}, true);
 
     auto goal_reached = [&goal_pose](const Pose3D& pose) {
         return goal_pose == pose;

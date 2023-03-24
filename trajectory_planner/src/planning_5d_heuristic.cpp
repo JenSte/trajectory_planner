@@ -44,75 +44,14 @@ double ManhattanHeuristic::value(
 DepthHeuristic::DepthHeuristic(
     Pose5D goal,
     const Costs& search_space)
+    : heuristic_(search_space, Pose2D{goal.x, goal.y}, false)
 {
-    // Flood-fill the 5D search space, starting from the goal pose, and use the
-    // distance to the goal as the heuristic value.
-
-    values_[Pose2D{goal.x, goal.y}] = 0.0;
-
-    std::unordered_set<Pose2D, boost::hash<Pose2D>> frontier;
-    frontier.insert(Pose2D{goal.x, goal.y});
-
-    std::unordered_set<Pose2D, boost::hash<Pose2D>> remaining;
-    search_space.export_5d_poses(remaining);
-    remaining.erase(Pose2D{goal.x, goal.y});
-
-    while (!remaining.empty()) {
-        std::unordered_set<Pose2D, boost::hash<Pose2D>> new_frontier;
-        std::unordered_set<Pose2D, boost::hash<Pose2D>> new_remaining;
-
-        for (const Pose2D& r: remaining) {
-            std::optional<Pose2D> closest_neighbour;
-            double closest_neighbour_distance = std::numeric_limits<double>::max();
-
-            for (const Pose2D& f: frontier) {
-                const int rx = static_cast<int>(r.x);
-                const int ry = static_cast<int>(r.y);
-                const int fx = static_cast<int>(f.x);
-                const int fy = static_cast<int>(f.y);
-
-                // Check if the poses are next to each other.
-                const bool xn = (rx == (fx - 1)) || (rx == fx) || (rx == (fx + 1));
-                const bool yn = (ry == (fy - 1)) || (ry == fy) || (ry == (fy + 1));
-                if (!(xn && yn)) {
-                    // The pose 'f' is not a neighbour of 'r'.
-                    continue;
-                }
-
-                // The distance to the neighbour.
-                const double dx = rx - fx;
-                const double dy = ry - fy;
-                const double distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
-
-                // The "total" heuristic value when going through the neighbour: The
-                // value of the neighbour itself, plus the distance from the current
-                // pose to the neighbour.
-                const double total = values_[f] + distance;
-
-                if (total < closest_neighbour_distance) {
-                    // This is the best neighbour we currently know of.
-                    closest_neighbour = f;
-                    closest_neighbour_distance = total;
-                }
-            }
-
-            if (closest_neighbour) {
-                values_[r] = closest_neighbour_distance;
-                new_frontier.insert(r);
-            } else {
-                new_remaining.insert(r);
-            }
-        }
-
-        frontier = std::move(new_frontier);
-        remaining = std::move(new_remaining);
-    }
 }
 
 double DepthHeuristic::value(
     const Pose5D& pose) const
 {
-    return values_.at(Pose2D{pose.x, pose.y});
+    return heuristic_.get_value(pose.x, pose.y);
 }
 
 PathHeuristic::PathHeuristic(

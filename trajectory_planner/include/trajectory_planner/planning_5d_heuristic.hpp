@@ -1,7 +1,7 @@
 #ifndef TRAJECTORY_PLANNER_5D_HEURISTIC_HPP
 #define TRAJECTORY_PLANNER_5D_HEURISTIC_HPP
 
-#include "trajectory_planner/costs.hpp"
+#include "trajectory_planner/depth_heuristic.hpp"
 
 namespace trajectory_planner::five
 {
@@ -63,8 +63,7 @@ public:
 // cell distance in the search space inflated from the 3D search result.
 class DepthHeuristic: public Heuristic
 {
-    // Pre-calculated map that contains an entry for each pose in the search space.
-    std::unordered_map<Pose2D, double, boost::hash<Pose2D>> values_;
+    trajectory_planner::DepthHeuristic heuristic_;
 
 public:
     DepthHeuristic(
