@@ -244,11 +244,19 @@ boost::container::static_vector<Pose3D, 8> neighbours(
     boost::container::static_vector<Pose3D, 8> result;
 
     auto add_neighbour = [&result, &costs](Pose3D p) {
-        const Costs::CostType3D cost = costs.get_3d_cost(p.x, p.y, p.movement);
-        if (cost != Costs::invalid_3d_cost) {
-            // This pose is in the costs object.
-            result.emplace_back(std::move(p));
+        if ((!(p.x < costs.width())) || (!(p.y < costs.height()))) {
+            // This pose is outside the map.
+            return;
         }
+
+        const Costs::CostType3D cost = costs.get_3d_cost(p.x, p.y, p.movement);
+        if (cost == Costs::invalid_3d_cost) {
+            // Not a valid pose.
+            return;
+        }
+
+        // This pose is in the costs object.
+        result.emplace_back(std::move(p));
     };
 
     std::tuple<Pose3D, Pose3D> ln = linear_neighbours(pose);
