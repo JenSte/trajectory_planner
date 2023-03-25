@@ -12,7 +12,7 @@ class Heuristic
 public:
     virtual ~Heuristic() {};
 
-    virtual double value(
+    virtual float value(
         const Pose5D& pose) const = 0;
 };
 
@@ -23,7 +23,7 @@ class NoneHeuristic: public Heuristic
 public:
     virtual ~NoneHeuristic() {};
 
-    double value(
+    float value(
         const Pose5D& pose) const override;
 };
 
@@ -39,7 +39,7 @@ public:
 
     virtual ~EuclideanHeuristic() {};
 
-    double value(
+    float value(
         const Pose5D& pose) const override;
 };
 
@@ -55,7 +55,7 @@ public:
 
     virtual ~ManhattanHeuristic() {};
 
-    double value(
+    float value(
         const Pose5D& pose) const override;
 };
 
@@ -72,7 +72,7 @@ public:
 
     virtual ~DepthHeuristic() {};
 
-    double value(
+    float value(
         const Pose5D& pose) const override;
 };
 
@@ -81,7 +81,7 @@ public:
 class PathHeuristic: public Heuristic
 {
     // Pre-calculated map that contains an entry for each pose in the search space.
-    std::unordered_map<Pose2D, double, boost::hash<Pose2D>> values_;
+    std::unordered_map<Pose2D, float, boost::hash<Pose2D>> values_;
 
 public:
     PathHeuristic(
@@ -90,7 +90,7 @@ public:
 
     virtual ~PathHeuristic() {};
 
-    double value(
+    float value(
         const Pose5D& pose) const override;
 };
 

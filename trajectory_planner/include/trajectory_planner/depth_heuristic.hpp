@@ -24,12 +24,12 @@ public:
         bool costs_3d);
 
     // Return the heuristic value of a given pose.
-    double get_value(
+    float get_value(
         unsigned int x,
         unsigned int y) const;
 
     // Return the biggest contained heuristic value.
-    double maximum_value() const
+    float maximum_value() const
     {
         return maximum_value_;
     }
@@ -40,7 +40,7 @@ private:
     void set_value(
         unsigned int x,
         unsigned int y,
-        double value);
+        float value);
 
     // The width of the cost object this object was created from.
     size_t width_;
@@ -49,10 +49,10 @@ private:
     size_t height_;
 
     // The heuristic used by the 3D planner is the 2D distance from the goal.
-    std::vector<double> values_;
+    std::vector<float> values_;
 
     // The maximum distance in 'values_'.
-    double maximum_value_;
+    float maximum_value_;
 };
 
 }

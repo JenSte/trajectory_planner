@@ -54,8 +54,8 @@ void output_inflated_occupancy_map(
             size_t row = height - 1 - y;
             size_t column = x;
 
-            double cost = cost_map.at(x, y);
-            cost = std::max(0.0, std::min(1.0, cost));
+            float cost = cost_map.at(x, y);
+            cost = std::max(0.0f, std::min(1.0f, cost));
 
             canvas.at<unsigned char>(row, column) = 255 * cost;
         }
@@ -112,7 +112,7 @@ void output_3d_orientation_map(
                 canvas.at<unsigned char>(row, column) = 0;
             } else {
                 // Valid location, create a tone that corresponds to the cost.
-                double c = trajectory_planner::Costs::cost_3d_to_double(cost);
+                float c = trajectory_planner::Costs::cost_3d_to_float(cost);
                 unsigned int grey = 255 * c;
                 grey = std::max(0u, std::min(255u, grey));
                 canvas.at<unsigned char>(row, column) = grey;
@@ -225,10 +225,10 @@ void output_result_3d_heuristic_image(
             size_t row = height - 1 - y;
             size_t column = x;
 
-            const double h = heuristic.get_value(x, y);
+            const float h = heuristic.get_value(x, y);
             if (!std::isnan(h)) {
-                double grey = h / heuristic.maximum_value();
-                grey = std::max(0.0, std::min(1.0, grey));
+                float grey = h / heuristic.maximum_value();
+                grey = std::max(0.0f, std::min(1.0f, grey));
 
                 canvas.at<unsigned char>(row, column) = 255 * grey;
             }
@@ -246,7 +246,7 @@ void output_result_3d_heuristic_image(
             size_t column = x;
 
             // Cells where no heuristic value exists in white.
-            const double h = heuristic.get_value(x, y);
+            const float h = heuristic.get_value(x, y);
             if (std::isnan(h)) {
                 color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(255, 255, 255);
             }

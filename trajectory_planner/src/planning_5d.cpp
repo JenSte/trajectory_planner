@@ -22,17 +22,17 @@ class TotalCostsMap
 public:
 
     // Set the total cost value for a pose.
-    void set(const Pose5D& pose, double cost)
+    void set(const Pose5D& pose, float cost)
     {
         total_costs_[pose] = cost;
     }
 
     // Return the total cost to the pose, or infinity if the pose is not in the object.
-    double get(const Pose5D& pose) const
+    float get(const Pose5D& pose) const
     {
         const auto it = total_costs_.find(pose);
         if (it == total_costs_.end()) {
-            return std::numeric_limits<double>::infinity();
+            return std::numeric_limits<float>::infinity();
         }
 
         return it->second;
@@ -41,7 +41,7 @@ public:
 private:
 
     // Maps the 5D poses to the total costs to this pose.
-    std::unordered_map<Pose5D, double, boost::hash<Pose5D>> total_costs_;
+    std::unordered_map<Pose5D, float, boost::hash<Pose5D>> total_costs_;
 };
 
 // Stores the predecessor for a pose in the A* search.
@@ -104,7 +104,7 @@ std::vector<Segment> split_path(
                 // Determine the direction of the robot when moving from one pose
                 // to the other form the difference of the angles.
                 const double diff = atan2(sin(orientation - angle), cos(orientation - angle));
-                if (abs(diff) < (M_PI / 2.0)) {
+                if (fabs(diff) < (M_PI / 2.0)) {
                     d = Direction::FORWARD;
                 } else {
                     d = Direction::BACKWARD;
@@ -249,7 +249,7 @@ double measure_curvature(
         // previous pose. Close poses have a higher weight.
         double weight = std::max(0.0, maximum_distance - total_distance);
 
-        acc(abs(orientation_diff), accumulators::weight=weight);
+        acc(fabs(orientation_diff), accumulators::weight=weight);
     }
 
     // Magic value, depending on the maximum length of the path, to scale down
@@ -439,7 +439,7 @@ std::tuple<double, double, double, double> calculate_movement_distances(
 
     const double angel_diff = atan2(sin(real_angle - cell_angle), cos(real_angle - cell_angle));
 
-    return std::make_tuple(cell_distance, scaled_real_distance, error, abs(angel_diff));
+    return std::make_tuple(cell_distance, scaled_real_distance, error, fabs(angel_diff));
 }
 
 SegmentSearchResult plan_turn_segment(
@@ -512,7 +512,7 @@ SegmentSearchResult plan_movement_segment(
             pose);
     };
 
-    auto movement_cost = [&](const Pose5D& pose, const Pose5D& neighbour) {
+    auto movement_cost = [&](const Pose5D& pose, const Pose5D& neighbour) -> float {
 
         double cell_distance, real_distance, error, angle_error;
         std::tie(cell_distance, real_distance, error, angle_error) =
@@ -563,16 +563,16 @@ SegmentSearchResult plan_movement_segment(
         predecessors);
 
     // Create the heuristic values for each pose of the path.
-    std::vector<double> path_heuristics;
+    std::vector<float> path_heuristics;
     for (const Pose5D& pose: path) {
         path_heuristics.push_back(heuristic_callback(pose));
     }
 
     // Sum up the cost values along the path.
-    std::vector<double> path_costs;
-    path_costs.push_back(0.0); // Cost of the goal.
+    std::vector<float> path_costs;
+    path_costs.push_back(0.0f); // Cost of the goal.
 
-    double cost = 0.0;
+    float cost = 0.0f;
     for (size_t i = path.size(); i-- > 1;) {
         const Pose5D& node = path.at(i);
         const Pose5D& predecessor = path.at(i - 1);

@@ -5,10 +5,10 @@
 namespace trajectory_planner::five
 {
 
-double NoneHeuristic::value(
+float NoneHeuristic::value(
     const Pose5D& /* pose */) const
 {
-    return 0.0;
+    return 0.0f;
 }
 
 EuclideanHeuristic::EuclideanHeuristic(
@@ -17,13 +17,13 @@ EuclideanHeuristic::EuclideanHeuristic(
 {
 }
 
-double EuclideanHeuristic::value(
+float EuclideanHeuristic::value(
     const Pose5D& pose) const
 {
-    const double dx = static_cast<double>(goal_.x) - static_cast<double>(pose.x);
-    const double dy = static_cast<double>(goal_.y) - static_cast<double>(pose.y);
+    const float dx = static_cast<float>(goal_.x) - static_cast<float>(pose.x);
+    const float dy = static_cast<float>(goal_.y) - static_cast<float>(pose.y);
 
-    return sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+    return sqrt(pow(dx, 2.0f) + pow(dy, 2.0f));
 }
 
 ManhattanHeuristic::ManhattanHeuristic(
@@ -32,11 +32,11 @@ ManhattanHeuristic::ManhattanHeuristic(
 {
 }
 
-double ManhattanHeuristic::value(
+float ManhattanHeuristic::value(
     const Pose5D& pose) const
 {
-    const double dx = static_cast<double>(goal_.x) - static_cast<double>(pose.x);
-    const double dy = static_cast<double>(goal_.y) - static_cast<double>(pose.y);
+    const float dx = static_cast<float>(goal_.x) - static_cast<float>(pose.x);
+    const float dy = static_cast<float>(goal_.y) - static_cast<float>(pose.y);
 
     return abs(dx) + abs(dy);
 }
@@ -48,7 +48,7 @@ DepthHeuristic::DepthHeuristic(
 {
 }
 
-double DepthHeuristic::value(
+float DepthHeuristic::value(
     const Pose5D& pose) const
 {
     return heuristic_.get_value(pose.x, pose.y);
@@ -67,15 +67,15 @@ PathHeuristic::PathHeuristic(
     search_space.export_5d_poses(poses);
 
     for (const Pose2D& pose: poses) {
-        double closest_neighbour_distance = std::numeric_limits<double>::max();
+        float closest_neighbour_distance = std::numeric_limits<float>::max();
 
         for (size_t i = 0; i < path.size(); i++) {
             const Pose& path_pose = path.at(i);
 
             // The distance to the pose on the path.
-            const double dx = static_cast<int>(pose.x) - static_cast<int>(path_pose.x);
-            const double dy = static_cast<int>(pose.y) - static_cast<int>(path_pose.y);
-            const double distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+            const float dx = static_cast<int>(pose.x) - static_cast<int>(path_pose.x);
+            const float dy = static_cast<int>(pose.y) - static_cast<int>(path_pose.y);
+            const float distance = sqrt(pow(dx, 2.0f) + pow(dy, 2.0f));
 
             if (distance < closest_neighbour_distance) {
                 closest_neighbour_distance = distance;
@@ -85,7 +85,7 @@ PathHeuristic::PathHeuristic(
     }
 }
 
-double PathHeuristic::value(
+float PathHeuristic::value(
     const Pose5D& pose) const
 {
     return values_.at(Pose2D{pose.x, pose.y});

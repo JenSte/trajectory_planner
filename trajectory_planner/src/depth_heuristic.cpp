@@ -11,7 +11,7 @@ DepthHeuristic::DepthHeuristic(
     bool costs_3d)
     : width_(costs.width())
     , height_(costs.height())
-    , values_(width_ * height_, std::nan(""))
+    , values_(width_ * height_, std::nanf(""))
     , maximum_value_(0.0)
 {
     // The nodes that are between the processed and unprocessed poses.
@@ -95,15 +95,15 @@ DepthHeuristic::DepthHeuristic(
             size_t y_max = c.y < height_ - 1 ? c.y + 1 : c.y;
 
             // Search for the shortest path into this cell.
-            double smallest_value = std::numeric_limits<double>::max();
+            float smallest_value = std::numeric_limits<float>::max();
             for (size_t x = x_min; x <= x_max; x++) {
                 for (size_t y = y_min; y <= y_max; y++) {
-                    const double neighbour_value = get_value(x, y);
+                    const float neighbour_value = get_value(x, y);
                     if (!std::isnan(neighbour_value)) {
                         // The distance going from the neighbour to the candidate
                         // is either "1.0" when the neighbour is on the same row
                         // or column, or "sqrt(2.0)" for diagonal neighbours.
-                        const double dist = ((x == c.x) || (y == c.y)) ? 1.0 : sqrt(2.0);
+                        const float dist = ((x == c.x) || (y == c.y)) ? 1.0f : sqrt(2.0f);
 
                         // Store the smallest of all neighbouring values.
                         smallest_value = std::min(smallest_value, neighbour_value + dist);
@@ -112,7 +112,7 @@ DepthHeuristic::DepthHeuristic(
             }
 
             // Because there is at least one neighbour (a node in 'frontier' that
-            // led us to 'candidate'), this value is not the maximum double value
+            // led us to 'candidate'), this value is not the maximum float value
             // any more. Also, we can end up here multiple times for the same pose
             // (the same pose as candidates from different elements in frontier),
             // but this is also fine as the already updated neighbour can not have
@@ -129,7 +129,7 @@ DepthHeuristic::DepthHeuristic(
     }
 }
 
-double DepthHeuristic::get_value(
+float DepthHeuristic::get_value(
     unsigned int x,
     unsigned int y) const
 {
@@ -155,7 +155,7 @@ double DepthHeuristic::get_value(
 void DepthHeuristic::set_value(
     unsigned int x,
     unsigned int y,
-    double value)
+    float value)
 {
     if (!(x < width_)) {
         std::ostringstream ss;

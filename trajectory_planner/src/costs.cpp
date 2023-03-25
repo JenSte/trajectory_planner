@@ -64,7 +64,7 @@ void Costs::set_3d_cost(
     CostVector3D& cost_vector,
     unsigned int x,
     unsigned int y,
-    double cost) const
+    float cost) const
 {
     if (!(x < floorplan_width_)) {
         std::ostringstream ss;
@@ -82,8 +82,8 @@ void Costs::set_3d_cost(
         throw std::runtime_error(ss.str());
     }
 
-    // Convert double value to the type used to store the cost values.
-    double capped_cost = std::max(0.0, std::min(1.0, cost));
+    // Convert float value to the type used to store the cost values.
+    float capped_cost = std::max(0.0f, std::min(1.0f, cost));
     CostType3D c = (invalid_3d_cost - 1) * capped_cost;
 
     cost_vector.at(x + floorplan_width_ * y) = c;

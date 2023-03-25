@@ -8,7 +8,7 @@
 namespace {
     // This value is multiplied with the (normalized) angle difference when turning
     // on the spot. A turn of 180 degrees will correspond to the full 'angle_factor'.
-    const double angle_factor = 10.0;
+    const float angle_factor = 10.0f;
 }
 
 namespace trajectory_planner::three
@@ -40,13 +40,13 @@ public:
     }
 
     // Set the total cost value for a pose.
-    void set(const Pose3D& pose, double cost)
+    void set(const Pose3D& pose, float cost)
     {
         total_costs_.at(pose.x + width_ * pose.y).at(pose.movement) = cost;
     }
 
     // Return the total cost to the pose, or infinity if the pose is not in the object.
-    double get(const Pose3D& pose) const
+    float get(const Pose3D& pose) const
     {
         return total_costs_.at(pose.x + width_ * pose.y).at(pose.movement);
     }
@@ -272,7 +272,7 @@ Pose3D refine_pose(
     const Costs& costs,
     const Pose& pose)
 {
-    const double angle = pose.angle_index * (2 * M_PI) / costs.angle_granularity();
+    const float angle = pose.angle_index * (2 * M_PI) / costs.angle_granularity();
 
     MovementIndex movement_index =
         static_cast<unsigned int>(
@@ -298,62 +298,62 @@ Pose3D refine_pose(
     return Pose3D{pose.x, pose.y, movement_index};
 }
 
-double normalized_angle_distance(
+float normalized_angle_distance(
     const unsigned int movement_index_a,
     const unsigned int movement_index_b)
 {
     // The actual orientation angles in radians.
-    const double a = angle_lut[movement_index_a];
-    const double b = angle_lut[movement_index_b];
+    const float a = angle_lut[movement_index_a];
+    const float b = angle_lut[movement_index_b];
 
     // The difference between the two orientations, from -pi to pi.
-    const double diff = atan2(sin(a - b), cos(a - b));
+    const float diff = atan2f(sinf(a - b), cosf(a - b));
 
     // We return the difference between the two orientations, normalized to
     // the range from 0.0 to 1.0.
-    return abs(diff) / M_PI;
+    return fabsf(diff) / M_PI;
 }
 
-double calculate_movemement_cost(
+float calculate_movemement_cost(
     const Costs& costs,
     const Pose3D& goal_pose,
     const Pose3D& from,
     const Pose3D& to)
 {
     // Calculate the cost of a pure forward/backward movement.
-    auto pure_movement_cost = [](const Pose3D& from, const Pose3D& to, double cost_value) {
+    auto pure_movement_cost = [](const Pose3D& from, const Pose3D& to, float cost_value) {
         // The distance when moving from 'from' to 'to'.
-        const double dx = static_cast<double>(from.x) - static_cast<double>(to.x);
-        const double dy = static_cast<double>(from.y) - static_cast<double>(to.y);
-        const double distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+        const float dx = static_cast<float>(from.x) - static_cast<float>(to.x);
+        const float dy = static_cast<float>(from.y) - static_cast<float>(to.y);
+        const float distance = sqrtf(powf(dx, 2.0f) + powf(dy, 2.0f));
 
         // The cost of the neighbour is multiplied by the distance to the cell,
         // so that edges that move diagonally do not have an advantage.
-        return distance * (1.0 + cost_value);
+        return distance * (1.0f + cost_value);
     };
 
     // Calculate the costs of turning on the spot.
-    auto pure_turn_cost = [&costs, &goal_pose](const Pose3D& from, const Pose3D& to, double cost_value) {
+    auto pure_turn_cost = [&costs, &goal_pose](const Pose3D& from, const Pose3D& to, float cost_value) {
         // Turning on the spot. We calculate the distance to the goal, and apply
         // a penalty for poses close to the goal. This is so that turns near the
         // goal are discouraged as turning often causes the robot to deviate from
         // the pose and makes it harder to hit the goal exactly.
-        const double dx = static_cast<double>(goal_pose.x) - static_cast<double>(to.x);
-        const double dy = static_cast<double>(goal_pose.y) - static_cast<double>(to.y);
-        const double goal_distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+        const float dx = static_cast<float>(goal_pose.x) - static_cast<float>(to.x);
+        const float dy = static_cast<float>(goal_pose.y) - static_cast<float>(to.y);
+        const float goal_distance = sqrtf(powf(dx, 2.0f) + powf(dy, 2.0f));
 
-        double goal_penalty = 1.0 + exp(-goal_distance / costs.goal_turn_penalty_distance());
-        if (goal_distance < 1.0) {
-            goal_penalty = 2.0;
+        float goal_penalty = 1.0f + expf(-goal_distance / costs.goal_turn_penalty_distance());
+        if (goal_distance < 1.0f) {
+            goal_penalty = 2.0f;
         }
 
-        const double angle_distance = normalized_angle_distance(from.movement, to.movement);
+        const float angle_distance = normalized_angle_distance(from.movement, to.movement);
 
-        return goal_penalty * (1.0 + angle_factor * angle_distance) * (1.0 + cost_value);
+        return goal_penalty * (1.0f + angle_factor * angle_distance) * (1.0f + cost_value);
     };
 
     // The value on the costmap at the 'to' pose.
-    const double to_cost = Costs::cost_3d_to_double(
+    const float to_cost = Costs::cost_3d_to_float(
         costs.get_3d_cost(to.x, to.y, to.movement));
 
     if (from.movement == to.movement) {
@@ -369,8 +369,8 @@ double calculate_movemement_cost(
             // The pose "between" 'from' and 'to'.
             Pose3D via{to.x, to.y, from.movement};
 
-            double mc = pure_movement_cost(from, via, to_cost);
-            double tc = pure_turn_cost(via, to, to_cost);
+            float mc = pure_movement_cost(from, via, to_cost);
+            float tc = pure_turn_cost(via, to, to_cost);
 
             // Calculate the cost of the combined "move + turn" from the costs
             // of separate "pure move" and "pure turn" costs when going over 'via'.
@@ -378,38 +378,38 @@ double calculate_movemement_cost(
             // consecutive turns are still "expensive", while only a single turn
             // can be cone relatively cheaply by using such a combined move. Also,
             // this cost value honors the triangle inequality.
-            return mc + 0.5 * tc;
+            return mc + 0.5f * tc;
         }
     }
 }
 
-double calculate_heuristic(
+float calculate_heuristic(
     const DepthHeuristic& heuristic,
     const Pose3D& goal_pose,
     const Pose3D& pose)
 {
-    double goal_distance = heuristic.get_value(pose.x, pose.y);
+    float goal_distance = heuristic.get_value(pose.x, pose.y);
     if (std::isnan(goal_distance)) {
         // A fallback if the pose is not in 'heuristic'. In this case there is
         // probably no path to the goal in the search space (otherwise the heuristic
         // map calculation would include the pose), so we could also detect this earlier.
-        const double dx = static_cast<double>(goal_pose.x) - static_cast<double>(pose.x);
-        const double dy = static_cast<double>(goal_pose.y) - static_cast<double>(pose.y);
-        goal_distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+        const float dx = static_cast<float>(goal_pose.x) - static_cast<float>(pose.x);
+        const float dy = static_cast<float>(goal_pose.y) - static_cast<float>(pose.y);
+        goal_distance = sqrtf(powf(dx, 2.0f) + powf(dy, 2.0f));
     }
 
     // Calculate the normalized angle differenct between the orientation of the
     // pose and the goal pose.
-    const double angle_distance = normalized_angle_distance(pose.movement, goal_pose.movement);
+    const float angle_distance = normalized_angle_distance(pose.movement, goal_pose.movement);
 
     // Compare to 'pure_movement_cost()': If we drive only forward, without ever
     // turning, far from every obstacle, so that the cost of a cell is 0.0:
-    const double movement_cost = goal_distance;
+    const float movement_cost = goal_distance;
 
     // Compare to 'pure_turn_cost()', but also to the calculation of the combined
     // "move + turn" step (taking only half the costs of a pure turn). No 'goal_penalty'
     // (see 'pure_turn_cost()' is applied, as we can not know where the turns would occur).
-    const double turn_cost = 0.5 * (angle_factor * angle_distance);
+    const float turn_cost = 0.5f * (angle_factor * angle_distance);
 
     return movement_cost + turn_cost;
 }
@@ -478,7 +478,7 @@ SearchResult3D plan(
     // Convert the 3D path back to a path for the trajectory planner
     // and create the heuristic vector.
     for (const Pose3D& pose: path) {
-        const double angle = angle_lut[pose.movement];
+        const float angle = angle_lut[pose.movement];
 
         int angle_index = angle / (2 * M_PI / costs.angle_granularity());
         angle_index %= costs.angle_granularity();
@@ -489,9 +489,9 @@ SearchResult3D plan(
 
     // Create the costs vector in the result. This is done by iterating over
     // pairs in the found path and summing up the cost values along the way.
-    result.cost.push_back(0.0); // Cost of the goal.
+    result.cost.push_back(0.0f); // Cost of the goal.
 
-    double cost = 0.0;
+    float cost = 0.0f;
     for (size_t i = path.size(); i-- > 1;) {
         const Pose3D& node = path.at(i);
         const Pose3D& predecessor = path.at(i - 1);

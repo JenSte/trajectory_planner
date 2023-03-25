@@ -22,7 +22,7 @@ template<
     // An item in the heap.
     struct HeapItem
     {
-        double priority;
+        float priority;
 
         Node node;
 
@@ -43,7 +43,7 @@ public:
     // the priority of a stored item if the item is already in the queue.
     void push(
         Node node,
-        double priority)
+        float priority)
     {
         HeapItem item{priority, node};
 
@@ -139,7 +139,7 @@ public:
                 }
 
                 // The path cost if we would enter the neighbour via the current node.
-                double total_cost = total_costs.get(node) + movement_cost(node, neighbour);
+                float total_cost = total_costs.get(node) + movement_cost(node, neighbour);
                 if (total_cost < total_costs.get(neighbour)) {
                     predecessors.set(neighbour, node);
                     total_costs.set(neighbour, total_cost);

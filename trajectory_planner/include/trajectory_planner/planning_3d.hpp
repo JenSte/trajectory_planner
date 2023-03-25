@@ -25,7 +25,7 @@ using MovementIndex = unsigned int;
 const MovementIndex movement_index_count = 16;
 
 // The angles in radians that correspond to a 3D movement index.
-const double angle_lut[movement_index_count] = {
+const float angle_lut[movement_index_count] = {
     // 1st quadrant.
     atan2(0, 1),
     atan2(1, 2),
@@ -102,11 +102,11 @@ struct SearchResult3D
 
     // Contains the heuristic value for every pose in the path (vector has
     // the exact same length as 'path').
-    std::vector<double> path_heuristic;
+    std::vector<float> path_heuristic;
 
     // The cost values of the poses along the path (vector has the exact same
     // length as 'path').
-    std::vector<double> cost;
+    std::vector<float> cost;
 
     // The data structure that contains the pre-calculated 2D heuristic values.
     DepthHeuristic heuristic;

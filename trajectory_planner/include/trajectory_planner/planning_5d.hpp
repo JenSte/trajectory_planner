@@ -46,11 +46,11 @@ struct SegmentSearchResult
 
     // Contains the heuristic value for every pose in the path (vector has
     // the exact same length as 'path', not used for TURN segments).
-    std::vector<double> path_heuristics;
+    std::vector<float> path_heuristics;
 
     // The cost values of the poses along the path (vector has the exact same
     // length as 'path', not used for TURN segments).
-    std::vector<double> path_costs;
+    std::vector<float> path_costs;
 
     // The cost object used for the search on this segment. This
     // is a subset of the global cost object, but only around the

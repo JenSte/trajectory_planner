@@ -77,13 +77,13 @@ public:
         CostVector3D& cost_vector,
         unsigned int x,
         unsigned int y,
-        double cost) const;
+        float cost) const;
 
-    // Convert a value of the type used to store the 3D costs to a double.
-    static double cost_3d_to_double(
+    // Convert a value of the type used to store the 3D costs to a float.
+    static float cost_3d_to_float(
         const CostType3D c)
     {
-        return static_cast<double>(c) / static_cast<double>(invalid_3d_cost - 1);
+        return static_cast<float>(c) / static_cast<float>(invalid_3d_cost - 1);
     }
 
     // Create a 5D cost vector, correctly sized and initialized to 'false'.
