@@ -42,6 +42,13 @@ private:
         unsigned int y,
         float value);
 
+    // Write a debug image that shows the current state of the heuristic. Used
+    // to debug the algorithm used to create the heuristic.
+    void write_debug_image(
+        size_t iteration,
+        const std::unordered_set<Pose2D, boost::hash<Pose2D>>& frontier,
+        const std::unordered_set<Pose2D, boost::hash<Pose2D>>& old_frontier) const;
+
     // The width of the cost object this object was created from.
     size_t width_;
 
