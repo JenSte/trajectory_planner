@@ -209,10 +209,11 @@ void output_5d_orientation_map(
     cv::imwrite(ss.str(), canvas);
 }
 
-void output_result_3d_heuristic_image(
+void output_depth_heuristic_image(
     const trajectory_planner::DepthHeuristic& heuristic,
     const trajectory_planner::Buffer<double>& occupancy_map,
     double map_resolution,
+    const std::string& label,
     const std::string& filename)
 {
     size_t width = occupancy_map.width();
@@ -258,7 +259,7 @@ void output_result_3d_heuristic_image(
         }
     }
 
-    extend_and_label_image(color_image, "3D heuristic");
+    extend_and_label_image(color_image, label);
 
     std::stringstream ss;
     ss
@@ -268,6 +269,16 @@ void output_result_3d_heuristic_image(
     write_text(color_image, 10, height + 46, ss.str());
 
     cv::imwrite(filename, color_image);
+}
+
+void output_result_3d_heuristic_image(
+    const trajectory_planner::DepthHeuristic& heuristic,
+    const trajectory_planner::Buffer<double>& occupancy_map,
+    double map_resolution,
+    const std::string& filename)
+{
+    output_depth_heuristic_image(
+        heuristic, occupancy_map, map_resolution, "3D heuristic", filename);
 }
 
 void output_result_3d_opened_nodes_image(
@@ -423,6 +434,24 @@ void output_result_5d_path_image(
     cv::imwrite(filename, color_image);
 }
 
+void output_result_5d_heuristic_image(
+    const trajectory_planner::five::SegmentSearchResult& segment,
+    const trajectory_planner::Buffer<double>& occupancy_map,
+    double map_resolution,
+    const std::string& filename)
+{
+    trajectory_planner::five::DepthHeuristic* dh =
+        dynamic_cast<trajectory_planner::five::DepthHeuristic*>(segment.heuristic.get());
+    if (nullptr == dh) {
+        // This function only supports the case where the used 5D heuristic is
+        // a depth heuristic.
+        return;
+    }
+
+    output_depth_heuristic_image(
+        dh->internal_heuristic(), occupancy_map, map_resolution, "5D heuristic", filename);
+}
+
 }
 
 namespace trajectory_planner
@@ -503,13 +532,20 @@ void TrajectoryPlanner::write_result_debug_images(
         ss
             << prefix
             << "5d_"
-            << std::setfill('0') << std::setw(3) << i << "_path.png";
+            << std::setfill('0') << std::setw(3) << i;
+
+        // Show the inflated 3D path and the heuristic values.
+        output_result_5d_heuristic_image(
+            result.search_result_5d.segment[i],
+            original_occupancy_map_,
+            map_resolution_,
+            ss.str() + "_heuristic.png");
 
         // Show the 5D path on the image, on top of the inflated 3D path.
         output_result_5d_path_image(
             result.search_result_5d.segment[i],
             original_occupancy_map_,
-            ss.str());
+            ss.str() + "_path.png");
     }
 }
 

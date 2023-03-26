@@ -74,6 +74,12 @@ public:
 
     float value(
         const Pose5D& pose) const override;
+
+    // Return the internally use heuristic object.
+    const trajectory_planner::DepthHeuristic& internal_heuristic() const
+    {
+        return heuristic_;
+    }
 };
 
 // A heuristic that estimates the cost of a pose from the nearest element of
