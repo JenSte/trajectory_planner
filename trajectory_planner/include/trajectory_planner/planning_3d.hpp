@@ -144,10 +144,15 @@ Pose3D refine_pose(
 
 // Plan between two poses in three dimensions.
 SearchResult3D plan(
+    const std::function<void(const std::string&)>& log_callback,
     const Costs& costs,
     const Pose& start,
     const Pose& goal,
     bool extract_opened_nodes);
+
+std::ostream& operator<<(
+    std::ostream& os,
+    const three::Pose3D& pose);
 }
 
 #endif

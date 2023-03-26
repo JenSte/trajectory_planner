@@ -423,6 +423,7 @@ float calculate_heuristic(
 }
 
 SearchResult3D plan(
+    const std::function<void(const std::string&)>& log_callback,
     const Costs& costs,
     const Pose& start,
     const Pose& goal,
@@ -432,6 +433,15 @@ SearchResult3D plan(
     // in regard to the orientation) poses used here.
     Pose3D start_pose = refine_pose(costs, start);
     Pose3D goal_pose = refine_pose(costs, goal);
+
+    std::ostringstream ss;
+    ss
+        << "  start pose: " << start_pose;
+    log_callback(ss.str());
+    ss.str("");
+    ss
+        << "  goal pose: " << goal_pose;
+    log_callback(ss.str());
 
     // The main heuristic for the 3D search is the distance to the goal, calculated
     // by flood-filling the 3D search space in 2D. While it takes some time to
@@ -509,6 +519,18 @@ SearchResult3D plan(
     std::reverse(result.cost.begin(), result.cost.end());
 
     return result;
+}
+
+std::ostream& operator<<(
+    std::ostream& os,
+    const three::Pose3D& pose)
+{
+    os
+        << "Pose3D{x = " << pose.x
+        << ", y = " << pose.y
+        << ", movement = " << pose.movement << "}";
+
+    return os;
 }
 
 }
