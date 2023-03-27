@@ -131,6 +131,11 @@ public:
         const Result& result,
         const std::string& prefix) const;
 
+    // Write data files that contain detailed debug information on the result.
+    void write_result_debug_data(
+        const Result& result,
+        const std::string& prefix) const;
+
     // Plan a route from 'start' to 'goal'.
     Result plan(
         const PlanningParameters& parameters,

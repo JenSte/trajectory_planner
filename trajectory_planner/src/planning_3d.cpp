@@ -280,7 +280,7 @@ Pose3D refine_pose(
     const Costs& costs,
     const Pose& pose)
 {
-    const float angle = pose.angle_index * (2 * M_PI) / costs.angle_granularity();
+    const float angle = costs.angle_index_to_radians(pose.angle_index);
 
     MovementIndex movement_index =
         static_cast<unsigned int>(

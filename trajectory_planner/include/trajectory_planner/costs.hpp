@@ -112,6 +112,12 @@ public:
     // Return the number of steps the whole circle is divided in.
     unsigned int angle_granularity() const;
 
+    // Convert a 5D angle index to radians.
+    double angle_index_to_radians(unsigned int angle_index) const
+    {
+        return angle_index * (2.0 * M_PI) / angle_granularity_;
+    }
+
     // Return a distance in cells to the goal to apply a turn penaltiy.
     unsigned int goal_turn_penalty_distance() const;
 
