@@ -430,7 +430,7 @@ void CostmapObserver::write_debug_images(
     std::chrono::duration<double> duration;
 
     timestamp_start = std::chrono::steady_clock::now();
-    planner->dump_orientation_maps(debug_directory + "/orientation_");
+    planner->write_debug_images(debug_directory + "/orientation_");
     timestamp_end = std::chrono::steady_clock::now();
 
     duration = timestamp_end - timestamp_start;

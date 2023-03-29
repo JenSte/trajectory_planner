@@ -98,16 +98,22 @@ ROSPoseStamped pose_to_pose_msg(
     const Pose& pose,
     unsigned int angle_granularity);
 
+// Convert a pose structure as used by the 3D planner to a ROS pose message.
+ROSPoseStamped pose3d_to_pose_msg(
+    const Costmap2D* costmap,
+    const std::string& frame_id,
+    double timestamp,
+    const three::Pose3D& pose_3d);
+
 // Create a path message for a 3D search result.
 ROSPath plan_3d_to_path_msg(
     const Costmap2D* costmap,
     const std::string& costmap_frame_id,
-    unsigned int angle_granularity,
     const TrajectoryPlanner::Result& result);
 
 // Convert the heuristic used by the 3d planner to an occupancy grid ROS message.
 ROSOccupancyGrid heuristic_3d_to_occupancy_grid_msg(
-    const three::HeuristicMap heuristic_map,
+    const DepthHeuristic& heuristic,
     size_t width,
     size_t height,
     const std::string& frame_id,
@@ -140,7 +146,6 @@ TPAugmentedPath search_result_3d_to_augmented_path_msg(
     const std::string& name,
     const Costmap2D* costmap_2d,
     const std::string& frame_id,
-    unsigned int angle_granularity,
     const MotionModel& motion_model,
     const three::SearchResult3D& search_result);
 

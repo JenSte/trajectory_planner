@@ -285,13 +285,12 @@ convert::ROSPath Plugin::plan(
         convert::plan_3d_to_path_msg(
             costmap_2d,
             costmap_ros_->getGlobalFrameID(),
-            planner->angle_granularity(),
             result));
 
     // Publish a map showing the heuristic used by the 3D planner.
     publish_heuristic_3d(
         convert::heuristic_3d_to_occupancy_grid_msg(
-            result.search_result_3d.heuristic_map,
+            result.search_result_3d.heuristic,
             planner->original_occupancy_map().width(),
             planner->original_occupancy_map().height(),
             costmap_ros_->getGlobalFrameID(),
@@ -369,7 +368,6 @@ void Plugin::publish_augmented_path_messages(
             ss.str() + "_3d",
             costmap,
             frame_id,
-            angle_granularity,
             result.motion_model,
             result.search_result_3d));
 

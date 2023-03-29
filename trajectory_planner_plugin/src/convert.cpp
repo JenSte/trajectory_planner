@@ -140,22 +140,46 @@ ROSPoseStamped pose_to_pose_msg(
     return result;
 }
 
+ROSPoseStamped pose3d_to_pose_msg(
+    const Costmap2D* costmap,
+    const std::string& frame_id,
+    double timestamp,
+    const three::Pose3D& pose_3d)
+{
+    ROSPoseStamped result;
+
+    result.header.frame_id = frame_id;
+    result.header.stamp = ros_time(timestamp);
+
+    costmap->mapToWorld(
+        pose_3d.x,
+        pose_3d.y,
+        result.pose.position.x,
+        result.pose.position.y);
+    result.pose.position.z = 0.0;
+
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, three::angle_lut[pose_3d.movement]);
+
+    result.pose.orientation = tf2::toMsg(q);
+
+    return result;
+}
+
 ROSPath plan_3d_to_path_msg(
     const Costmap2D* costmap,
     const std::string& costmap_frame_id,
-    unsigned int angle_granularity,
     const TrajectoryPlanner::Result& result)
 {
     ROSPath path;
     path.header.frame_id = costmap_frame_id;
 
     for (size_t i = 0; i < result.search_result_3d.path.size(); i++) {
-        const ROSPoseStamped pose_msg = pose_to_pose_msg(
+        const ROSPoseStamped pose_msg = pose3d_to_pose_msg(
             costmap,
             costmap_frame_id,
             i * result.motion_model.time_delta(),
-            result.search_result_3d.path.at(i),
-            angle_granularity);
+            result.search_result_3d.path.at(i));
 
         path.poses.push_back(pose_msg);
     }
@@ -164,7 +188,7 @@ ROSPath plan_3d_to_path_msg(
 }
 
 ROSOccupancyGrid heuristic_3d_to_occupancy_grid_msg(
-    const three::HeuristicMap heuristic_map,
+    const DepthHeuristic& heuristic,
     size_t width,
     size_t height,
     const std::string& frame_id,
@@ -181,24 +205,16 @@ ROSOccupancyGrid heuristic_3d_to_occupancy_grid_msg(
     result.info.width = width;
     result.info.height = height;
 
-    // Find the biggest heuristic value we come across, used to scale down the rest.
-    double maximum_heuristic_value = 1.0;
-    for (const auto it: heuristic_map) {
-        maximum_heuristic_value = std::max(maximum_heuristic_value, it.second);
-    }
-
     for (size_t y = 0; y < height; y++) {
         for (size_t x = 0; x < width; x++) {
-            const Pose2D pose{static_cast<unsigned int>(x), static_cast<unsigned int>(y)};
-
-            const auto it = heuristic_map.find(pose);
-            if (it == heuristic_map.end()) {
+            const float h = heuristic.get_value(x, y);
+            if (std::isnan(h)) {
                 // This cell is not part of the search space.
                 result.data.push_back(0);
             } else {
                 // Map the heuristic into the range from 0 to 98, which rviz
                 // draws from blue to red in "costmap" mode.
-                const uint8_t h = 1.0 + it->second / maximum_heuristic_value * 97.0;
+                const uint8_t h = 1.0 + h / heuristic.maximum_value() * 97.0;
                 result.data.push_back(h);
             }
         }
@@ -267,16 +283,17 @@ ROSOccupancyGrid search_space_5d_to_occupacy_grid_msg(
     std::unordered_map<Pose2D, double, boost::hash<Pose2D>> heuristic_values;
 
     for (size_t i = segments.size(); i-- > 0;) {
-        if (segments.at(i).direction == five::Direction::TURN) {
+        const five::SegmentSearchResult& segment = segments.at(i);
+
+        if (segment.direction == five::Direction::TURN) {
             continue;
         }
-
         std::unordered_set<Pose2D, boost::hash<Pose2D>> poses;
-        segments.at(i).costs.export_poses(poses);
+        segment.costs.export_5d_poses(poses);
 
         for (const Pose2D& pose: poses) {
             const Pose5D dummy{pose.x, pose.y, 0, Pose5D::LinearVelocity(0), Pose5D::AngularVelocity(0)};
-            const double h = segments.at(i).heuristic->value(dummy);
+            const double h = segment.heuristic->value(dummy);
 
             heuristic_values[pose] = h;
             maximum_heuristic_value = std::max(maximum_heuristic_value, h);
@@ -308,11 +325,10 @@ TPAugmentedPath search_result_3d_to_augmented_path_msg(
     const std::string& name,
     const Costmap2D* costmap_2d,
     const std::string& frame_id,
-    unsigned int angle_granularity,
     const MotionModel& motion_model,
     const three::SearchResult3D& search_result)
 {
-    if (search_result.path.size() != search_result.heuristic.size()) {
+    if (search_result.path.size() != search_result.path_heuristic.size()) {
         throw std::runtime_error("Search result heuristic vector has wrong size.");
     }
     if (search_result.path.size() != search_result.cost.size()) {
@@ -326,15 +342,14 @@ TPAugmentedPath search_result_3d_to_augmented_path_msg(
     for (size_t i = 0; i < search_result.path.size(); ++i) {
         TPAugmentedPose pose_message;
 
-        pose_message.pose = pose_to_pose_msg(
+        pose_message.pose = pose3d_to_pose_msg(
             costmap_2d,
             frame_id,
             0.0,
-            search_result.path.at(i),
-            angle_granularity);
+            search_result.path.at(i));
 
         pose_message.cost = search_result.cost.at(i);
-        pose_message.heuristic = search_result.heuristic.at(i);
+        pose_message.heuristic = search_result.path_heuristic.at(i);
 
         result.poses.push_back(pose_message);
     }
