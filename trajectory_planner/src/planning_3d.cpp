@@ -330,10 +330,21 @@ float calculate_movemement_cost(
 {
     // Calculate the cost of a pure forward/backward movement.
     auto pure_movement_cost = [](const Pose3D& from, const Pose3D& to, float cost_value) {
-        // The distance when moving from 'from' to 'to'.
-        const float dx = static_cast<float>(from.x) - static_cast<float>(to.x);
-        const float dy = static_cast<float>(from.y) - static_cast<float>(to.y);
-        const float distance = sqrtf(powf(dx, 2.0f) + powf(dy, 2.0f));
+        // Absolute distance driven in the two directions.
+        const int dx = abs(static_cast<int>(from.x) - static_cast<int>(to.x));
+        const int dy = abs(static_cast<int>(from.y) - static_cast<int>(to.y));
+
+        // Value for driving straight forward/backward.
+        float distance = 1.0f;
+
+        if ((dx == 2) || (dy == 2)) {
+            // Two forward/backward, one sideward.
+            distance = sqrtf(5.0f);
+        } else if ((dx == 1) && (dy == 1)) {
+            // One forward/backward, one sidward.
+            distance = sqrtf(2.0f);
+        }
+        // else: Pure forward/backward, keep default value.
 
         // The cost of the neighbour is multiplied by the distance to the cell,
         // so that edges that move diagonally do not have an advantage.
