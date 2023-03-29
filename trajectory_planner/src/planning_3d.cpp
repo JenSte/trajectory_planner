@@ -314,12 +314,18 @@ float normalized_angle_distance(
     const float a = angle_lut[movement_index_a];
     const float b = angle_lut[movement_index_b];
 
-    // The difference between the two orientations, from -pi to pi.
-    const float diff = atan2f(sinf(a - b), cosf(a - b));
+    // Always subtract the smaller from the bigger angle. This way,
+    // even if the 2*pi -> 0 part is between the two angles, the
+    // difference is calculated the correct way.
+    float diff = a > b ? a - b : b - a;
 
-    // We return the difference between the two orientations, normalized to
-    // the range from 0.0 to 1.0.
-    return fabsf(diff) / M_PI;
+    // If the difference is bigger than 180deg, take the
+    // smaller way around the circle.
+    if (diff > M_PI) {
+        diff = 2.0f * M_PI - diff;
+    }
+
+    return diff / M_PI;
 }
 
 float calculate_movemement_cost(
