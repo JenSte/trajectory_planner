@@ -3,6 +3,7 @@
 
 #include "trajectory_planner/costs.hpp"
 #include "trajectory_planner/motion_model.hpp"
+#include "trajectory_planner/planning_3d.hpp"
 #include "trajectory_planner/planning_5d_heuristic.hpp"
 
 // The functions in this name space implement a "five dimensional" search. This
@@ -32,7 +33,7 @@ struct Segment
     Direction direction;
 
     // The poses that make up this segment.
-    Path path;
+    three::Path3D path;
 };
 
 // The search result for a single segment.
@@ -71,7 +72,7 @@ struct SearchResult5D
 // Split a path into multiple segments with different directions.
 std::vector<Segment> split_path(
     unsigned int angle_granularity,
-    const Path& path);
+    const three::Path3D& path);
 
 // Coordinates covered by a circle which has the origin at 0/0.
 using CircleCoordinates = std::vector<std::tuple<int, int>>;
@@ -96,7 +97,7 @@ Costs inflate_path(
     const CircleCoordinatesMap& coordinates_map,
     unsigned int inflation_lookahead,
     const Costs& costs,
-    const Path& path);
+    const three::Path3D& path);
 
 // Calculate the distance that is traveled from "pose" to "neighbour". Basically, doing
 // this calculation would should be as easy as using the Pythagorean theorem on the gris
@@ -123,7 +124,7 @@ SearchResult5D plan(
     HeuristicType heuristic_type,
     const Costs& costs,
     const MotionModel& motion_model,
-    const Path& path);
+    const three::Path3D& path);
 }
 
 #endif

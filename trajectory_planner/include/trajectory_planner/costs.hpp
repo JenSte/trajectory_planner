@@ -118,6 +118,15 @@ public:
         return angle_index * (2.0 * M_PI) / angle_granularity_;
     }
 
+    unsigned int radians_to_angle_index(double angle) const
+    {
+        if (angle < 0.0) {
+            angle += 2.0 * M_PI;
+        }
+
+        return angle / (2.0 * M_PI / angle_granularity_);
+    }
+
     // Return a distance in cells to the goal to apply a turn penaltiy.
     unsigned int goal_turn_penalty_distance() const;
 

@@ -9,7 +9,6 @@ namespace
 
 void output_result_3d_data(
     const trajectory_planner::three::SearchResult3D& result,
-    const trajectory_planner::Costs& costs,
     const std::string& filename)
 {
     if (result.path.size() != result.path_heuristic.size()) {
@@ -46,7 +45,7 @@ void output_result_3d_data(
         file
             << x << ','
             << y << ','
-            << costs.angle_index_to_radians(result.path[i].angle_index) << ','
+            << trajectory_planner::three::angle_lut[result.path[i].movement] << ','
             << result.cost[i] << ','
             << result.heuristic.get_value(x, y)
             << "\n";
@@ -128,7 +127,6 @@ void TrajectoryPlanner::write_result_debug_data(
 {
     output_result_3d_data(
         result.search_result_3d,
-        costs_,
         prefix + "3d_path_data.csv");
 
     for (size_t i = 0; i < result.search_result_5d.segment.size(); i++) {

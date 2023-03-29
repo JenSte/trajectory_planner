@@ -493,15 +493,9 @@ SearchResult3D plan(
         result.opened_nodes = total_costs.count_opened_nodes();
     }
 
-    // Convert the 3D path back to a path for the trajectory planner
-    // and create the heuristic vector.
-    for (const Pose3D& pose: path) {
-        const float angle = angle_lut[pose.movement];
+    result.path = std::move(path);
 
-        int angle_index = angle / (2 * M_PI / costs.angle_granularity());
-        angle_index %= costs.angle_granularity();
-
-        result.path.push_back(Pose{pose.x, pose.y, static_cast<unsigned int>(angle_index)});
+    for (const Pose3D& pose: result.path) {
         result.path_heuristic.push_back(result.heuristic.get_value(pose.x, pose.y));
     }
 
@@ -510,9 +504,9 @@ SearchResult3D plan(
     result.cost.push_back(0.0f); // Cost of the goal.
 
     float cost = 0.0f;
-    for (size_t i = path.size(); i-- > 1;) {
-        const Pose3D& node = path.at(i);
-        const Pose3D& predecessor = path.at(i - 1);
+    for (size_t i = result.path.size(); i-- > 1;) {
+        const Pose3D& node = result.path.at(i);
+        const Pose3D& predecessor = result.path.at(i - 1);
         cost += movement_cost(predecessor, node);
         result.cost.push_back(cost);
     }

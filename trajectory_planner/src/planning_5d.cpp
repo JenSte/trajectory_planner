@@ -71,7 +71,7 @@ private:
 
 std::vector<Segment> split_path(
     unsigned int angle_granularity,
-    const Path& path)
+    const three::Path3D& path)
 {
     std::vector<Segment> result;
 
@@ -80,7 +80,7 @@ std::vector<Segment> split_path(
     }
 
     // Two poses, and the direction when moving from the first to the second.
-    using PosePair = std::tuple<Pose, Pose, Direction>;
+    using PosePair = std::tuple<three::Pose3D, three::Pose3D, Direction>;
 
     std::vector<PosePair> pairs;
     std::transform(
@@ -88,7 +88,7 @@ std::vector<Segment> split_path(
         path.cend() - 1,
         path.cbegin() + 1,
         std::back_inserter(pairs),
-        [angle_granularity](const Pose& from, const Pose& to) {
+        [angle_granularity](const three::Pose3D& from, const three::Pose3D& to) {
             Direction d = Direction::TURN;
 
             // If at least one of the coordinates differ, we did not turn.
@@ -99,7 +99,8 @@ std::vector<Segment> split_path(
                     static_cast<int>(to.x) - static_cast<int>(from.x));
 
                 // The orientation at the first pose.
-                const double orientation = to.angle_index * 2.0 * M_PI / angle_granularity;
+                //const double orientation = to.angle_index * 2.0 * M_PI / angle_granularity;
+                const double orientation = three::angle_lut[from.movement];
 
                 // Determine the direction of the robot when moving from one pose
                 // to the other form the difference of the angles.
@@ -159,7 +160,7 @@ std::vector<Segment> split_path(
         auto last = std::find_if_not(begin, pairs.cend(), same_direction);
 
         // Copy out the poses of the current segment.
-        Path path;
+        three::Path3D path;
         for (auto it = begin; it < last; it++) {
             if (it == begin) {
                 path.push_back(std::get<0>(*it));
@@ -200,8 +201,7 @@ CircleCoordinates circle_coordinates(
 }
 
 double measure_curvature(
-    unsigned int angle_granularity,
-    const Path& path,
+    const three::Path3D& path,
     size_t start,
     double maximum_distance,
     bool forward)
@@ -228,9 +228,9 @@ double measure_curvature(
             }
         }
 
-        const Pose& prev = path.at(index);
+        const three::Pose3D& prev = path.at(index);
         index += forward ? 1 : -1;
-        const Pose& curr = path.at(index);
+        const three::Pose3D& curr = path.at(index);
 
         // Calculate the distance between the previous and the current pose.
         const double dx = static_cast<double>(prev.x) - static_cast<double>(curr.x);
@@ -239,8 +239,8 @@ double measure_curvature(
         total_distance += distance;
 
         // Calculate the change in orientation between the two poses.
-        const double prev_orientation = prev.angle_index * 2.0 * M_PI / angle_granularity;
-        const double curr_orientation = curr.angle_index * 2.0 * M_PI / angle_granularity;
+        const double prev_orientation = three::angle_lut[prev.movement];
+        const double curr_orientation = three::angle_lut[curr.movement];
         const double orientation_diff = atan2(
             sin(prev_orientation - curr_orientation),
             cos(prev_orientation - curr_orientation));
@@ -263,7 +263,7 @@ Costs inflate_path(
     const CircleCoordinatesMap& coordinates_map,
     const unsigned int inflation_lookahead,
     const Costs& costs,
-    const Path& path)
+    const three::Path3D& path)
 {
     // Get the minimum and maximum inflation values. All other values between
     // the extremes are also assumed to be in the map.
@@ -271,12 +271,12 @@ Costs inflate_path(
     const unsigned int inflation_max = coordinates_map.rbegin()->first;
 
     std::vector<Pose2D> subset;
-    for (const Pose& pose: path) {
+    for (const three::Pose3D& pose: path) {
         size_t index = &pose - &(*path.begin());
 
         const double curvature = std::max(
-            measure_curvature(costs.angle_granularity(), path, index, inflation_lookahead, true),
-            measure_curvature(costs.angle_granularity(), path, index, inflation_lookahead, false));
+            measure_curvature(path, index, inflation_lookahead, true),
+            measure_curvature(path, index, inflation_lookahead, false));
 
         unsigned int inflation =
             inflation_min + (inflation_max - inflation_min) * curvature;
@@ -310,7 +310,7 @@ Costs inflate_path(
 std::unique_ptr<Heuristic> create_heuristic(
     HeuristicType heuristic_type,
     const Pose5D& goal,
-    const Path& path,
+    const three::Path3D& path,
     const Costs& search_space)
 {
     switch (heuristic_type) {
@@ -451,9 +451,16 @@ SegmentSearchResult plan_turn_segment(
     Costs search_space = costs.intersect_5d_costs(subset);
 
     Path5D path;
-    for (const Pose& pose: segment.path) {
+    for (const three::Pose3D& pose: segment.path) {
+        const double angle = three::angle_lut[pose.movement];
+
         path.emplace_back(
-            Pose5D{pose.x, pose.y, pose.angle_index, Pose5D::LinearVelocity(0), Pose5D::AngularVelocity(0)});
+            Pose5D{
+                pose.x,
+                pose.y,
+                costs.radians_to_angle_index(angle),
+                Pose5D::LinearVelocity(0),
+                Pose5D::AngularVelocity(0)});
     }
 
     return SegmentSearchResult{Direction::TURN, std::move(path), {}, {}, std::move(search_space), nullptr};
@@ -476,7 +483,7 @@ SegmentSearchResult plan_movement_segment(
     Pose5D real_start{
         segment.path.front().x,
         segment.path.front().y,
-        segment.path.front().angle_index,
+        costs.radians_to_angle_index(three::angle_lut[segment.path.front().movement]),
         Pose5D::LinearVelocity(0),
         Pose5D::AngularVelocity(0)};
 
@@ -484,7 +491,7 @@ SegmentSearchResult plan_movement_segment(
     Pose5D real_goal{
         segment.path.back().x,
         segment.path.back().y,
-        segment.path.back().angle_index,
+        costs.radians_to_angle_index(three::angle_lut[segment.path.back().movement]),
         Pose5D::LinearVelocity(0),
         Pose5D::AngularVelocity(0)};
 
@@ -598,7 +605,7 @@ SearchResult5D plan(
     HeuristicType heuristic_type,
     const Costs& costs,
     const MotionModel& motion_model,
-    const Path& path)
+    const three::Path3D& path)
 {
     // The width, in pixels, of the maximum inflation around a cell in the 3D path.
     unsigned int maximum_inflation = std::max(2u, inflation_radius_pixels);

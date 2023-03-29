@@ -98,7 +98,7 @@ struct SearchResult3D
 
     // The result of the path search, converted back to the data type used by
     // the trajectory planner.
-    Path path;
+    Path3D path;
 
     // Contains the heuristic value for every pose in the path (vector has
     // the exact same length as 'path').

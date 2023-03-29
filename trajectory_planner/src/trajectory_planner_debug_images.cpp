@@ -354,7 +354,7 @@ void output_result_3d_opened_nodes_image(
 }
 
 void output_result_3d_path_image(
-    const trajectory_planner::Path& path,
+    const trajectory_planner::three::Path3D& path,
     const trajectory_planner::Buffer<double>& occupancy_map,
     const std::string& filename)
 {
@@ -363,7 +363,7 @@ void output_result_3d_path_image(
 
     cv::Mat color_image(height, width, CV_8UC3, cv::Vec3b(255, 255, 255));
 
-    for (const trajectory_planner::Pose& pose: path) {
+    for (const trajectory_planner::three::Pose3D& pose: path) {
         size_t row = height - 1 - pose.y;
         size_t column = pose.x;
 

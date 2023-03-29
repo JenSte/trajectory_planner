@@ -55,11 +55,11 @@ float DepthHeuristic::value(
 }
 
 PathHeuristic::PathHeuristic(
-    const Path& path,
+    const three::Path3D& path,
     const Costs& search_space)
 {
     std::vector<Pose2D> path_2d;
-    for (const Pose& pose: path) {
+    for (const three::Pose3D& pose: path) {
         path_2d.emplace_back(Pose2D{pose.x, pose.y});
     }
 
@@ -70,7 +70,7 @@ PathHeuristic::PathHeuristic(
         float closest_neighbour_distance = std::numeric_limits<float>::max();
 
         for (size_t i = 0; i < path.size(); i++) {
-            const Pose& path_pose = path.at(i);
+            const three::Pose3D& path_pose = path.at(i);
 
             // The distance to the pose on the path.
             const float dx = static_cast<int>(pose.x) - static_cast<int>(path_pose.x);

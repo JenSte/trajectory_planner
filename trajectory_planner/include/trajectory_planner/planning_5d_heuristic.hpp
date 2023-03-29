@@ -2,6 +2,7 @@
 #define TRAJECTORY_PLANNER_5D_HEURISTIC_HPP
 
 #include "trajectory_planner/depth_heuristic.hpp"
+#include "trajectory_planner/planning_3d.hpp"
 
 namespace trajectory_planner::five
 {
@@ -91,7 +92,7 @@ class PathHeuristic: public Heuristic
 
 public:
     PathHeuristic(
-        const Path& path,
+        const three::Path3D& path,
         const Costs& search_space);
 
     virtual ~PathHeuristic() {};
