@@ -16,6 +16,30 @@
 namespace trajectory_planner::five
 {
 
+std::ostream& operator<<(
+    std::ostream& os,
+    Direction direction)
+{
+    switch (direction) {
+        case Direction::TURN:
+            os << "turn";
+            break;
+
+        case Direction::FORWARD:
+            os << "forward";
+            break;
+
+        case Direction::BACKWARD:
+            os << "backward";
+            break;
+
+        default:
+            os.setstate(std::ios_base::failbit);
+    }
+
+    return os;
+}
+
 // Stores the total costs along a path to a cell during an A* search.
 class TotalCostsMap
 {

@@ -24,6 +24,10 @@ enum class Direction {
     TURN
 };
 
+std::ostream& operator<<(
+    std::ostream& os,
+    Direction direction);
+
 // A segment is a part of the 3D path that contains poses where
 // the movement is only in a single direction (forward or backward)
 // or where the robot turns on a spot.

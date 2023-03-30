@@ -431,6 +431,13 @@ void output_result_5d_path_image(
 
     extend_and_label_image(color_image, "5D path (on inflated 3D path)");
 
+    std::stringstream ss;
+    ss
+        << "Direction: " << segment.direction
+        << ", start: " << segment.path.front()
+        << ", goal: " << segment.path.back();
+    write_text(color_image, 10, height + 46, ss.str());
+
     cv::imwrite(filename, color_image);
 }
 

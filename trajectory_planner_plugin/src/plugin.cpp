@@ -254,15 +254,8 @@ convert::ROSPath Plugin::plan(
     for (const five::SegmentSearchResult& segment: result.search_result_5d.segment) {
         size_t index = &segment - &(*result.search_result_5d.segment.begin());
 
-        std::string direction = "turn";
-        if (segment.direction == five::Direction::FORWARD) {
-            direction = "forward";
-        } else if (segment.direction == five::Direction::BACKWARD) {
-            direction = "backward";
-        }
-
         ss.str("");
-        ss << "  segment " << index << " direction: " << direction;
+        ss << "  segment " << index << " direction: " << segment.direction;
         log_info(ss.str());
 
         if (segment.path.empty()) {

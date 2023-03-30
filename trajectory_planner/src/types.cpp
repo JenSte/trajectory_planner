@@ -47,4 +47,18 @@ std::ostream& operator<<(
     return os;
 }
 
+std::ostream& operator<<(
+    std::ostream& os,
+    const Pose5D& pose)
+{
+    os
+        << "Pose5D{x = " << pose.x
+        << ", y = " << pose.y
+        << ", angle = " << pose.angle_index
+        << ", lin. vel. = " << static_cast<int>(pose.linear_velocity)
+        << ", ang. vel. = " << static_cast<int>(pose.angular_velocity) << "}";
+
+    return os;
+}
+
 }
