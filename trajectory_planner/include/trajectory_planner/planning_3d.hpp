@@ -38,14 +38,14 @@ const float angle_lut[movement_index_count] = {
     atan2(1, -2),
     // 3rd quadrant.
     atan2(0, -1),
-    atan2(-1, -2),
-    atan2(-1, -1),
-    atan2(-2, -1),
+    atan2(-1, -2) + 2 * M_PI,
+    atan2(-1, -1) + 2 * M_PI,
+    atan2(-2, -1) + 2 * M_PI,
     // 4th quadrant.
-    atan2(-1, 0),
-    atan2(-2, 1),
-    atan2(-1, 1),
-    atan2(-1, 2)
+    atan2(-1, 0) + 2 * M_PI,
+    atan2(-2, 1) + 2 * M_PI,
+    atan2(-1, 1) + 2 * M_PI,
+    atan2(-1, 2) + 2 * M_PI
 };
 
 // A pose as used by the three dimensional planner.
