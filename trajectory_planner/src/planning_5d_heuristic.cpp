@@ -38,7 +38,7 @@ float ManhattanHeuristic::value(
     const float dx = static_cast<float>(goal_.x) - static_cast<float>(pose.x);
     const float dy = static_cast<float>(goal_.y) - static_cast<float>(pose.y);
 
-    return abs(dx) + abs(dy);
+    return fabs(dx) + fabs(dy);
 }
 
 DepthHeuristic::DepthHeuristic(

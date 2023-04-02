@@ -94,7 +94,6 @@ private:
 };
 
 std::vector<Segment> split_path(
-    unsigned int angle_granularity,
     const three::Path3D& path)
 {
     std::vector<Segment> result;
@@ -112,7 +111,7 @@ std::vector<Segment> split_path(
         path.cend() - 1,
         path.cbegin() + 1,
         std::back_inserter(pairs),
-        [angle_granularity](const three::Pose3D& from, const three::Pose3D& to) {
+        [](const three::Pose3D& from, const three::Pose3D& to) {
             Direction d = Direction::TURN;
 
             // If at least one of the coordinates differ, we did not turn.
@@ -667,7 +666,7 @@ SearchResult5D plan(
 
     // We split the 3D path up into multiple segments, each of
     // which is then processed individually in the 5D space.
-    std::vector<Segment> segments = split_path(costs.angle_granularity(), path);
+    std::vector<Segment> segments = split_path(path);
 
     std::unique_ptr<boost::asio::thread_pool> pool;
     if (multi_threaded) {

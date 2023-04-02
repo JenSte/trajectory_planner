@@ -27,25 +27,25 @@ const MovementIndex movement_index_count = 16;
 // The angles in radians that correspond to a 3D movement index.
 const float angle_lut[movement_index_count] = {
     // 1st quadrant.
-    atan2(0, 1),
-    atan2(1, 2),
-    atan2(1, 1),
-    atan2(2, 1),
+    atan2f(0.0f, 1.0f),
+    atan2f(1.0f, 2.0f),
+    atan2f(1.0f, 1.0f),
+    atan2f(2.0f, 1.0f),
     // 2nd quadrant.
-    atan2(1, 0),
-    atan2(2, -1),
-    atan2(1, -1),
-    atan2(1, -2),
+    atan2f(1.0f, 0.0f),
+    atan2f(2.0f, -1.0f),
+    atan2f(1.0f, -1.0f),
+    atan2f(1.0f, -2.0f),
     // 3rd quadrant.
-    atan2(0, -1),
-    atan2(-1, -2) + 2 * M_PI,
-    atan2(-1, -1) + 2 * M_PI,
-    atan2(-2, -1) + 2 * M_PI,
+    atan2f(0.0f, -1.0f),
+    atan2f(-1.0f, -2.0f) + 2.0f * static_cast<float>(M_PI),
+    atan2f(-1.0f, -1.0f) + 2.0f * static_cast<float>(M_PI),
+    atan2f(-2.0f, -1.0f) + 2.0f * static_cast<float>(M_PI),
     // 4th quadrant.
-    atan2(-1, 0) + 2 * M_PI,
-    atan2(-2, 1) + 2 * M_PI,
-    atan2(-1, 1) + 2 * M_PI,
-    atan2(-1, 2) + 2 * M_PI
+    atan2f(-1.0f, 0.0f) + 2.0f * static_cast<float>(M_PI),
+    atan2f(-2.0f, 1.0f) + 2.0f * static_cast<float>(M_PI),
+    atan2f(-1.0f, 1.0f) + 2.0f * static_cast<float>(M_PI),
+    atan2f(-1.0f, 2.0f) + 2.0f * static_cast<float>(M_PI)
 };
 
 // A pose as used by the three dimensional planner.
