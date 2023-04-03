@@ -185,6 +185,8 @@ private:
     void serialize(Archive& ar, const unsigned int /*version*/)
     {
         ar & angle_granularity_;
+        ar & floorplan_width_;
+        ar & floorplan_height_;
         ar & goal_turn_penalty_distance_;
         ar & costs_3d_;
         ar & costs_5d_;
