@@ -79,4 +79,11 @@ $PERF ./trajectory_planner_standalone \
 if [ "$PROFILE" = true ]; then
 	# Visualize collected data.
 	hotspot perf.data
+else
+	for CSV in /tmp/standalone_result_*.csv; do
+		[ -e "$CSV" ] || continue
+
+		echo "creating plots from '$CSV'..."
+		"$SCRIPT_PATH/../scripts/plot_path.py" "$CSV"
+	done
 fi
