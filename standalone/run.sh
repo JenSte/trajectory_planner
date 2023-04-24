@@ -4,16 +4,21 @@
 
 set -eu
 
-usage() { echo "Usage: $0 [-p] [-r route]" >&2; exit 1; }
+usage() { echo "Usage: $0 [-p] [-o debug-output] [-r route]" >&2; exit 1; }
 
 PROFILE=false
 ROUTE=roblab-long
+OUTPUT_FILES_PREFIX=/tmp/standalone_
 
-while getopts "pr:" OPT; do
+while getopts "po:r:" OPT; do
 	case "$OPT" in
 		p)
 			# Run planner under profiler and then visualize the data.
 			PROFILE=true
+			;;
+		o)
+			# Where to write the debug files to.
+			OUTPUT_FILES_PREFIX="$OPTARG"
 			;;
 		r)
 			# Select the route to plan, from "routes.env".
@@ -35,6 +40,29 @@ if [ ! -f "Makefile" ]; then
 fi
 make -j4
 
+if [ "$ROUTE" = ALL ]; then
+	# Special route name, run this script on all known routes.
+
+	ALL_ROUTES=$(sed -n 's/.*ROUTE" = "\(.*\)".*/\1/p' "$SCRIPT_PATH/routes.env")
+
+	PROFILE_ARG=""
+	if [ "$PROFILE" = true ]; then
+		PROFILE_ARG="-p"
+	fi
+
+	for ROUTE in $ALL_ROUTES; do
+		echo ""
+		echo "Running on route '$ROUTE'..."
+		echo ""
+
+		OUTPUT_ARG="-o /tmp/standalone_route-${ROUTE}_"
+
+		"./$0" $PROFILE_ARG $OUTPUT_ARG -r "$ROUTE"
+	done
+
+	exit 0
+fi
+
 # Get map and coordinates for the selected route.
 source "$SCRIPT_PATH/routes.env"
 MAP="$SCRIPT_PATH/../map/$MAP"
@@ -54,6 +82,9 @@ if [ "$PROFILE" = true ]; then
 	WRITE_DEBUG_IMAGES=false
 	MULTI_THREADED=false
 else
+	# Remove old debug files, if there are any.
+	rm -f "$OUTPUT_FILES_PREFIX*.png" "$OUTPUT_FILES_PREFIX*.csv"
+
 	PERF="time -p"
 	WRITE_DEBUG_IMAGES=true
 	MULTI_THREADED=true
@@ -74,13 +105,14 @@ $PERF ./trajectory_planner_standalone \
     --goal_x "$GOAL_X" \
     --goal_y "$GOAL_Y" \
     --goal_theta "$GOAL_THETA" \
-    --write_debug_images "$WRITE_DEBUG_IMAGES"
+    --write_debug_images "$WRITE_DEBUG_IMAGES" \
+    --debug_files_prefix "$OUTPUT_FILES_PREFIX"
 
 if [ "$PROFILE" = true ]; then
 	# Visualize collected data.
 	hotspot perf.data
 else
-	for CSV in /tmp/standalone_result_*.csv; do
+	for CSV in $OUTPUT_FILES_PREFIX*.csv; do
 		[ -e "$CSV" ] || continue
 
 		echo "creating plots from '$CSV'..."

@@ -31,6 +31,7 @@ boost::program_options::variables_map parse_arguments(int argc, const char *argv
         ("goal_theta", po::value<double>()->required())
 
         ("write_debug_images", po::value<bool>()->default_value(true))
+        ("debug_files_prefix", po::value<std::string>()->default_value("/tmp/standalone_"))
     ;
 
     po::variables_map vm;
@@ -119,11 +120,13 @@ int main(int argc, const char* argv[])
     }
 
     if (arguments["write_debug_images"].as<bool>()) {
-        std::cout << "writing debug images\n";
-        planner->write_debug_images("/tmp/standalone_");
+        std::string path = arguments["debug_files_prefix"].as<std::string>();
+        std::cout << "writing planner debug images to '" << path << "'...\n";
+
+        planner->write_debug_images(path);
     }
 
-    std::cout << "planning\n";
+    std::cout << "planning...\n";
 
     trajectory_planner::TrajectoryPlanner::PlanningParameters pp;
     pp.inflation_5d_radius = 0.2;
@@ -173,8 +176,11 @@ int main(int argc, const char* argv[])
             << "planning took " << planning_duration.count() << " sec.\n";
 
         if (arguments["write_debug_images"].as<bool>()) {
-            planner->write_result_debug_images(result, "/tmp/standalone_result_");
-            planner->write_result_debug_data(result, "/tmp/standalone_result_");
+            std::string path = arguments["debug_files_prefix"].as<std::string>();
+            std::cout << "writing result debug images to '" << path << "'...\n";
+
+            planner->write_result_debug_images(result, path);
+            planner->write_result_debug_data(result, path);
         }
     } catch (const std::exception& e) {
         std::cerr << "error while planning: " << e.what() << std::endl;
