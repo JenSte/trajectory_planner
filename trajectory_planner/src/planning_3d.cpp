@@ -606,16 +606,19 @@ SearchResult3D plan(
         total_costs,
         predecessors);
 
+    // The heuristic values along the found path.
+    std::vector<float> path_heuristic;
+    for (const Pose3D& pose: path) {
+        path_heuristic.push_back(heuristic_callback(pose));
+    }
+
     SearchResult3D result(std::move(heuristic));
     if (extract_opened_nodes) {
         result.opened_nodes = total_costs.count_opened_nodes();
     }
 
     result.path = std::move(path);
-
-    for (const Pose3D& pose: result.path) {
-        result.path_heuristic.push_back(result.heuristic.get_value(pose.x, pose.y));
-    }
+    result.path_heuristic = std::move(path_heuristic);
 
     // Create the costs vector in the result. This is done by iterating over
     // pairs in the found path and summing up the cost values along the way.
