@@ -127,13 +127,13 @@ void TrajectoryPlanner::write_result_debug_data(
 {
     output_result_3d_data(
         result.search_result_3d,
-        prefix + "3d_path_data.csv");
+        prefix + "result_3d_path_data.csv");
 
     for (size_t i = 0; i < result.search_result_5d.segment.size(); i++) {
         std::ostringstream ss;
         ss
             << prefix
-            << "5d_"
+            << "result_5d_"
             << std::setfill('0') << std::setw(3) << i;
 
         output_result_5d_data(

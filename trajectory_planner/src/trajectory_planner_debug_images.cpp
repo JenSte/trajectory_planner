@@ -476,7 +476,7 @@ void TrajectoryPlanner::write_debug_images(
             output_inflated_occupancy_map(
                 this->original_occupancy_map_,
                 this->cost_map_,
-                prefix + "3d_inflated_occupancy_");
+                prefix + "planner_3d_inflated_occupancy_");
         });
 
     // Maps showing the 3D costs.
@@ -488,7 +488,7 @@ void TrajectoryPlanner::write_debug_images(
                     this->original_occupancy_map_,
                     this->costs_,
                     i,
-                    prefix + "3d_orientation_");
+                    prefix + "planner_3d_orientation_");
             }
         );
     }
@@ -502,7 +502,7 @@ void TrajectoryPlanner::write_debug_images(
                     this->original_occupancy_map_,
                     this->costs_,
                     ai,
-                    prefix + "5d_orientation_");
+                    prefix + "planner_5d_orientation_");
             }
         );
     }
@@ -519,26 +519,26 @@ void TrajectoryPlanner::write_result_debug_images(
         result.search_result_3d.heuristic,
         original_occupancy_map_,
         map_resolution_,
-        prefix + "3d_heuristic.png");
+        prefix + "result_3d_heuristic.png");
 
     // Show the nodes (only the X/Y coordinates, not the orientation, obviously) that
     // were looked at during the 3D search
     output_result_3d_opened_nodes_image(
         result.search_result_3d.opened_nodes,
         original_occupancy_map_,
-        prefix + "3d_opened_nodes.png");
+        prefix + "result_3d_opened_nodes.png");
 
     // Mark the 3D path on the image.
     output_result_3d_path_image(
         result.search_result_3d.path,
         original_occupancy_map_,
-        prefix + "3d_path.png");
+        prefix + "result_3d_path.png");
 
     for (size_t i = 0; i < result.search_result_5d.segment.size(); i++) {
         std::ostringstream ss;
         ss
             << prefix
-            << "5d_"
+            << "result_5d_"
             << std::setfill('0') << std::setw(3) << i;
 
         // Show the inflated 3D path and the heuristic values.
