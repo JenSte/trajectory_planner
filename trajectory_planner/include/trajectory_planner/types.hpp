@@ -157,6 +157,10 @@ std::ostream& operator<<(
 
 std::ostream& operator<<(
     std::ostream& os,
+    const Pose2D& pose);
+
+std::ostream& operator<<(
+    std::ostream& os,
     const Pose5D& pose);
 
 }

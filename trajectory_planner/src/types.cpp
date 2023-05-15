@@ -49,6 +49,17 @@ std::ostream& operator<<(
 
 std::ostream& operator<<(
     std::ostream& os,
+    const Pose2D& pose)
+{
+    os
+        << "Pose2D{x = " << pose.x
+        << ", y = " << pose.y << "}";
+
+    return os;
+}
+
+std::ostream& operator<<(
+    std::ostream& os,
     const Pose5D& pose)
 {
     os
