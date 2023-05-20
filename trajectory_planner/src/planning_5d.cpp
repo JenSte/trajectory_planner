@@ -583,7 +583,19 @@ SegmentSearchResult plan_movement_segment(
     log_callback(ss.str());
 
     auto heuristic_callback = [&heuristic](const Pose5D& pose) {
-        return heuristic->value(pose);
+        // The heuristic is created by flood-filling starting from the goal pose,
+        // with a lookahead of 2 cells around each newly filled cell. This results
+        // in a heuristic map that works very well for the 3D search, as the 3D path
+        // finding also only does "small moves" with a maximum distance of two cells
+        // per iteration.
+        // However, the 5D search can, at higher speed values, jump over more than
+        // two cells at a time. In this case, it can happen that the heuristic value
+        // slightly overestimates the true final cost of the cells. Therefore, we
+        // subtract a small value from the pose's heuristic value to make sure the
+        // value that is returned here is not an invalid heuristic value for the
+        // A* search algorithm. (When testing, even with big maps, the error with
+        // which the true costs were overestimated was always below 0.9.)
+        return std::max(0.0f, heuristic->value(pose) - 0.9f);
     };
 
     using a_star_type = AStar<
