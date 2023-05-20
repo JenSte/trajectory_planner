@@ -97,30 +97,36 @@ DepthHeuristic::DepthHeuristic(
             });
         candidates.erase(del, candidates.end());
 
+        // Returns 'true' if the given cell is contained in with at least one
+        // orientation in the respective costs object, 'false' otherwise.
+        auto in_costs = [costs_3d, &costs](unsigned int x, unsigned int y) {
+            if (costs_3d) {
+                for (three::MovementIndex mi = 0; mi < three::movement_index_count; mi++) {
+                    if (costs.get_3d_cost(x, y, mi) != Costs::invalid_3d_cost) {
+                        // The candidate pose is valid.
+                        return true;
+                    }
+                }
+            } else {
+                for (unsigned int ai = 0; ai < costs.angle_granularity(); ai++) {
+                    if (costs.get_5d_cost(x, y, ai)) {
+                        // The candidate pose is valid.
+                        return true;
+                    }
+                }
+            }
+
+            // Pose is not in the 3D/5D costs.
+            return false;
+        };
+
         // Remove all poses from the candidates vector that are not valid poses,
         // i.e. that are not contained in the costs object.
         del = std::remove_if(
             candidates.begin(),
             candidates.end(),
-            [costs_3d, &costs](const Pose2D& c) {
-                if (costs_3d) {
-                    for (three::MovementIndex mi = 0; mi < three::movement_index_count; mi++) {
-                        if (costs.get_3d_cost(c.x, c.y, mi) != Costs::invalid_3d_cost) {
-                            // The candidate pose is valid, keep it.
-                            return false;
-                        }
-                    }
-                } else {
-                    for (unsigned int ai = 0; ai < costs.angle_granularity(); ai++) {
-                        if (costs.get_5d_cost(c.x, c.y, ai)) {
-                            // The candidate pose is valid, keep it.
-                            return false;
-                        }
-                    }
-                }
-
-                // Pose is not in the 3D/5D costs, remove it.
-                return true;
+            [&in_costs](const Pose2D& c) {
+                return !in_costs(c.x, c.y);
             });
         candidates.erase(del, candidates.end());
 
@@ -132,7 +138,7 @@ DepthHeuristic::DepthHeuristic(
         std::unordered_set<Pose2D, boost::hash<Pose2D>> new_frontier;
         for (const Pose2D& c: candidates) {
             // Search for the shortest path into this cell. Because the candidate 'c'
-            // has at leaste one neighbour in 'frontier', there will be at least one
+            // has at least one neighbour in 'frontier', there will be at least one
             // path into this pose
             float smallest_value = std::numeric_limits<float>::max();
 
@@ -144,8 +150,9 @@ DepthHeuristic::DepthHeuristic(
             for (int dx = -2; dx < 3; dx++) {
                 // The X coordinate of the pose we check now.
                 const int x = static_cast<int>(c.x) + dx;
+
                 if ((x < 0) || !(x < static_cast<int>(width_))) {
-                    // Out of bounds.
+                    // X coordinate is out of bounds of the map.
                     continue;
                 }
 
@@ -153,26 +160,115 @@ DepthHeuristic::DepthHeuristic(
                     // The Y coordinate of the pose we check now.
                     const int y = static_cast<int>(c.y) + dy;
                     if ((y < 0) || !(y < static_cast<int>(height_))) {
-                        // Out of bounds.
-                        continue;
-                    }
-
-                    if ((abs(dx) == 2) && (abs(dy) == 2)) {
-                        // We skip this combination, looking at the direct diagonal
-                        // neighbour results in equivalent values in the end.
-                        continue;
-                    }
-
-                    if (((abs(dx) == 2) && (dy == 0)) || ((dx == 0) && (abs(dy) == 2))) {
-                        // We skip this combination, looking at the direct neighbour
-                        // results in equivalent values in the end.
+                        // Y coordinate is out of bounds of the map.
                         continue;
                     }
 
                     if (std::isnan(get_value(x, y))) {
                         // Neighbour has not been processed yet. (Okay, these neighbours
-                        // would also have been caught by the next test below.)
+                        // would also have been caught by the frontier test below.)
                         continue;
+                    }
+
+                    // Skip diagonal neighbours around the candidate that are
+                    // two cells away in both directions (the ones marked with
+                    // "x"):
+                    //
+                    //   x...x
+                    //   .d.d.
+                    //   ..c..
+                    //   .d.d.
+                    //   x...x
+                    //
+                    // Skipping these cells removes the need for a check if the
+                    // direct diagonal neighbours ("d") between the cell and the
+                    // candidate ("c") is valid. The direct diagonal neighbours
+                    // are still considered and will yield the same heuristic value
+                    // in the end as if one of the diagonal neighbours two cells
+                    // away would have been the smallest neighbour.
+                    if ((abs(dx) == 2) && (abs(dy) == 2)) {
+                        continue;
+                    }
+
+                    // Skip vertical/horizontal neighbours that are two cells away
+                    // from the candidate (the ones marked with "x"):
+                    //
+                    //    .x.
+                    //   ..d..
+                    //   xdcdx
+                    //   ..d..
+                    //    .x.
+                    //
+                    // Again, not considering these cells removes the need for a check
+                    // if the direct neighbours ("d") are valid.
+                    if (((abs(dx) == 2) && (dy == 0)) || ((dx == 0) && (abs(dy) == 2))) {
+                        continue;
+                    }
+
+                    // After the checks above, when we reach here, only the following
+                    // cells (marked with ".") around the candidate ("c") are still
+                    // considered:
+                    //
+                    //    . .
+                    //   .....
+                    //    .c.
+                    //   .....
+                    //    . .
+
+                    // The four 'if'-blocks below check if for a "knight move" (cell
+                    // that is two cells away in one direction) the cells on the route
+                    // to that cell are valid cells. This check is needed, otherwise
+                    // it would be possible to go "through walls" (thin walls that are
+                    // only one cell wide) and end up with an invalid heuristic.
+
+                    if (dx == 2) {
+                        // 'dx' is two, so the cell is one of the two marked with "x",
+                        // the first check below checks if "j" is a valid pose:
+                        //
+                        //    . .
+                        //   ...ix
+                        //    .cj
+                        //   ...kx
+                        //    . .
+                        if (!in_costs(c.x + 1, c.y)) {
+                            continue;
+                        }
+
+                        // This checks if "i" or "k" is valid, depending on the sign
+                        // of 'dy', whose absolute value is 1.
+                        if (!in_costs(c.x + 1, c.y + dy)) {
+                            continue;
+                        }
+                    }
+
+                    // Same checks as above, but check for cells on the left of "c".
+                    if (dx == -2) {
+                        if (!in_costs(c.x - 1, c.y)) {
+                            continue;
+                        }
+                        if (!in_costs(c.x - 1, c.y + dy)) {
+                            continue;
+                        }
+                    }
+
+                    // Same checks as above, but check for cells on the top of "c".
+                    if (dy == 2) {
+                        if (!in_costs(c.x, c.y + 1)) {
+                            continue;
+                        }
+                        if (!in_costs(c.x + dx, c.y + 1)) {
+                            continue;
+                        }
+                    }
+
+                    // Same checks as above, but check for cells on the bottom of "c".
+                    if (dy == -2) {
+                        if (!in_costs(c.x, c.y - 1)) {
+                            continue;
+                        }
+                        if (!in_costs(c.x + dx, c.y - 1)) {
+                            continue;
+                        }
                     }
 
                     // We only look at the cells we came from.
