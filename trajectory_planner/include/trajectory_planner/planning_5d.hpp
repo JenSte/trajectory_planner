@@ -121,6 +121,7 @@ std::tuple<double, double, double, double> calculate_movement_distances(
 
 // Plan in the five dimensional space, using a three dimensional path to aid the search.
 SearchResult5D plan(
+    const std::function<void(const std::string&)>& log_callback,
     bool multi_threaded,
     double map_resolution,
     unsigned int inflation_radius_pixels,

@@ -9,9 +9,13 @@
 #include <opencv2/imgproc.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <iomanip>
+#include <iostream>
 #include <optional>
 #include <thread>
+
 
 namespace trajectory_planner::five
 {
@@ -490,6 +494,8 @@ SegmentSearchResult plan_turn_segment(
 }
 
 SegmentSearchResult plan_movement_segment(
+    const std::function<void(const std::string&)>& log_callback,
+    const size_t index,
     const double map_resolution,
     const CircleCoordinatesMap& coordinates_map,
     const int inflation_lookahead,
@@ -563,8 +569,19 @@ SegmentSearchResult plan_movement_segment(
         return cell_distance + sqrt(error * angle_error) + low_speed_penalty;
     };
 
+    auto timestamp_start = std::chrono::steady_clock::now();
     std::unique_ptr<Heuristic> heuristic =
         create_heuristic(heuristic_type, goal, segment.path, search_space);
+    auto timestamp_end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> duration = timestamp_end - timestamp_start;
+
+    std::ostringstream ss;
+    ss
+        << "  5D heuristic for segment " << index << " created in "
+        << std::setprecision(3) << std::fixed
+        << duration.count() << " sec.";
+    log_callback(ss.str());
+
     auto heuristic_callback = [&heuristic](const Pose5D& pose) {
         return heuristic->value(pose);
     };
@@ -621,6 +638,7 @@ SegmentSearchResult plan_movement_segment(
 }
 
 SearchResult5D plan(
+    const std::function<void(const std::string&)>& log_callback,
     bool multi_threaded,
     double map_resolution,
     unsigned int inflation_radius_pixels,
@@ -651,6 +669,8 @@ SearchResult5D plan(
             search_result = plan_turn_segment(costs, segment);
         } else {
             search_result = plan_movement_segment(
+                log_callback,
+                index,
                 map_resolution,
                 coordinates_map,
                 inflation_lookahead_pixels,

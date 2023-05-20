@@ -319,6 +319,7 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     log_callback_("Starting 5D search...");
     timestamp_start = std::chrono::steady_clock::now();
     five::SearchResult5D result_5d = five::plan(
+        log_callback_,
         parameters.multi_threaded,
         map_resolution_,
         parameters.inflation_5d_radius / map_resolution_,

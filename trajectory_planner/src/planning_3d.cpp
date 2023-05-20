@@ -1,6 +1,7 @@
 #include "trajectory_planner/planning_3d.hpp"
 #include "trajectory_planner/a_star.hpp"
 
+#include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
@@ -565,7 +566,17 @@ SearchResult3D plan(
     // by flood-filling the 3D search space in 2D. While it takes some time to
     // pre-calculate these values before doing the actual search, it pays of on
     // large maps, and does not take much time on small maps.
+    auto timestamp_start = std::chrono::steady_clock::now();
     DepthHeuristic heuristic(costs, Pose2D{goal_pose.x, goal_pose.y}, true);
+    auto timestamp_end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> duration = timestamp_end - timestamp_start;
+
+    ss.str("");
+    ss
+        << "  3D heuristic created in "
+        << std::setprecision(3) << std::fixed
+        << duration.count() << " sec.";
+    log_callback(ss.str());
 
     auto goal_reached = [&goal_pose](const Pose3D& pose) {
         return goal_pose == pose;
