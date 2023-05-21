@@ -405,6 +405,14 @@ void output_result_3d_path_image(
     ss << "length: " << path.size() << " poses";
     write_text(color_image, 1, ss.str());
 
+    ss.str("");
+    ss << "start: " << path.front();
+    write_text(color_image, 2, ss.str());
+
+    ss.str("");
+    ss << "goal: " << path.back();
+    write_text(color_image, 3, ss.str());
+
     cv::imwrite(filename, color_image);
 }
 
