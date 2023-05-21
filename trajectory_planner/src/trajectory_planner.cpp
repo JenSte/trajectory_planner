@@ -308,6 +308,11 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
     auto timestamp_end = std::chrono::steady_clock::now();
     std::chrono::duration<double> duration = timestamp_end - timestamp_start;
 
+    if (result_3d.path.empty()) {
+        log_callback_("No 3D path found.");
+        return Result{std::move(result_3d), five::SearchResult5D(), std::move(motion_model)};
+    }
+
     std::ostringstream ss;
     ss
         << "3D search finished in "

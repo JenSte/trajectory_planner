@@ -125,6 +125,12 @@ void TrajectoryPlanner::write_result_debug_data(
     const Result& result,
     const std::string& prefix) const
 {
+    if (result.search_result_3d.path.empty()) {
+        std::cout
+            << "write_result_debug_data(): 3D path is empty, not writing any debug data." << std::endl;
+        return;
+    }
+
     output_result_3d_data(
         result.search_result_3d,
         prefix + "result_3d_path_data.csv");
