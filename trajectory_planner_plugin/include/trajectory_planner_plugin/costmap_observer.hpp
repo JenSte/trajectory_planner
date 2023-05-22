@@ -37,6 +37,7 @@ public:
     // Start watching a given costmap for changes.
     void watch_costmap(
         int angle_granularity,
+        double inscribed_radius,
         double inflation_radius,
         const std::string& cache_directory,
         const std::string& debug_directory,
@@ -54,6 +55,7 @@ private:
     // Watches the costmap for changes and (re-)creates the planner if necessary.
     void planner_update_thread_function(
         int angle_granularity,
+        double inscribed_radius,
         double inflation_radius,
         std::string cache_directory,
         std::string debug_directory);
@@ -61,6 +63,7 @@ private:
     // Create a hash used to identify the costmap.
     std::string hash_costmap(
         int angle_granularity,
+        double inscribed_radius,
         double inflation_radius,
         const Polygon& footprint,
         const convert::Costmap2D* costmap) const;
@@ -80,6 +83,7 @@ private:
     std::unique_ptr<TrajectoryPlanner> create_planner(
         const std::string& hash,
         int angle_granularity,
+        double inscribed_radius,
         double inflation_radius,
         const Polygon& footprint,
         const convert::Costmap2D* costmap_2d) const;

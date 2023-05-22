@@ -15,11 +15,13 @@ void TrajectoryPlannerPlugin::initialize(
     create_publishers(name);
 
     int angle_granularity;
+    double inscribed_radius;
     double inflation_radius;
     std::string cache_directory;
     std::string debug_directory;
 
     nh_.getParam("angle_granularity", angle_granularity);
+    nh_.getParam("inscribed_radius", inscribed_radius);
     nh_.getParam("inflation_radius", inflation_radius);
     nh_.getParam("cache_directory", cache_directory);
     nh_.getParam("debug_directory", debug_directory);
@@ -37,6 +39,7 @@ void TrajectoryPlannerPlugin::initialize(
 
     costmap_observer_.watch_costmap(
         angle_granularity,
+        inscribed_radius,
         inflation_radius,
         cache_directory,
         debug_directory,

@@ -18,6 +18,7 @@ namespace trajectory_planner
 Buffer<double> TrajectoryPlanner::create_cost_map(
     const LogCallback& log_callback,
     const double resolution,
+    const double inscribed_radius,
     const double inflation_radius,
     const Buffer<double>& occupancy_map)
 {
@@ -51,7 +52,15 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
         for (size_t x = 0; x < width; x ++) {
             // The distance, in pixels from the closest black pixel, multiplied
             // with the map's resolution, to get a value in meter.
-            const double distance_meter = dist.at<float>(y, x) * resolution;
+            double distance_meter = dist.at<float>(y, x) * resolution;
+
+            if (distance_meter <= inscribed_radius) {
+                // Inside the inscribed radius, the cost are always high.
+                cost_map.at(x, y) = 1.0;
+            }
+
+            distance_meter = std::max(distance_meter - inscribed_radius, 0.0);
+
             if (distance_meter > inflation_radius) {
                 continue;
             }

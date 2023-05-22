@@ -67,6 +67,7 @@ fi
 source "$SCRIPT_PATH/routes.env"
 MAP="$SCRIPT_PATH/../map/$MAP"
 
+INSCRIBED_RADIUS="0.3"
 INFLATION_RADIUS="1.0"
 ANGLE_GRANULARITY=24
 
@@ -98,6 +99,7 @@ $PERF ./trajectory_planner_standalone \
     --angle_granularity "$ANGLE_GRANULARITY" \
     --map "$MAP" \
     --map_resolution "$MAP_RESOLUTION" \
+    --inscribed_radius "$INSCRIBED_RADIUS" \
     --inflation_radius "$INFLATION_RADIUS" \
     --start_x "$START_X" \
     --start_y "$START_Y" \

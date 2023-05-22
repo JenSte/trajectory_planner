@@ -35,6 +35,7 @@ std::shared_ptr<TrajectoryPlanner> CostmapObserver::planner() const
 
 void CostmapObserver::watch_costmap(
     int angle_granularity,
+    double inscribed_radius,
     double inflation_radius,
     const std::string& cache_directory,
     const std::string& debug_directory,
@@ -48,6 +49,16 @@ void CostmapObserver::watch_costmap(
         ss
             << "invalid 'angle_granularity' value, using "
             << angle_granularity << " divisions";
+        log_info_(ss.str());
+    }
+
+    if (inscribed_radius <= 0.00) {
+        inscribed_radius = 0.0;
+
+        std::ostringstream ss;
+        ss
+            << "invalid 'inscribed_radius' value, using "
+            << inscribed_radius << " m";
         log_info_(ss.str());
     }
 
@@ -66,6 +77,13 @@ void CostmapObserver::watch_costmap(
     ss
         << "angle_granularity: "
         << angle_granularity << " divisions";
+    log_info_(ss.str());
+
+    ss.str("");
+    ss
+        << "inscribed_radius: "
+        << std::setprecision(3) << std::fixed
+        << inscribed_radius << " m";
     log_info_(ss.str());
 
     ss.str("");
@@ -95,6 +113,7 @@ void CostmapObserver::watch_costmap(
         &CostmapObserver::planner_update_thread_function,
         this,
         angle_granularity,
+        inscribed_radius,
         inflation_radius,
         cache_directory,
         debug_directory);
@@ -118,6 +137,7 @@ void CostmapObserver::stop_watching()
 
 void CostmapObserver::planner_update_thread_function(
     int angle_granularity,
+    double inscribed_radius,
     double inflation_radius,
     std::string cache_directory,
     std::string debug_directory)
@@ -151,7 +171,7 @@ void CostmapObserver::planner_update_thread_function(
         Polygon footprint = convert::polygon_msg_to_polygon(
             costmap_ros_->getRobotFootprintPolygon());
         std::string new_hash = hash_costmap(
-            angle_granularity, inflation_radius, footprint, costmap_2d);
+            angle_granularity, inscribed_radius, inflation_radius, footprint, costmap_2d);
 
         // Get the old hash value, if there is currently a planner.
         std::string old_hash;
@@ -191,6 +211,7 @@ void CostmapObserver::planner_update_thread_function(
             planner = create_planner(
                 new_hash,
                 angle_granularity,
+                inscribed_radius,
                 inflation_radius,
                 footprint,
                 costmap_2d);
@@ -231,6 +252,7 @@ void CostmapObserver::planner_update_thread_function(
 
 std::string CostmapObserver::hash_costmap(
     int angle_granularity,
+    double inscribed_radius,
     double inflation_radius,
     const Polygon& footprint,
     const convert::Costmap2D* costmap) const
@@ -244,6 +266,8 @@ std::string CostmapObserver::hash_costmap(
 
     // Include additional things that are not parameters to this function but
     // will influence the calculated costs of the planner.
+    unsigned int inscribed_radius_mm = to_mm(inscribed_radius);
+    crc.process_bytes(&inscribed_radius_mm, sizeof(inscribed_radius_mm));
     unsigned int inflation_radius_mm = to_mm(inflation_radius);
     crc.process_bytes(&inflation_radius_mm, sizeof(inflation_radius_mm));
     crc.process_bytes(&angle_granularity, sizeof(angle_granularity));
@@ -335,6 +359,7 @@ std::unique_ptr<TrajectoryPlanner> CostmapObserver::load_planner(
 std::unique_ptr<TrajectoryPlanner> CostmapObserver::create_planner(
     const std::string& hash,
     int angle_granularity,
+    double inscribed_radius,
     double inflation_radius,
     const Polygon& footprint,
     const convert::Costmap2D* costmap_2d) const
@@ -365,6 +390,7 @@ std::unique_ptr<TrajectoryPlanner> CostmapObserver::create_planner(
         hash,
         angle_granularity,
         costmap_2d->getResolution(),
+        inscribed_radius,
         inflation_radius,
         footprint,
         convert::create_occupancy_map(costmap_2d),

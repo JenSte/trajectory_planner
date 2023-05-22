@@ -24,6 +24,7 @@ base_global_planner: "trajectory_planner/TrajectoryPlanner"
 # Configuration of the global planner.
 TrajectoryPlanner:
   angle_granularity: 120
+  inscribed_radius: 0.3
   inflation_radius: 2.5
   cache_directory: "/tmp"
   debug_directory: "/tmp"

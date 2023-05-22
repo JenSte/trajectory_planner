@@ -97,6 +97,7 @@ public:
         std::string hash,
         unsigned int angle_granularity,
         double resolution,
+        double inscribed_radius,
         double inflation_radius,
         const Polygon& footprint,
         Buffer<double> occupancy_map,
@@ -167,21 +168,10 @@ private:
 
     // Create the "cost map" by inflating the occupancy map, using an exponential
     // decay function.
-    //
-    // The reason for creating the cost values on our own and not using the one
-    // provided by ROS' costmap_2d is that costmap_2d derives an "inscribed radius"
-    // from the robot's footprint. This is the smallest distance the robot can be
-    // placed next to an obstacle. All cells in the costmap_2d within the range of
-    // this inscribed radius to an obstacle are then set to the same constant value
-    // and the decay function only starts around that area. Because our per-pose cost
-    // extraction function (see 'create_costs()') "integrates" up all the cost values
-    // covered by the footprint using the values from costmap_2d resultd in non-optimal
-    // costs, especially around corners. Therefore this function implements the costmap
-    // calculation without an inscribed radius, starting the inflation directly around
-    // obstacles on the occupancy map.
     static Buffer<double> create_cost_map(
         const LogCallback& log_callback,
         double resolution,
+        double inscribed_radius,
         double inflation_radius,
         const Buffer<double>& occupancy_map);
 

@@ -20,6 +20,7 @@ boost::program_options::variables_map parse_arguments(int argc, const char *argv
         ("angle_granularity", po::value<unsigned int>()->required())
         ("map", po::value<std::string>()->required())
         ("map_resolution", po::value<double>()->required())
+        ("inscribed_radius", po::value<double>()->required())
         ("inflation_radius", po::value<double>()->required())
 
         // Start and goal coordinates are in raw pixel values (y coordinates growing down).
@@ -107,6 +108,7 @@ int main(int argc, const char* argv[])
             "",
             arguments["angle_granularity"].as<unsigned int>(),
             arguments["map_resolution"].as<double>(),
+            arguments["inscribed_radius"].as<double>(),
             arguments["inflation_radius"].as<double>(),
             footprint,
             std::move(map),

@@ -61,11 +61,13 @@ void TrajectoryPlannerPlugin::activate()
     // and not only later when the actual planning is done.
 
     int angle_granularity;
+    double inscribed_radius;
     double inflation_radius;
     std::string cache_directory;
     std::string debug_directory;
 
     node_->get_parameter(name_ + ".angle_granularity", angle_granularity);
+    node_->get_parameter(name_ + ".inscribed_radius", inscribed_radius);
     node_->get_parameter(name_ + ".inflation_radius", inflation_radius);
     node_->get_parameter(name_ + ".cache_directory", cache_directory);
     node_->get_parameter(name_ + ".debug_directory", debug_directory);
@@ -73,6 +75,7 @@ void TrajectoryPlannerPlugin::activate()
     // (Re-)Start watching the costmap for changes and recreate the planner if needed.
     costmap_observer_.watch_costmap(
         angle_granularity,
+        inscribed_radius,
         inflation_radius,
         cache_directory,
         debug_directory,
@@ -242,6 +245,9 @@ void TrajectoryPlannerPlugin::declare_parameters()
 
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".angle_granularity", rclcpp::ParameterValue(128), ro_descriptor);
+
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".inscribed_radius", rclcpp::ParameterValue(0.2), ro_descriptor);
 
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".inflation_radius", rclcpp::ParameterValue(2.0), ro_descriptor);

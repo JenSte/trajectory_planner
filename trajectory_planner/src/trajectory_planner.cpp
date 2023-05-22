@@ -34,6 +34,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     std::string hash,
     unsigned int angle_granularity,
     double resolution,
+    double inscribed_radius,
     double inflation_radius,
     const Polygon& footprint,
     Buffer<double> occupancy_map,
@@ -46,6 +47,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     Buffer<double> cost_map = create_cost_map(
         log_callback,
         resolution,
+        inscribed_radius,
         inflation_radius,
         occupancy_map);
     Costs costs = create_costs(
