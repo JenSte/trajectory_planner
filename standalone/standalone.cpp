@@ -57,10 +57,10 @@ int main(int argc, const char* argv[])
 
     // Footprint of a rectangular robot.
     trajectory_planner::Polygon footprint;
-    footprint.push_back(std::make_tuple(-0.2, 0.2));
-    footprint.push_back(std::make_tuple(0.4, 0.2));
-    footprint.push_back(std::make_tuple(0.4, -0.2));
-    footprint.push_back(std::make_tuple(-0.2, -0.2));
+    footprint.push_back(std::make_tuple(-0.21, 0.21));
+    footprint.push_back(std::make_tuple(0.41, 0.21));
+    footprint.push_back(std::make_tuple(0.41, -0.21));
+    footprint.push_back(std::make_tuple(-0.21, -0.21));
 
     boost::gil::gray8_image_t image;
     std::string filename = arguments["map"].as<std::string>();
