@@ -11,6 +11,12 @@ void output_result_3d_data(
     const trajectory_planner::three::SearchResult3D& result,
     const std::string& filename)
 {
+    if (result.path.empty()) {
+        std::cout
+            << "output_result_3d_data(): No path found, skipping." << std::endl;
+        return;
+    }
+
     if (result.path.size() != result.path_heuristic.size()) {
         std::cout
             << "output_result_3d_data(): path_heuristic vector has wrong length." << std::endl;
@@ -59,6 +65,12 @@ void output_result_5d_data(
     const std::string& filename)
 {
     if (segment.direction == trajectory_planner::five::Direction::TURN) {
+        return;
+    }
+
+    if (segment.path.empty()) {
+        std::cout
+            << "output_result_5d_data(): No path found, skipping this segment." << std::endl;
         return;
     }
 

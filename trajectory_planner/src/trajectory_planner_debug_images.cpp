@@ -405,13 +405,17 @@ void output_result_3d_path_image(
     ss << "length: " << path.size() << " poses";
     write_text(color_image, 1, ss.str());
 
-    ss.str("");
-    ss << "start: " << path.front();
-    write_text(color_image, 2, ss.str());
+    if (!path.empty()) {
+        ss.str("");
+        ss << "start: " << path.front();
+        write_text(color_image, 2, ss.str());
 
-    ss.str("");
-    ss << "goal: " << path.back();
-    write_text(color_image, 3, ss.str());
+        ss.str("");
+        ss << "goal: " << path.back();
+        write_text(color_image, 3, ss.str());
+    } else {
+        write_text(color_image, 3, "No path found!");
+    }
 
     cv::imwrite(filename, color_image);
 }
@@ -463,13 +467,17 @@ void output_result_5d_path_image(
     ss << "direction: " << segment.direction;
     write_text(color_image, 1, ss.str());
 
-    ss.str("");
-    ss << "start: " << segment.path.front();
-    write_text(color_image, 2, ss.str());
+    if (!segment.path.empty()) {
+        ss.str("");
+        ss << "start: " << segment.path.front();
+        write_text(color_image, 2, ss.str());
 
-    ss.str("");
-    ss << "goal: " << segment.path.back();
-    write_text(color_image, 3, ss.str());
+        ss.str("");
+        ss << "goal: " << segment.path.back();
+        write_text(color_image, 3, ss.str());
+    } else {
+        write_text(color_image, 3, "No path found!");
+    }
 
     cv::imwrite(filename, color_image);
 }
