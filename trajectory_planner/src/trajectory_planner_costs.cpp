@@ -17,12 +17,14 @@ namespace trajectory_planner
 
 Buffer<double> TrajectoryPlanner::create_cost_map(
     const LogCallback& log_callback,
+    const three::CostMap3DType cost_map_3d_type,
     const double resolution,
     const double inscribed_radius,
     const double inflation_radius,
     const Buffer<double>& occupancy_map)
 {
-    log_callback("Inflating obstacles on map...");
+    std::string decay = (cost_map_3d_type == three::CostMap3DType::LINEAR) ? "linear" : "exponential";
+    log_callback("Inflating obstacles on map using " + decay + " decay...");
 
     size_t width = occupancy_map.width();
     size_t height = occupancy_map.height();
@@ -66,7 +68,14 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
             }
 
             // The cost falls off from 1.0 next to an obstacle to nearly 0.0.
-            const double cost = exp(-5.0 * distance_meter / inflation_radius);
+            double cost = 0.0;
+            if (cost_map_3d_type == three::CostMap3DType::LINEAR) {
+                // Linear down from 1.0 to 0.0.
+                cost = 1.0 - distance_meter / inflation_radius;
+            } else {
+                // Exponential decay from 1.0 to 0.0.
+                cost = exp(-5.0 * distance_meter / inflation_radius);
+            }
             cost_map.at(x, y) = cost;
         }
     }
@@ -76,6 +85,7 @@ Buffer<double> TrajectoryPlanner::create_cost_map(
 
 Costs TrajectoryPlanner::create_costs(
     const LogCallback& log_callback,
+    const three::OrientationCosts3DType orientation_costs_3d_type,
     const bool multi_threaded,
     const unsigned int angle_granularity,
     const double resolution,
@@ -160,14 +170,19 @@ Costs TrajectoryPlanner::create_costs(
 
         plan_forward.execute(footprint_image, footprint_image_spectrum_1);
 
+        // The second buffer processing is only needed for the 3D costs if
+        // the "FOOTPRINT" orientation cost type is used;
+        bool second_buffer = three_dimensional;
+        second_buffer &= orientation_costs_3d_type == three::OrientationCosts3DType::FOOTPRINT;
+
         // In the three dimensional case we need the footprint's spectrum another time,
         // so we make a copy instead of transforming it again.
         Buffer<fftw_complex> footprint_image_spectrum_2 =
-            three_dimensional ? footprint_image_spectrum_1.copy() : Buffer<fftw_complex>(1, 1);
+            second_buffer ? footprint_image_spectrum_1.copy() : Buffer<fftw_complex>(1, 1);
 
         // Multiply the corresponding spectrum buffers.
         multiply_buffers(footprint_image_spectrum_1, occupancy_map_spectrum);
-        if (three_dimensional) {
+        if (second_buffer) {
             multiply_buffers(footprint_image_spectrum_2, cost_map_spectrum);
         }
 
@@ -177,8 +192,8 @@ Costs TrajectoryPlanner::create_costs(
 
         // Again, this is only needed for the three dimensional case.
         Buffer<double> result_buffer_2 =
-            three_dimensional ? Buffer<double>(padded_width, padded_height) : Buffer<double>(1, 1);
-        if (three_dimensional) {
+            second_buffer ? Buffer<double>(padded_width, padded_height) : Buffer<double>(1, 1);
+        if (second_buffer) {
             plan_backward.execute(footprint_image_spectrum_2, result_buffer_2);
         }
 
@@ -193,7 +208,8 @@ Costs TrajectoryPlanner::create_costs(
                 footprint_pixel_size / 2,
                 covered_pixels,
                 result_buffer_1,
-                result_buffer_2);
+                second_buffer ? &result_buffer_2 : nullptr,
+                cost_map);
 
             std::lock_guard<std::mutex> lock(costs_mutex);
             costs.set_3d_cost_vector(index, std::move(cost_vector));
@@ -210,7 +226,9 @@ Costs TrajectoryPlanner::create_costs(
         }
     };
 
-    log_callback("Creating cost layers...");
+    std::string s = orientation_costs_3d_type == three::OrientationCosts3DType::FOOTPRINT ?
+        "normalized" : "identical";
+    log_callback("Creating cost layers, 3D orientation costs are " + s + " 3D inflated costs...");
 
     std::unique_ptr<boost::asio::thread_pool> pool;
     if (multi_threaded) {
@@ -341,7 +359,8 @@ Costs::CostVector3D TrajectoryPlanner::extract_costs_3d(
     size_t offset,
     unsigned int footprint_covered_pixels,
     const Buffer<double>& convoluted_occupancy_map,
-    const Buffer<double>& convoluted_cost_map)
+    const Buffer<double>* convoluted_cost_map,
+    const Buffer<double>& cost_map)
 {
     if (convoluted_occupancy_map.width() < map_width + 2 * offset - 1) {
         throw std::runtime_error("Convoluted occupancy map has wrong width.");
@@ -351,12 +370,14 @@ Costs::CostVector3D TrajectoryPlanner::extract_costs_3d(
         throw std::runtime_error("Convoluted occupancy map has wrong height.");
     }
 
-    if (convoluted_occupancy_map.width() != convoluted_cost_map.width()) {
-        throw std::runtime_error("Cost and occupancy map do not have the same width.");
-    }
+    if (convoluted_cost_map != nullptr) {
+        if (convoluted_occupancy_map.width() != convoluted_cost_map->width()) {
+            throw std::runtime_error("Cost and occupancy map do not have the same width.");
+        }
 
-    if (convoluted_occupancy_map.height() != convoluted_cost_map.height()) {
-        throw std::runtime_error("Cost and occupancy map do not have the same height.");
+        if (convoluted_occupancy_map.height() != convoluted_cost_map->height()) {
+            throw std::runtime_error("Cost and occupancy map do not have the same height.");
+        }
     }
 
     // FFTW computes an unnormalized transform, i.e. the values of IFFT(FFT(...)) are
@@ -377,14 +398,24 @@ Costs::CostVector3D TrajectoryPlanner::extract_costs_3d(
             if (convoluted_occupancy_map.at(x + offset, y + offset) < 0.5) {
                 // A valid position, store the cost of this position in the result.
 
-                double cost = convoluted_cost_map.at(x + offset, y + offset);
+                double cost = 0.0;
+                if (convoluted_cost_map != nullptr) {
+                    // "FOOTPRINT" orientation cost type, we look at the second
+                    // buffer and use the normalized value from there.
 
-                // Remove the FFT bias.
-                cost /= fft_factor;
+                    cost = convoluted_cost_map->at(x + offset, y + offset);
 
-                // Also normalize for the fact that the footprint image might cover
-                // a different number of pixels for different orientations.
-                cost /= footprint_covered_pixels;
+                    // Remove the FFT bias.
+                    cost /= fft_factor;
+
+                    // Also normalize for the fact that the footprint image might cover
+                    // a different number of pixels for different orientations.
+                    cost /= footprint_covered_pixels;
+                } else {
+                    // "IDENTICAL" orientation cost type, we directly pick the
+                    // value from the inflated cost map.
+                    cost = cost_map.at(x, y);
+                }
 
                 costs.set_3d_cost(result, x, y, cost);
             }

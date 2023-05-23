@@ -22,6 +22,8 @@ boost::program_options::variables_map parse_arguments(int argc, const char *argv
         ("map_resolution", po::value<double>()->required())
         ("inscribed_radius", po::value<double>()->required())
         ("inflation_radius", po::value<double>()->required())
+        ("cost_map_3d_type", po::value<std::string>()->required())
+        ("orientation_costs_3d_type", po::value<std::string>()->required())
 
         // Start and goal coordinates are in raw pixel values (y coordinates growing down).
         ("start_x", po::value<unsigned int>()->required())
@@ -44,9 +46,30 @@ boost::program_options::variables_map parse_arguments(int argc, const char *argv
 
 int main(int argc, const char* argv[])
 {
+    trajectory_planner::three::CostMap3DType cost_map_3d_type;
+    trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type;
+
     boost::program_options::variables_map arguments;
     try {
         arguments = parse_arguments(argc, argv);
+
+        std::string str = arguments["cost_map_3d_type"].as<std::string>();
+        if (str == "linear") {
+            cost_map_3d_type = trajectory_planner::three::CostMap3DType::LINEAR;
+        } else if (str == "exponential") {
+            cost_map_3d_type = trajectory_planner::three::CostMap3DType::EXPONENTIAL;
+        } else {
+            throw std::runtime_error("Unable to parse cost_map_3d_type '" + str + "'.");
+        }
+
+        str = arguments["orientation_costs_3d_type"].as<std::string>();
+        if (str == "identical") {
+            orientation_costs_3d_type = trajectory_planner::three::OrientationCosts3DType::IDENTICAL;
+        } else if (str == "footprint") {
+            orientation_costs_3d_type = trajectory_planner::three::OrientationCosts3DType::FOOTPRINT;
+        } else {
+            throw std::runtime_error("Unable to parse orientation_costs_3d_type '" + str + "'.");
+        }
     } catch (const std::exception& e) {
         std::cerr << "error parsing command line: " << e.what() << std::endl;
         return 1;
@@ -104,6 +127,8 @@ int main(int argc, const char* argv[])
     std::unique_ptr<trajectory_planner::TrajectoryPlanner> planner =
         trajectory_planner::TrajectoryPlanner::create_planner(
             log_callback,
+            cost_map_3d_type,
+            orientation_costs_3d_type,
             arguments["multi_threaded"].as<bool>(),
             "",
             arguments["angle_granularity"].as<unsigned int>(),

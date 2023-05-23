@@ -36,6 +36,8 @@ public:
 
     // Start watching a given costmap for changes.
     void watch_costmap(
+        trajectory_planner::three::CostMap3DType cost_map_3d_type,
+        trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type,
         int angle_granularity,
         double inscribed_radius,
         double inflation_radius,
@@ -54,6 +56,8 @@ private:
 
     // Watches the costmap for changes and (re-)creates the planner if necessary.
     void planner_update_thread_function(
+        trajectory_planner::three::CostMap3DType cost_map_3d_type,
+        trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type,
         int angle_granularity,
         double inscribed_radius,
         double inflation_radius,
@@ -62,6 +66,8 @@ private:
 
     // Create a hash used to identify the costmap.
     std::string hash_costmap(
+        trajectory_planner::three::CostMap3DType cost_map_3d_type,
+        trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type,
         int angle_granularity,
         double inscribed_radius,
         double inflation_radius,
@@ -81,6 +87,8 @@ private:
 
     // Create a planner.
     std::unique_ptr<TrajectoryPlanner> create_planner(
+        trajectory_planner::three::CostMap3DType cost_map_3d_type,
+        trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type,
         const std::string& hash,
         int angle_granularity,
         double inscribed_radius,

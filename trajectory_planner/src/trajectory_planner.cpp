@@ -30,6 +30,8 @@ TrajectoryPlanner::TrajectoryPlanner(
 
 std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
     LogCallback log_callback,
+    const three::CostMap3DType cost_map_3d_type,
+    const three::OrientationCosts3DType orientation_costs_3d_type,
     const bool multi_threaded,
     std::string hash,
     unsigned int angle_granularity,
@@ -46,12 +48,14 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::create_planner(
 
     Buffer<double> cost_map = create_cost_map(
         log_callback,
+        cost_map_3d_type,
         resolution,
         inscribed_radius,
         inflation_radius,
         occupancy_map);
     Costs costs = create_costs(
         log_callback,
+        orientation_costs_3d_type,
         multi_threaded,
         angle_granularity,
         resolution,

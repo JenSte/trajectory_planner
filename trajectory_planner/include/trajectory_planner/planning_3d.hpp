@@ -48,6 +48,30 @@ const float angle_lut[movement_index_count] = {
     atan2f(-1.0f, 2.0f) + 2.0f * static_cast<float>(M_PI)
 };
 
+// Describes how the cost map for the 3D planner are is created.
+enum class CostMap3DType {
+    // Constant high value out to 'inscribed_radius', then
+    // linearly down to 'inscribed_radius' + 'inflation_radius'.
+    LINEAR,
+
+    // Constant high value out to 'inscribed_radius', then
+    // exponentially down to 'inscribed_radius' + 'inflation_radius'.
+    EXPONENTIAL
+};
+
+// Describes how the costs for the individual orientations of the
+// 3D planner are derived from the inflated 3D cost map.
+enum class OrientationCosts3DType {
+    // Each valid pose on an orientation cost map takes the cost
+    // value of the identical pose in the inflated cost map.
+    IDENTICAL,
+
+    // Each valid pose on an orientation cost map takes a cost that
+    // corresponds to the accumulated and normalized sum of costs
+    // of a footprint placed at that pose.
+    FOOTPRINT
+};
+
 // A pose as used by the three dimensional planner.
 struct Pose3D
 {

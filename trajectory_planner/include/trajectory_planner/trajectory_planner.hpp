@@ -93,6 +93,8 @@ public:
     // Create a new planner.
     static std::unique_ptr<TrajectoryPlanner> create_planner(
         LogCallback log_callback,
+        three::CostMap3DType cost_map_3d_type,
+        three::OrientationCosts3DType orientation_costs_3d_type,
         bool multi_threaded,
         std::string hash,
         unsigned int angle_granularity,
@@ -170,6 +172,7 @@ private:
     // decay function.
     static Buffer<double> create_cost_map(
         const LogCallback& log_callback,
+        three::CostMap3DType cost_map_3d_type,
         double resolution,
         double inscribed_radius,
         double inflation_radius,
@@ -179,6 +182,7 @@ private:
     // on the map in any direction.
     static Costs create_costs(
         const LogCallback& log_callback,
+        three::OrientationCosts3DType orientation_costs_3d_type,
         bool multi_threaded,
         unsigned int angle_granularity,
         double resolution,
@@ -244,7 +248,8 @@ private:
         size_t offset,
         unsigned int footprint_covered_pixels,
         const Buffer<double>& convoluted_occupancy_map,
-        const Buffer<double>& convoluted_cost_map);
+        const Buffer<double>* convoluted_cost_map,
+        const Buffer<double>& cost_map);
 
     // Get the 5D cost (occupancy) values from the given map.
     static Costs::CostVector5D extract_costs_5d(

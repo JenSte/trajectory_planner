@@ -69,6 +69,16 @@ MAP="$SCRIPT_PATH/../map/$MAP"
 
 INSCRIBED_RADIUS="0.3"
 INFLATION_RADIUS="1.0"
+
+# Determines how the 3D cost values around obstacles decay.
+#COST_MAP_3D_TYPE="linear"
+COST_MAP_3D_TYPE="exponential"
+
+# Determines how the orientation 3D costs are derived from
+# the inflated 3D cost map.
+ORIENTATION_COSTS_3D_TYPE="identical"
+#ORIENTATION_COSTS_3D_TYPE="footprint"
+
 ANGLE_GRANULARITY=24
 
 if [ "$PROFILE" = true ]; then
@@ -101,6 +111,8 @@ $PERF ./trajectory_planner_standalone \
     --map_resolution "$MAP_RESOLUTION" \
     --inscribed_radius "$INSCRIBED_RADIUS" \
     --inflation_radius "$INFLATION_RADIUS" \
+    --cost_map_3d_type "$COST_MAP_3D_TYPE" \
+    --orientation_costs_3d_type "$ORIENTATION_COSTS_3D_TYPE" \
     --start_x "$START_X" \
     --start_y "$START_Y" \
     --start_theta "$START_THETA" \

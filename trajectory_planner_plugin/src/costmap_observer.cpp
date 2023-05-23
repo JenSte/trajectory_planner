@@ -34,6 +34,8 @@ std::shared_ptr<TrajectoryPlanner> CostmapObserver::planner() const
 }
 
 void CostmapObserver::watch_costmap(
+    trajectory_planner::three::CostMap3DType cost_map_3d_type,
+    trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type,
     int angle_granularity,
     double inscribed_radius,
     double inflation_radius,
@@ -112,6 +114,8 @@ void CostmapObserver::watch_costmap(
     planner_update_thread_ = std::thread(
         &CostmapObserver::planner_update_thread_function,
         this,
+        cost_map_3d_type,
+        orientation_costs_3d_type,
         angle_granularity,
         inscribed_radius,
         inflation_radius,
@@ -136,6 +140,8 @@ void CostmapObserver::stop_watching()
 }
 
 void CostmapObserver::planner_update_thread_function(
+    trajectory_planner::three::CostMap3DType cost_map_3d_type,
+    trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type,
     int angle_granularity,
     double inscribed_radius,
     double inflation_radius,
@@ -171,7 +177,13 @@ void CostmapObserver::planner_update_thread_function(
         Polygon footprint = convert::polygon_msg_to_polygon(
             costmap_ros_->getRobotFootprintPolygon());
         std::string new_hash = hash_costmap(
-            angle_granularity, inscribed_radius, inflation_radius, footprint, costmap_2d);
+            cost_map_3d_type,
+            orientation_costs_3d_type,
+            angle_granularity,
+            inscribed_radius,
+            inflation_radius,
+            footprint,
+            costmap_2d);
 
         // Get the old hash value, if there is currently a planner.
         std::string old_hash;
@@ -209,6 +221,8 @@ void CostmapObserver::planner_update_thread_function(
             // Either there was no planner to load or the loading failed,
             // re-create the whole planner.
             planner = create_planner(
+                cost_map_3d_type,
+                orientation_costs_3d_type,
                 new_hash,
                 angle_granularity,
                 inscribed_radius,
@@ -251,6 +265,8 @@ void CostmapObserver::planner_update_thread_function(
 }
 
 std::string CostmapObserver::hash_costmap(
+    trajectory_planner::three::CostMap3DType cost_map_3d_type,
+    trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type,
     int angle_granularity,
     double inscribed_radius,
     double inflation_radius,
@@ -266,6 +282,8 @@ std::string CostmapObserver::hash_costmap(
 
     // Include additional things that are not parameters to this function but
     // will influence the calculated costs of the planner.
+    crc.process_bytes(&cost_map_3d_type, sizeof(cost_map_3d_type));
+    crc.process_bytes(&orientation_costs_3d_type, sizeof(orientation_costs_3d_type));
     unsigned int inscribed_radius_mm = to_mm(inscribed_radius);
     crc.process_bytes(&inscribed_radius_mm, sizeof(inscribed_radius_mm));
     unsigned int inflation_radius_mm = to_mm(inflation_radius);
@@ -357,6 +375,8 @@ std::unique_ptr<TrajectoryPlanner> CostmapObserver::load_planner(
 }
 
 std::unique_ptr<TrajectoryPlanner> CostmapObserver::create_planner(
+    trajectory_planner::three::CostMap3DType cost_map_3d_type,
+    trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type,
     const std::string& hash,
     int angle_granularity,
     double inscribed_radius,
@@ -386,6 +406,8 @@ std::unique_ptr<TrajectoryPlanner> CostmapObserver::create_planner(
     timestamp_start = std::chrono::steady_clock::now();
     std::unique_ptr<TrajectoryPlanner> planner = TrajectoryPlanner::create_planner(
         log_callback,
+        cost_map_3d_type,
+        orientation_costs_3d_type,
         true,
         hash,
         angle_granularity,

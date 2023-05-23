@@ -23,6 +23,12 @@ base_global_planner: "trajectory_planner/TrajectoryPlanner"
 
 # Configuration of the global planner.
 TrajectoryPlanner:
+  # cost_map_3d_type: "linear"
+  cost_map_3d_type: "exponential"
+
+  orientation_costs_3d_type: "identical"
+  # orientation_costs_3d_type: "footprint"
+
   angle_granularity: 120
   inscribed_radius: 0.3
   inflation_radius: 2.5

@@ -19,12 +19,35 @@ void TrajectoryPlannerPlugin::initialize(
     double inflation_radius;
     std::string cache_directory;
     std::string debug_directory;
+    trajectory_planner::three::CostMap3DType cost_map_3d_type;
+    trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type;
 
     nh_.getParam("angle_granularity", angle_granularity);
     nh_.getParam("inscribed_radius", inscribed_radius);
     nh_.getParam("inflation_radius", inflation_radius);
     nh_.getParam("cache_directory", cache_directory);
     nh_.getParam("debug_directory", debug_directory);
+
+    std::string str;
+    nh_.getParam("cost_map_3d_type", str);
+    if (str == "linear") {
+        cost_map_3d_type = trajectory_planner::three::CostMap3DType::LINEAR;
+    } else if (str == "exponential") {
+        cost_map_3d_type = trajectory_planner::three::CostMap3DType::EXPONENTIAL;
+    } else {
+        cost_map_3d_type = trajectory_planner::three::CostMap3DType::EXPONENTIAL;
+        ROS_WARN("Unable to parse cost_map_3d_type, using 'exponental'." );
+    }
+
+    nh_.getParam("orientation_costs_3d_type", str);
+    if (str == "identical") {
+        orientation_costs_3d_type = trajectory_planner::three::OrientationCosts3DType::IDENTICAL;
+    } else if (str == "footprint") {
+        orientation_costs_3d_type = trajectory_planner::three::OrientationCosts3DType::FOOTPRINT;
+    } else {
+        orientation_costs_3d_type = trajectory_planner::three::OrientationCosts3DType::IDENTICAL;
+        ROS_WARN("Unable to parse orientation_costs_3d_type, using 'identical'.");
+    }
 
     std::optional<Point> internal_point;
     if (nh_.hasParam("internal_point_x") && nh_.hasParam("internal_point_y")) {
@@ -38,6 +61,8 @@ void TrajectoryPlannerPlugin::initialize(
     costmap_ros_ = costmap_ros;
 
     costmap_observer_.watch_costmap(
+        cost_map_3d_type,
+        orientation_costs_3d_type,
         angle_granularity,
         inscribed_radius,
         inflation_radius,

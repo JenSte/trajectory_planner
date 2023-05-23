@@ -6,6 +6,12 @@ costmap:
   footprint: "[[0.17, 0.0], [0.13, 0.18], [-0.19, 0.18], [-0.26, 0], [-0.19, -0.18], [0.13, -0.18]]"
 
 TrajectoryPlanner:
+  # cost_map_3d_type: "linear"
+  cost_map_3d_type: "exponential"
+
+  orientation_costs_3d_type: "identical"
+  # orientation_costs_3d_type: "footprint"
+
   angle_granularity: 120
   inscribed_radius: 0.3
   inflation_radius: 2.5
