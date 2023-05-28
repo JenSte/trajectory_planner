@@ -516,14 +516,6 @@ float calculate_heuristic(
     const Pose3D& pose)
 {
     float goal_distance = heuristic.get_value(pose.x, pose.y);
-    if (std::isnan(goal_distance)) {
-        // A fallback if the pose is not in 'heuristic'. In this case there is
-        // probably no path to the goal in the search space (otherwise the heuristic
-        // map calculation would include the pose), so we could also detect this earlier.
-        const float dx = static_cast<float>(goal_pose.x) - static_cast<float>(pose.x);
-        const float dy = static_cast<float>(goal_pose.y) - static_cast<float>(pose.y);
-        goal_distance = sqrtf(powf(dx, 2.0f) + powf(dy, 2.0f));
-    }
 
     // Calculate the normalized angle differenct between the orientation of the
     // pose and the goal pose.
@@ -570,6 +562,15 @@ SearchResult3D plan(
     DepthHeuristic heuristic(costs, Pose2D{goal_pose.x, goal_pose.y}, true);
     auto timestamp_end = std::chrono::steady_clock::now();
     std::chrono::duration<double> duration = timestamp_end - timestamp_start;
+
+    // The heuristic (DepthHeuristic) flood-fills starting at the goal, so if
+    // the start pose is not in the heuristic, we know immediately that there
+    // is no path between start and goal.
+    const float goal_heuristic = heuristic.get_value(start.x, start.y);
+    if (std::isnan(goal_heuristic)) {
+        log_callback("  Start pose not covered by heuristic.");
+        return SearchResult3D(std::move(heuristic));
+    }
 
     ss.str("");
     ss
