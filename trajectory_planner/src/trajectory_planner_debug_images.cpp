@@ -294,6 +294,59 @@ void output_result_3d_heuristic_image(
         heuristic, occupancy_map, map_resolution, "3D heuristic", filename);
 }
 
+void output_result_3d_turn_costs_image(
+    const trajectory_planner::TurnCosts& turn_costs,
+    const trajectory_planner::Buffer<double>& occupancy_map,
+    const std::string& filename)
+{
+    size_t width = occupancy_map.width();
+    size_t height = occupancy_map.height();
+
+    cv::Mat canvas = cv::Mat::zeros(height, width, CV_8UC1);
+
+    for (size_t y = 0; y < height; y++) {
+        for (size_t x = 0; x < width; x++) {
+            size_t row = height - 1 - y;
+            size_t column = x;
+
+            const float t = turn_costs.get_value(x, y);
+            if (!std::isnan(t)) {
+                const float grey = std::max(0.0f, std::min(1.0f, t));
+                canvas.at<unsigned char>(row, column) = 255 * grey;
+            }
+        }
+    }
+
+    // Convert the grayscale values to colors.
+    cv::Mat color_image;
+    cv::applyColorMap(canvas, color_image, cv::COLORMAP_JET);
+
+    // Do another pass over the colored image and tidy it up a bit.
+    for (size_t y = 0; y < height; y++) {
+        for (size_t x = 0; x < width; x++) {
+            size_t row = height - 1 - y;
+            size_t column = x;
+
+            // Cells where no heuristic value exists in white.
+            const float h = turn_costs.get_value(x, y);
+            if (std::isnan(h)) {
+                color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(255, 255, 255);
+            }
+
+            // Draw the obstacles in black.
+            if (occupancy_map.at(x, y) > 0.5) {
+                color_image.at<cv::Vec3b>(row, column) = cv::Vec3b(0, 0, 0);
+            }
+        }
+    }
+
+    extend_and_label_image(color_image, "3D turn costs/penalty value");
+    write_text(color_image, 1, "blue: low value");
+    write_text(color_image, 2, "red: high value");
+
+    cv::imwrite(filename, color_image);
+}
+
 void output_result_3d_opened_nodes_image(
     const trajectory_planner::three::SearchResult3D::OpenedNodesMap& opened_nodes,
     const trajectory_planner::Buffer<double>& occupancy_map,
@@ -561,6 +614,13 @@ void TrajectoryPlanner::write_result_debug_images(
         original_occupancy_map_,
         map_resolution_,
         prefix + "result_3d_heuristic.png");
+
+    if (result.search_result_3d.turn_costs) {
+        output_result_3d_turn_costs_image(
+            *result.search_result_3d.turn_costs,
+            original_occupancy_map_,
+            prefix + "result_3d_turn_costs.png");
+    }
 
     // Show the nodes (only the X/Y coordinates, not the orientation, obviously) that
     // were looked at during the 3D search

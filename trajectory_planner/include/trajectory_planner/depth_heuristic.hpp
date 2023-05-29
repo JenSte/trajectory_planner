@@ -34,6 +34,12 @@ public:
         return maximum_value_;
     }
 
+    // Return the width of the floorplan this heuristic was created for.
+    size_t width() const;
+
+    // Return the height of the floorplan this heuristic was created for.
+    size_t height() const;
+
 private:
 
     // Set the heuristic value of a coordinate.

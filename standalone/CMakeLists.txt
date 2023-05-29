@@ -36,6 +36,7 @@ add_executable(${PROJECT_NAME}
     "../trajectory_planner/include/trajectory_planner/planning_5d.hpp"
     "../trajectory_planner/include/trajectory_planner/planning_5d_heuristic.hpp"
     "../trajectory_planner/include/trajectory_planner/trajectory_planner.hpp"
+    "../trajectory_planner/include/trajectory_planner/turn_costs.hpp"
     "../trajectory_planner/include/trajectory_planner/types.hpp"
     "../trajectory_planner/src/buffer.cpp"
     "../trajectory_planner/src/convolution.cpp"
@@ -49,6 +50,7 @@ add_executable(${PROJECT_NAME}
     "../trajectory_planner/src/trajectory_planner_costs.cpp"
     "../trajectory_planner/src/trajectory_planner_debug_data.cpp"
     "../trajectory_planner/src/trajectory_planner_debug_images.cpp"
+    "../trajectory_planner/src/turn_costs.cpp"
     "../trajectory_planner/src/types.cpp"
     "standalone.cpp"
 )

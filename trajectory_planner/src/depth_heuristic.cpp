@@ -324,6 +324,16 @@ DepthHeuristic::DepthHeuristic(
     }
 }
 
+size_t DepthHeuristic::width() const
+{
+    return width_;
+}
+
+size_t DepthHeuristic::height() const
+{
+    return height_;
+}
+
 float DepthHeuristic::get_value(
     unsigned int x,
     unsigned int y) const

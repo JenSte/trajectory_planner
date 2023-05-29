@@ -432,7 +432,7 @@ float normalized_angle_distance(
 
 float calculate_movemement_cost(
     const Costs& costs,
-    const Pose3D& goal_pose,
+    const TurnCosts& turn_costs,
     const Pose3D& from,
     const Pose3D& to)
 {
@@ -459,24 +459,25 @@ float calculate_movemement_cost(
         return distance * (1.0f + cost_value);
     };
 
-    // Calculate the costs of turning on the spot.
-    auto pure_turn_cost = [&costs, &goal_pose](const Pose3D& from, const Pose3D& to, float cost_value) {
-        // Turning on the spot. We calculate the distance to the goal, and apply
-        // a penalty for poses close to the goal. This is so that turns near the
-        // goal are discouraged as turning often causes the robot to deviate from
-        // the pose and makes it harder to hit the goal exactly.
-        const float dx = static_cast<float>(goal_pose.x) - static_cast<float>(to.x);
-        const float dy = static_cast<float>(goal_pose.y) - static_cast<float>(to.y);
-        const float goal_distance = sqrtf(powf(dx, 2.0f) + powf(dy, 2.0f));
+    // Calculate the costs of turning on the spot, or a combined move/turn.
+    auto pure_turn_cost = [&turn_costs](const Pose3D& from, const Pose3D& to) {
+        // Turning on the spot. We calculate the difference of the two poses'
+        // orientations, and return a value that is proportional to that angle
+        // difference.
 
-        float goal_penalty = 1.0f + expf(-goal_distance / costs.goal_turn_penalty_distance());
-        if (goal_distance < 1.0f) {
-            goal_penalty = 2.0f;
+        if (from.movement == to.movement) {
+            // No turn.
+            return 0.0f;
         }
 
+        // The diference between the two poses' orientations.
         const float angle_distance = normalized_angle_distance(from.movement, to.movement);
 
-        return goal_penalty * (1.0f + angle_factor * angle_distance) * (1.0f + cost_value);
+        // The turn cost, derived from the distance to the goal, is pre-calculated
+        // before the planning starts.
+        const float turn_cost = turn_costs.get_value(to.x, to.y);
+
+        return turn_cost * angle_factor * angle_distance;
     };
 
     // The value on the costmap at the 'to' pose.
@@ -489,7 +490,7 @@ float calculate_movemement_cost(
     } else {
         if ((from.x == to.x) && (from.y == to.y)) {
             // Turning on the spot.
-            return pure_turn_cost(from, to, to_cost);
+            return pure_turn_cost(from, to);
         } else {
             // Moving forward/backward and turning at the same time.
 
@@ -497,7 +498,7 @@ float calculate_movemement_cost(
             Pose3D via{to.x, to.y, from.movement};
 
             float mc = pure_movement_cost(from, via, to_cost);
-            float tc = pure_turn_cost(via, to, to_cost);
+            float tc = pure_turn_cost(via, to);
 
             // Calculate the cost of the combined "move + turn" from the costs
             // of separate "pure move" and "pure turn" costs when going over 'via'.
@@ -572,6 +573,8 @@ SearchResult3D plan(
         return SearchResult3D(std::move(heuristic));
     }
 
+    TurnCosts turn_costs(heuristic, goal_heuristic);
+
     ss.str("");
     ss
         << "  3D heuristic created in "
@@ -587,8 +590,8 @@ SearchResult3D plan(
         return neighbours(costs, pose);
     };
 
-    auto movement_cost = [&costs, &goal_pose](const Pose3D& pose, const Pose3D& neighbour) {
-        return calculate_movemement_cost(costs, goal_pose, pose, neighbour);
+    auto movement_cost = [&costs, &turn_costs](const Pose3D& pose, const Pose3D& neighbour) {
+        return calculate_movemement_cost(costs, turn_costs, pose, neighbour);
     };
 
     auto heuristic_callback = [&goal_pose, &heuristic](const Pose3D& pose) {
@@ -644,6 +647,10 @@ SearchResult3D plan(
         result.cost.push_back(cost);
     }
     std::reverse(result.cost.begin(), result.cost.end());
+
+    // Assign at the end, when 'turn_costs' is not used by the movement
+    // callback any more.
+    result.turn_costs = std::move(turn_costs);
 
     return result;
 }

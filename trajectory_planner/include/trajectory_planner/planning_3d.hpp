@@ -3,6 +3,7 @@
 
 #include "trajectory_planner/costs.hpp"
 #include "trajectory_planner/depth_heuristic.hpp"
+#include "trajectory_planner/turn_costs.hpp"
 
 #include <boost/container/static_vector.hpp>
 #include <boost/container_hash/hash.hpp>
@@ -134,6 +135,9 @@ struct SearchResult3D
 
     // The data structure that contains the pre-calculated 2D heuristic values.
     DepthHeuristic heuristic;
+
+    // The data structure that contains the pre-calculated 2D turn-cost values.
+    std::optional<TurnCosts> turn_costs;
 
     // Describes the cells the search algorithm looked at during the search. This
     // maps the 2D coordinates to the number of orientations that were checked
