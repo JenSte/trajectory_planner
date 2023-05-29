@@ -48,13 +48,11 @@ public:
     using CostVector5D = std::vector<bool>;
 
     // Initialize a cost object. 'angle_granularity' is the number of steps the whole
-    // circle (2 * PI) is divided in. 'goal_turn_penalty_distance' is the distance to
-    // the goal (in cells) for which a penalty to turn shall be applied.
+    // circle (2 * PI) is divided in.
     Costs(
         size_t floorplan_width,
         size_t floorplan_height,
-        unsigned int angle_granularity,
-        unsigned int goal_turn_penalty_distance);
+        unsigned int angle_granularity);
 
     // Create a 3D cost vector, correctly sized and initialized to the invalid cost value.
     CostVector3D create_3d_cost_vector() const;
@@ -127,9 +125,6 @@ public:
         return angle / (2.0 * M_PI / angle_granularity_);
     }
 
-    // Return a distance in cells to the goal to apply a turn penaltiy.
-    unsigned int goal_turn_penalty_distance() const;
-
     // Intersect the 5D costs stored in this object with the passed coordinates. All
     // costs (occupancy) values in the result will be set to "occupied" if the pose
     // was not in the input argument. The 3D costs in the returned object are all empty.
@@ -164,9 +159,6 @@ private:
     // The height of the floorplan this object holds the costs for.
     size_t floorplan_height_;
 
-    // Cell distance to the goal to apply a penalty on pure turns.
-    unsigned int goal_turn_penalty_distance_;
-
     // Stores the cost values for the 3D planner.
     //
     // Maps an movement index as used by the 3D planner to a vector containing
@@ -187,7 +179,6 @@ private:
         ar & angle_granularity_;
         ar & floorplan_width_;
         ar & floorplan_height_;
-        ar & goal_turn_penalty_distance_;
         ar & costs_3d_;
         ar & costs_5d_;
     }

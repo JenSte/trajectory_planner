@@ -127,16 +127,6 @@ Costs TrajectoryPlanner::create_costs(
     plan_forward.execute(occupancy_map_padded, occupancy_map_spectrum);
     plan_forward.execute(cost_map_padded, cost_map_spectrum);
 
-    // Use a value that is proportional to the size of the footprint to select
-    // poses close to the goal.
-    const unsigned int goal_turn_penalty_distance = footprint_pixel_size / 2;
-    std::ostringstream ss;
-    ss
-        << std::setprecision(2) << std::fixed
-        << "Goal turn penalty distance: "
-        << (goal_turn_penalty_distance * resolution) << " m";
-    log_callback(ss.str());
-
     // The mutex used to protect access to 'costs'.
     std::mutex costs_mutex;
 
@@ -144,8 +134,7 @@ Costs TrajectoryPlanner::create_costs(
     Costs costs(
         occupancy_map.width(),
         occupancy_map.height(),
-        angle_granularity,
-        goal_turn_penalty_distance);
+        angle_granularity);
 
     // Process the footprint: For a given orientation, the robot's footprint is drawn
     // and then FFT transformed. Then, both spectrums of the maps (occupancy map and

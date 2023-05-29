@@ -8,16 +8,11 @@ namespace trajectory_planner
 Costs::Costs(
     size_t floorplan_width,
     size_t floorplan_height,
-    unsigned int angle_granularity,
-    unsigned int goal_turn_penalty_distance)
+    unsigned int angle_granularity)
     : angle_granularity_(angle_granularity)
     , floorplan_width_(floorplan_width)
     , floorplan_height_(floorplan_height)
-    , goal_turn_penalty_distance_(goal_turn_penalty_distance)
 {
-    if (0 == goal_turn_penalty_distance_) {
-        throw std::runtime_error("Goal turn penalty distance is zero.");
-    }
 }
 
 Costs::CostVector3D Costs::create_3d_cost_vector() const
@@ -158,16 +153,11 @@ unsigned int Costs::angle_granularity() const
     return angle_granularity_;
 }
 
-unsigned int Costs::goal_turn_penalty_distance() const
-{
-    return goal_turn_penalty_distance_;
-}
-
 Costs Costs::intersect_5d_costs(
     std::vector<Pose2D> poses) const
 {
     Costs result(
-        floorplan_width_, floorplan_height_, angle_granularity_, goal_turn_penalty_distance_);
+        floorplan_width_, floorplan_height_, angle_granularity_);
 
     for (unsigned int ai = 0; ai < angle_granularity_; ai++) {
         result.set_5d_cost_vector(ai, result.create_5d_cost_vector());

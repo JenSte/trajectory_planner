@@ -86,7 +86,7 @@ std::unique_ptr<TrajectoryPlanner> TrajectoryPlanner::load_planner(
     Buffer<double> cost_map(occupancy_map.width(), occupancy_map.height());
     draw_text(cost_map, "Cost map not available for planners loaded from cache.");
 
-    Costs costs(0, 0, 0, 1);
+    Costs costs(0, 0, 0);
     try {
         // Load the costs object.
         boost::archive::binary_iarchive ia(istream);
