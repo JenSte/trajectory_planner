@@ -203,6 +203,69 @@ std::vector<Segment> split_path(
     return result;
 }
 
+void print_segments(
+    const std::function<void(const std::string&)>& log_callback,
+    const Costs& costs,
+    const std::vector<Segment>& segments)
+{
+    std::ostringstream ss;
+    ss << "  3D path was split into " << segments.size() << " segment(s):";
+    log_callback(ss.str());
+
+    for (size_t i = 0; i < segments.size(); i++) {
+        const Segment& segment = segments.at(i);
+
+        ss.str("");
+        ss << "    segment #" << i << ":";
+        log_callback(ss.str());
+
+        ss.str("");
+        ss << "      direction: " << segment.direction;
+        log_callback(ss.str());
+
+        ss.str("");
+        ss << "      poses: " << segment.path.size();
+        log_callback(ss.str());
+
+        ss.str("");
+        ss << "      start pose: " << segment.path.front();
+        log_callback(ss.str());
+
+        ss.str("");
+        ss << "                  " << convert_pose(costs, segment.path.front(), segment.direction);
+        log_callback(ss.str());
+
+        ss.str("");
+        ss << "      goal pose:  " << segment.path.back();
+        log_callback(ss.str());
+
+        ss.str("");
+        ss << "                  " << convert_pose(costs, segment.path.back(), segment.direction);
+        log_callback(ss.str());
+    }
+}
+
+Pose5D convert_pose(
+    const Costs& costs,
+    const three::Pose3D& pose,
+    Direction direction)
+{
+    Pose5D p{
+        pose.x,
+        pose.y,
+        costs.radians_to_angle_index(three::angle_lut[pose.movement]),
+        Pose5D::LinearVelocity(0),
+        Pose5D::AngularVelocity(0)};
+
+    if (direction == Direction::FORWARD) {
+        p.linear_velocity = Pose5D::LinearVelocity(1);
+    } else if (direction == Direction::BACKWARD) {
+        p.linear_velocity = Pose5D::LinearVelocity(-1);
+    }
+
+    return p;
+}
+
 CircleCoordinates circle_coordinates(
     unsigned int pixel_radius)
 {
@@ -508,32 +571,9 @@ SegmentSearchResult plan_movement_segment(
     Costs search_space = inflate_path(
         coordinates_map, inflation_lookahead, costs, segment.path);
 
-    // The real start pose, in 5D.
-    Pose5D real_start{
-        segment.path.front().x,
-        segment.path.front().y,
-        costs.radians_to_angle_index(three::angle_lut[segment.path.front().movement]),
-        Pose5D::LinearVelocity(0),
-        Pose5D::AngularVelocity(0)};
-
-    // The real goal pose, in 5D.
-    Pose5D real_goal{
-        segment.path.back().x,
-        segment.path.back().y,
-        costs.radians_to_angle_index(three::angle_lut[segment.path.back().movement]),
-        Pose5D::LinearVelocity(0),
-        Pose5D::AngularVelocity(0)};
-
-    Pose5D start = real_start;
-    Pose5D goal = real_goal;
-
-    if (segment.direction == Direction::FORWARD) {
-        start.linear_velocity = Pose5D::LinearVelocity(1);
-        goal.linear_velocity = Pose5D::LinearVelocity(1);
-    } else {
-        start.linear_velocity = Pose5D::LinearVelocity(-1);
-        goal.linear_velocity = Pose5D::LinearVelocity(-1);
-    }
+    // The real start and goal poses, in 5D.
+    Pose5D start = convert_pose(costs, segment.path.front(), segment.direction);
+    Pose5D goal = convert_pose(costs, segment.path.back(), segment.direction);
 
     auto goal_reached = [&goal](const Pose5D& pose) {
         return pose == goal;
@@ -699,6 +739,7 @@ SearchResult5D plan(
     // We split the 3D path up into multiple segments, each of
     // which is then processed individually in the 5D space.
     std::vector<Segment> segments = split_path(path);
+    print_segments(log_callback, costs, segments);
 
     std::unique_ptr<boost::asio::thread_pool> pool;
     if (multi_threaded) {

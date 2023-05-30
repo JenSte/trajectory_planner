@@ -78,6 +78,18 @@ std::vector<Segment> split_path(
     unsigned int angle_granularity,
     const three::Path3D& path);
 
+// Log details on the splitted 3D path.
+void print_segments(
+    const std::function<void(const std::string&)>& log_callback,
+    const Costs& costs,
+    const std::vector<Segment>& segments);
+
+// Convert a 3D pose to the closes 5D pose.
+Pose5D convert_pose(
+    const Costs& costs,
+    const three::Pose3D& pose,
+    Direction direction);
+
 // Coordinates covered by a circle which has the origin at 0/0.
 using CircleCoordinates = std::vector<std::tuple<int, int>>;
 
