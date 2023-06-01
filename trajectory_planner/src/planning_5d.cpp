@@ -97,7 +97,146 @@ private:
     std::unordered_map<Pose5D, Pose5D, boost::hash<Pose5D>> predecessors_;
 };
 
+std::vector<Segment> split_movement_segment(
+    const std::function<void(const std::string&)>& log_callback,
+    double map_resolution,
+    const MotionModel& motion_model,
+    const Segment& segment)
+{
+    // The start and end indices (of poses in 'segment.path') of
+    // runs with consecutive poses that have the same direction.
+    using Run = std::tuple<size_t, size_t>;
+
+    // The runs with consecutive orientations found in 'segment.path'.
+    std::vector<Run> all_runs;
+
+    {
+        // Find consecutive poses with identical orientation values.
+
+        std::optional<three::MovementIndex> last_movement;
+        size_t start_index;
+
+        for (size_t i = 0; i < segment.path.size(); i++) {
+            if (!last_movement) {
+                // 'last_movement' has not been set yet. We are at the beginning
+                // of 'segment.path', start the first run.
+                last_movement = segment.path.at(i).movement;
+                start_index = i;
+            } else {
+                if (*last_movement != segment.path.at(i).movement) {
+                    // The movement has changed, we've finished a run.
+                    size_t end_index = i - 1;
+
+                    all_runs.push_back(std::make_tuple(start_index, end_index));
+
+                    // Start the next run.
+                    last_movement = segment.path.at(i).movement;
+                    start_index = i;
+                }
+            }
+        }
+
+        // Remove a straight part found at the start of 'segment.path', it makes
+        // no sense of splitting this. The same thing is not needed at the end
+        // of 'all_runs', because of how the loop above terminates these runs at
+        // the end are not generated.
+        if (!all_runs.empty()) {
+            size_t first_start = std::get<0>(all_runs.at(0));
+
+            if (first_start == 0) {
+                all_runs.erase(all_runs.begin());
+            }
+        }
+    }
+
+    // The valid runs: The ones that are long enough.
+    std::vector<Run> valid_runs;
+
+    {
+        // We consider a run long enough if it is possible for the vehicle to
+        // accelerate from 0 to the maximum speed and then brake down again within
+        // the length of the run.
+        double minimum_distance_meters = 0.0;
+        for (double velocity: motion_model.linear_steps()) {
+            minimum_distance_meters += velocity * motion_model.time_delta();
+        }
+        minimum_distance_meters *= 2.5;
+
+        // The 3D path poses are all pixel coordinates, so the minimum length
+        // has to be converted to this domain.
+        const double minimum_distance_pixels =
+            minimum_distance_meters / map_resolution;
+
+        std::ostringstream ss;
+        ss
+            << "  Minimum length for splitting straight segments: "
+            << std::fixed << std::setprecision(2)
+            << minimum_distance_pixels << " pixels.";
+        log_callback(ss.str());
+
+        for (const Run& run: all_runs) {
+            // The start and end poses of the run.
+            three::Pose3D start = segment.path.at(std::get<0>(run));
+            three::Pose3D end = segment.path.at(std::get<1>(run));
+
+            // Calculate the length of this run.
+            const double dx = static_cast<double>(start.x) - static_cast<double>(end.x);
+            const double dy = static_cast<double>(start.y) - static_cast<double>(end.y);
+            const double dist = sqrt(pow(dx, 2.0) + pow(dy, 2.0));
+
+            if (dist > minimum_distance_pixels) {
+                valid_runs.push_back(run);
+            }
+        }
+    }
+
+    // These are the poses (indices of the poses) in the middle of the valid runs
+    // that are used to split up the original 3D path.
+    std::vector<size_t> split_points;
+    {
+        // Start of the path.
+        split_points.push_back(0);
+
+        // The pose (or, the index of the pose) in the middle of a valid run.
+        for (const Run& run: valid_runs) {
+            const size_t s = std::get<0>(run);
+            const size_t e = std::get<1>(run);
+
+            split_points.push_back(s + (e - s) / 2);
+        }
+
+        // End of the path.
+        split_points.push_back(segment.path.size() - 1);
+    }
+
+    std::vector<Segment> result;
+
+    {
+        // Take pairs of the split points and create new segments that
+        // contain the poses between the two split points.
+
+        for (size_t i = 0; i < split_points.size() - 1; i++) {
+            const size_t s = split_points.at(i);
+            const size_t e = split_points.at(i + 1);
+
+            Segment new_segment;
+            new_segment.direction = segment.direction;
+            std::copy(
+                segment.path.begin() + s,
+                segment.path.begin() + e,
+                std::back_inserter(new_segment.path));
+
+            result.push_back(new_segment);
+        }
+    }
+
+    return result;
+}
+
 std::vector<Segment> split_path(
+    const std::function<void(const std::string&)>& log_callback,
+    double map_resolution,
+    const MotionModel& motion_model,
     const three::Path3D& path)
 {
     std::vector<Segment> result;
@@ -200,7 +339,29 @@ std::vector<Segment> split_path(
         result.emplace_back(Segment{d, std::move(path)});
     }
 
-    return result;
+    // The elements in 'result', but with another split-procedure applied that
+    // tries to split up long forward/backward movement segments even further.
+    std::vector<Segment> split_result;
+
+    for (const Segment& segment: result) {
+        if (segment.direction == Direction::TURN) {
+            split_result.push_back(segment);
+        } else {
+            // Split movement segment further up.
+            std::vector<Segment> segments = split_movement_segment(
+                log_callback,
+                map_resolution,
+                motion_model,
+                segment);
+
+            split_result.insert(
+                split_result.end(),
+                segments.begin(),
+                segments.end());
+        }
+    }
+
+    return split_result;
 }
 
 void print_segments(
@@ -738,7 +899,11 @@ SearchResult5D plan(
 
     // We split the 3D path up into multiple segments, each of
     // which is then processed individually in the 5D space.
-    std::vector<Segment> segments = split_path(path);
+    std::vector<Segment> segments = split_path(
+        log_callback,
+        map_resolution,
+        motion_model,
+        path);
     print_segments(log_callback, costs, segments);
 
     std::unique_ptr<boost::asio::thread_pool> pool;

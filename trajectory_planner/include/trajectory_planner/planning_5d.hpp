@@ -73,9 +73,20 @@ struct SearchResult5D
     std::vector<SegmentSearchResult> segment;
 };
 
+// Helper function for 'split_path', splits a movement (forward/backward) further
+// up into multiple parts.
+std::vector<Segment> split_movement_segment(
+    const std::function<void(const std::string&)>& log_callback,
+    double map_resolution,
+    const MotionModel& motion_model,
+    const Segment& segment);
+
 // Split a path into multiple segments with different directions.
 std::vector<Segment> split_path(
+    const std::function<void(const std::string&)>& log_callback,
     unsigned int angle_granularity,
+    double map_resolution,
+    const MotionModel& motion_model,
     const three::Path3D& path);
 
 // Log details on the splitted 3D path.
