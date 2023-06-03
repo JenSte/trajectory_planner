@@ -36,8 +36,14 @@ struct Segment
     // The directon of the segment.
     Direction direction;
 
-    // The poses that make up this segment.
+    // The poses that make up this segment, cut out from the original 3D path.
     three::Path3D path;
+
+    // The 5D pose to start the 5D search from.
+    Pose5D start_pose;
+
+    // The 5D pose to end the 5D search at.
+    Pose5D goal_pose;
 };
 
 // The search result for a single segment.
@@ -78,6 +84,7 @@ struct SearchResult5D
 std::vector<Segment> split_movement_segment(
     const std::function<void(const std::string&)>& log_callback,
     double map_resolution,
+    const Costs& costs,
     const MotionModel& motion_model,
     const Segment& segment);
 
@@ -86,20 +93,22 @@ std::vector<Segment> split_path(
     const std::function<void(const std::string&)>& log_callback,
     unsigned int angle_granularity,
     double map_resolution,
+    const Costs& costs,
     const MotionModel& motion_model,
     const three::Path3D& path);
 
 // Log details on the splitted 3D path.
 void print_segments(
     const std::function<void(const std::string&)>& log_callback,
-    const Costs& costs,
     const std::vector<Segment>& segments);
 
 // Convert a 3D pose to the closes 5D pose.
 Pose5D convert_pose(
     const Costs& costs,
+    const MotionModel& motion_model,
     const three::Pose3D& pose,
-    Direction direction);
+    Direction direction,
+    bool high_speed);
 
 // Coordinates covered by a circle which has the origin at 0/0.
 using CircleCoordinates = std::vector<std::tuple<int, int>>;

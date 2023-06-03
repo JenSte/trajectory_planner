@@ -100,6 +100,7 @@ private:
 std::vector<Segment> split_movement_segment(
     const std::function<void(const std::string&)>& log_callback,
     double map_resolution,
+    const Costs& costs,
     const MotionModel& motion_model,
     const Segment& segment)
 {
@@ -226,7 +227,30 @@ std::vector<Segment> split_movement_segment(
                 segment.path.begin() + e,
                 std::back_inserter(new_segment.path));
 
-            result.push_back(new_segment);
+            // The first and the last pose of the split up (original) movement
+            // segment have a small speed value, while the start/goal poses
+            // of the newly generated segments inbetween have a high speed
+            // value. No need to stop at the points where the straight parts
+            // where split up.
+            const bool start_high_speed = i != 0;
+            const bool goal_high_speed = (i + 1) != (split_points.size() - 1);
+
+            new_segment.start_pose =
+                convert_pose(
+                    costs,
+                    motion_model,
+                    new_segment.path.front(),
+                    new_segment.direction,
+                    start_high_speed);
+            new_segment.goal_pose =
+                convert_pose(
+                    costs,
+                    motion_model,
+                    new_segment.path.back(),
+                    new_segment.direction,
+                    goal_high_speed);
+
+            result.emplace_back(std::move(new_segment));
         }
     }
 
@@ -236,6 +260,7 @@ std::vector<Segment> split_movement_segment(
 std::vector<Segment> split_path(
     const std::function<void(const std::string&)>& log_callback,
     double map_resolution,
+    const Costs& costs,
     const MotionModel& motion_model,
     const three::Path3D& path)
 {
@@ -325,18 +350,32 @@ std::vector<Segment> split_path(
         // Find the end of the current segment.
         auto last = std::find_if_not(begin, pairs.cend(), same_direction);
 
+        Segment new_segment;
+        new_segment.direction = d;
+
         // Copy out the poses of the current segment.
-        three::Path3D path;
         for (auto it = begin; it < last; it++) {
             if (it == begin) {
-                path.push_back(std::get<0>(*it));
+                new_segment.path.push_back(std::get<0>(*it));
             }
-            path.push_back(std::get<1>(*it));
+            new_segment.path.push_back(std::get<1>(*it));
         }
-
         begin = last;
 
-        result.emplace_back(Segment{d, std::move(path)});
+        new_segment.start_pose = convert_pose(
+            costs,
+            motion_model,
+            new_segment.path.front(),
+            new_segment.direction,
+            false);
+        new_segment.goal_pose = convert_pose(
+            costs,
+            motion_model,
+            new_segment.path.back(),
+            new_segment.direction,
+            false);
+
+        result.emplace_back(std::move(new_segment));
     }
 
     // The elements in 'result', but with another split-procedure applied that
@@ -351,6 +390,7 @@ std::vector<Segment> split_path(
             std::vector<Segment> segments = split_movement_segment(
                 log_callback,
                 map_resolution,
+                costs,
                 motion_model,
                 segment);
 
@@ -366,7 +406,6 @@ std::vector<Segment> split_path(
 
 void print_segments(
     const std::function<void(const std::string&)>& log_callback,
-    const Costs& costs,
     const std::vector<Segment>& segments)
 {
     std::ostringstream ss;
@@ -393,7 +432,7 @@ void print_segments(
         log_callback(ss.str());
 
         ss.str("");
-        ss << "                  " << convert_pose(costs, segment.path.front(), segment.direction);
+        ss << "                  " << segment.start_pose;
         log_callback(ss.str());
 
         ss.str("");
@@ -401,15 +440,17 @@ void print_segments(
         log_callback(ss.str());
 
         ss.str("");
-        ss << "                  " << convert_pose(costs, segment.path.back(), segment.direction);
+        ss << "                  " << segment.goal_pose;
         log_callback(ss.str());
     }
 }
 
 Pose5D convert_pose(
     const Costs& costs,
+    const MotionModel& motion_model,
     const three::Pose3D& pose,
-    Direction direction)
+    Direction direction,
+    bool high_speed)
 {
     Pose5D p{
         pose.x,
@@ -419,9 +460,17 @@ Pose5D convert_pose(
         Pose5D::AngularVelocity(0)};
 
     if (direction == Direction::FORWARD) {
-        p.linear_velocity = Pose5D::LinearVelocity(1);
+        if (high_speed) {
+            p.linear_velocity = Pose5D::LinearVelocity(motion_model.linear_steps().size() - 1);
+        } else {
+            p.linear_velocity = Pose5D::LinearVelocity(1);
+        }
     } else if (direction == Direction::BACKWARD) {
-        p.linear_velocity = Pose5D::LinearVelocity(-1);
+        if (high_speed) {
+            p.linear_velocity = Pose5D::LinearVelocity(-(motion_model.linear_steps().size() - 1));
+        } else {
+            p.linear_velocity = Pose5D::LinearVelocity(-1);
+        }
     }
 
     return p;
@@ -733,8 +782,8 @@ SegmentSearchResult plan_movement_segment(
         coordinates_map, inflation_lookahead, costs, segment.path);
 
     // The real start and goal poses, in 5D.
-    Pose5D start = convert_pose(costs, segment.path.front(), segment.direction);
-    Pose5D goal = convert_pose(costs, segment.path.back(), segment.direction);
+    Pose5D start = segment.start_pose;
+    Pose5D goal = segment.goal_pose;
 
     auto goal_reached = [&goal](const Pose5D& pose) {
         return pose == goal;
@@ -902,9 +951,10 @@ SearchResult5D plan(
     std::vector<Segment> segments = split_path(
         log_callback,
         map_resolution,
+        costs,
         motion_model,
         path);
-    print_segments(log_callback, costs, segments);
+    print_segments(log_callback, segments);
 
     std::unique_ptr<boost::asio::thread_pool> pool;
     if (multi_threaded) {
