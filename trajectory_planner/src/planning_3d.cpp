@@ -454,9 +454,11 @@ float calculate_movemement_cost(
         }
         // else: Pure forward/backward, keep default value.
 
-        // The cost of the neighbour is multiplied by the distance to the cell,
-        // so that edges that move diagonally do not have an advantage.
-        return distance * (1.0f + cost_value);
+        // The cost value, scaled up by the distance of the movement,
+        // so that bigger steps don't have an unfair advantage.
+        const float normalized_cost = cost_value * distance;
+
+        return distance + normalized_cost;
     };
 
     // Calculate the costs of turning on the spot, or a combined move/turn.
