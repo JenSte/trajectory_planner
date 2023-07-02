@@ -816,7 +816,13 @@ SegmentSearchResult plan_movement_segment(
         const double low_speed_penalty =
             (1.0 / (2.0 * indices)) * (indices - 1 - linear_index);
 
-        return cell_distance + sqrt(error * angle_error) + low_speed_penalty;
+        unsigned turn = abs(
+            static_cast<int>(pose.linear_velocity) - static_cast<int>(neighbour.linear_velocity));
+        double turn_penalty = turn / 10.0;
+
+        return cell_distance
+                * (1.0 + low_speed_penalty)
+                * (1.0 + turn_penalty);
     };
 
     auto timestamp_start = std::chrono::steady_clock::now();
