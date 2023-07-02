@@ -159,8 +159,13 @@ def plot_data(data, output_file, width, height, dpi, wheel_distance):
             if d.heuristic > d.cost:
                 axes_c.axvspan(t - 0.1, t + 0.1, facecolor="r", alpha=0.5)
 
+                e = d.heuristic - d.cost
+
                 print(
-                    f"bad heuristic value at path element {t}, h = {d.heuristic:.2f}, c = {d.cost:.2f}"
+                    f"bad heuristic value at path element {t}, "
+                    f"h = {d.heuristic:.2f}, "
+                    f"c = {d.cost:.2f}, "
+                    f"h - c = {e:.3f}"
                 )
 
     matplotlib.pyplot.setp(axes_x.get_xticklabels(), visible=False)
