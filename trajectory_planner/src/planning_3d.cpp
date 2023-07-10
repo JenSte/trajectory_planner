@@ -487,8 +487,11 @@ float calculate_movemement_cost(
         costs.get_3d_cost(to.x, to.y, to.movement));
 
     if (from.movement == to.movement) {
+        const float from_cost = Costs::cost_3d_to_float(
+            costs.get_3d_cost(from.x, from.y, from.movement));
+
         // The orientation stayed the same: pure forward/backward movement.
-        return pure_movement_cost(from, to, to_cost);
+        return pure_movement_cost(from, to, std::max(from_cost, to_cost));
     } else {
         if ((from.x == to.x) && (from.y == to.y)) {
             // Turning on the spot.
