@@ -113,6 +113,7 @@ TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_par
     result.angular_acceleration_maximum = 3.5;
 
     result.multi_threaded = true;
+    nh_.getParam("split_long_5d_segments", result.split_long_5d_segments);
 
     nh_.getParam("inflation_5d_radius", result.inflation_5d_radius);
     nh_.getParam("inflation_5d_lookahead", result.inflation_5d_lookahead);

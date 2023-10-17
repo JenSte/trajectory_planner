@@ -144,6 +144,8 @@ ROSOccupancyGrid search_space_5d_to_occupacy_grid_msg(
 // Create an augmented path message for a 3D search result.
 TPAugmentedPath search_result_3d_to_augmented_path_msg(
     const std::string& name,
+    const unsigned segment_count,
+    const unsigned total_segments,
     const Costmap2D* costmap_2d,
     const std::string& frame_id,
     const MotionModel& motion_model,
@@ -152,6 +154,8 @@ TPAugmentedPath search_result_3d_to_augmented_path_msg(
 // Create an augmented path message for a 5D segment search result.
 TPAugmentedPath search_result_5d_to_augmented_path_msg(
     const std::string& name,
+    const unsigned segment_count,
+    const unsigned total_segments,
     const Costmap2D* costmap_2d,
     const std::string& frame_id,
     unsigned int angle_granularity,

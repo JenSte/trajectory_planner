@@ -25,6 +25,9 @@ boost::program_options::variables_map parse_arguments(int argc, const char *argv
         ("cost_map_3d_type", po::value<std::string>()->required())
         ("orientation_costs_3d_type", po::value<std::string>()->required())
 
+        // Options that influence the behaviour of the 5D planner.
+        ("split_long_5d_segments", po::value<bool>()->default_value(true))
+
         // Start and goal coordinates are in raw pixel values (y coordinates growing down).
         ("start_x", po::value<unsigned int>()->required())
         ("start_y", po::value<unsigned int>()->required())
@@ -164,6 +167,7 @@ int main(int argc, const char* argv[])
     pp.linear_velocity_steps = 5;
     pp.angular_velocity_steps = 5;
     pp.multi_threaded = arguments["multi_threaded"].as<bool>();
+    pp.split_long_5d_segments = arguments["split_long_5d_segments"].as<bool>();
     pp.heuristic_type = trajectory_planner::HeuristicType::DEPTH;
     pp.extract_3d_opened_nodes = arguments["write_debug_images"].as<bool>();
 

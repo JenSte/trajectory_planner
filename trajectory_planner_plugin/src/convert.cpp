@@ -329,6 +329,8 @@ ROSOccupancyGrid search_space_5d_to_occupacy_grid_msg(
 
 TPAugmentedPath search_result_3d_to_augmented_path_msg(
     const std::string& name,
+    const unsigned segment_count,
+    const unsigned total_segments,
     const Costmap2D* costmap_2d,
     const std::string& frame_id,
     const MotionModel& motion_model,
@@ -343,6 +345,9 @@ TPAugmentedPath search_result_3d_to_augmented_path_msg(
 
     TPAugmentedPath result;
     result.name = name;
+    result.segment_type = TPAugmentedPath::SEGMENT_TYPE_FORWARD;
+    result.segment_count = segment_count;
+    result.total_segments = total_segments;
     result.motion_model = motion_model_to_motion_model_msg(motion_model);
 
     for (size_t i = 0; i < search_result.path.size(); ++i) {
@@ -365,6 +370,8 @@ TPAugmentedPath search_result_3d_to_augmented_path_msg(
 
 TPAugmentedPath search_result_5d_to_augmented_path_msg(
     const std::string& name,
+    const unsigned segment_count,
+    const unsigned total_segments,
     const Costmap2D* costmap_2d,
     const std::string& frame_id,
     unsigned int angle_granularity,
@@ -373,6 +380,17 @@ TPAugmentedPath search_result_5d_to_augmented_path_msg(
 {
     TPAugmentedPath result;
     result.name = name;
+
+    if (search_result.direction == trajectory_planner::five::Direction::FORWARD) {
+        result.segment_type = TPAugmentedPath::SEGMENT_TYPE_FORWARD;
+    } else if (search_result.direction == trajectory_planner::five::Direction::BACKWARD) {
+        result.segment_type = TPAugmentedPath::SEGMENT_TYPE_BACKWARD;
+    } else {
+        result.segment_type = TPAugmentedPath::SEGMENT_TYPE_TURN;
+    }
+
+    result.segment_count = segment_count;
+    result.total_segments = total_segments;
     result.motion_model = motion_model_to_motion_model_msg(motion_model);
 
     for (size_t i = 0; i < search_result.path.size(); ++i) {
@@ -404,6 +422,10 @@ TPMotionModel motion_model_to_motion_model_msg(
     const MotionModel& motion_model)
 {
     TPMotionModel result;
+
+    result.maximum_wheel_velocity = motion_model.maximum_wheel_velocity();
+    result.maximum_wheel_acceleration = motion_model.maximum_wheel_acceleration();
+    result.wheel_distance = motion_model.wheel_distance();
 
     for (const double linear_velocity_value: motion_model.linear_steps()) {
         result.linear_velocities.push_back(linear_velocity_value);

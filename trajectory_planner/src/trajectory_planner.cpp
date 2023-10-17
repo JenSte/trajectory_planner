@@ -338,6 +338,7 @@ TrajectoryPlanner::Result TrajectoryPlanner::plan(
         parameters.heuristic_type,
         costs_,
         motion_model,
+        parameters.split_long_5d_segments,
         result_3d.path);
     timestamp_end = std::chrono::steady_clock::now();
     duration = timestamp_end - timestamp_start;

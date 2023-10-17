@@ -197,6 +197,18 @@ void Plugin::log_planning_parameters(
 
     ss.str("");
     ss
+        << "  multi_threaded: "
+        << (parameters.multi_threaded ? "yes" : "no");
+    log_info(ss.str());
+
+    ss.str("");
+    ss
+        << "  split_long_5d_segments: "
+        << (parameters.split_long_5d_segments ? "yes" : "no");
+    log_info(ss.str());
+
+    ss.str("");
+    ss
         << "  heuristic: "
         << parameters.heuristic_type;
     log_info(ss.str());
@@ -366,6 +378,8 @@ void Plugin::publish_augmented_path_messages(
     publish_augmented_path(
         convert::search_result_3d_to_augmented_path_msg(
             ss.str() + "_3d",
+            1,
+            1,
             costmap,
             frame_id,
             result.motion_model,
@@ -387,6 +401,8 @@ void Plugin::publish_augmented_path_messages(
         publish_augmented_path(
             convert::search_result_5d_to_augmented_path_msg(
                 sss.str(),
+                index,
+                result.search_result_5d.segment.size(),
                 costmap,
                 frame_id,
                 angle_granularity,

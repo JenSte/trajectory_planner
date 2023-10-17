@@ -1,0 +1,15 @@
+<launch>
+    <!-- Send a navigation goal on the "office" map. -->
+
+    <node
+        name="publish_goal"
+        pkg="trajectory_planner_tools"
+        type="send_pose.py"
+        output="screen"
+    >
+        <remap from="~pose" to="/move_base_simple/goal"/>
+        <param name="x" value="3.0"/>
+        <param name="y" value="7.0"/>
+        <param name="theta" value="1.571"/>
+    </node>
+</launch>

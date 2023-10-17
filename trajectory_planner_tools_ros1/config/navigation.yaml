@@ -55,6 +55,7 @@ TrajectoryPlanner:
 
   inflation_5d_radius: 0.10
   inflation_5d_lookahead: 0.5
+  split_long_5d_segments: false
   heuristic: "depth"
 
 # Comment "in" to use the DWA planner. The default is the "Trajectory Rollout" planner

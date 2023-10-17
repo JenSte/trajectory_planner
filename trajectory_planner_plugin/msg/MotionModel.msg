@@ -1,3 +1,15 @@
+# The maximum wheel velocity used to create this motion
+# model, in m/s.
+float64 maximum_wheel_velocity
+
+# The maximum wheel acceleration used to create this motion
+# model, in m/(s^2).
+float64 maximum_wheel_acceleration
+
+# The distance between the wheels of the robot used to create
+# this motion model, in m.
+float64 wheel_distance
+
 # The linear velocities used for the 5D planning, in m/s.
 float64[] linear_velocities
 

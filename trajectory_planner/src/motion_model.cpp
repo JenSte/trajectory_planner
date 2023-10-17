@@ -13,6 +13,9 @@ MotionModel::MotionModel(
 //    unsigned int angle_granularity,
     unsigned int linear_velocity_steps,
     unsigned int angular_velocity_steps)
+    : maximum_wheel_velocity_(maximum_wheel_velocity)
+    , maximum_wheel_acceleration_(maximum_wheel_acceleration)
+    , wheel_distance_(wheel_distance)
 {
     // Maximum linear speed of the vehicle: Both wheels drive forward with maximum
     // speed.
@@ -261,6 +264,21 @@ std::tuple<double, double, double> MotionModel::calculate_displacement(
 double MotionModel::time_delta() const
 {
     return time_delta_;
+}
+
+double MotionModel::maximum_wheel_velocity() const
+{
+    return maximum_wheel_velocity_;
+}
+
+double MotionModel::maximum_wheel_acceleration() const
+{
+    return maximum_wheel_acceleration_;
+}
+
+double MotionModel::wheel_distance() const
+{
+    return wheel_distance_;
 }
 
 const std::vector<double>& MotionModel::linear_steps() const

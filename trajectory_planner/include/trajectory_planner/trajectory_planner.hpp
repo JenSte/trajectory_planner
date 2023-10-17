@@ -65,6 +65,10 @@ public:
         // Wheter or not to do a multi-threaded search.
         bool multi_threaded;
 
+        // Wheter or not to split long straight segments for the 5D path and process
+        // them separately (possibly in multiple threads).
+        bool split_long_5d_segments;
+
         // The heuristic to use for the 5D search.
         HeuristicType heuristic_type;
 

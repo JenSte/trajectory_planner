@@ -95,6 +95,7 @@ std::vector<Segment> split_path(
     double map_resolution,
     const Costs& costs,
     const MotionModel& motion_model,
+    bool split_long_5d_segments,
     const three::Path3D& path);
 
 // Log details on the splitted 3D path.
@@ -161,6 +162,7 @@ SearchResult5D plan(
     HeuristicType heuristic_type,
     const Costs& costs,
     const MotionModel& motion_model,
+    bool split_long_5d_segments,
     const three::Path3D& path);
 }
 

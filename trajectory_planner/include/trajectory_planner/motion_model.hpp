@@ -102,6 +102,15 @@ public:
     // Return the time delta simulation parameter that was passed to the constructor.
     double time_delta() const;
 
+    // Return the maximum wheel velocity that was passed to the constructor
+    double maximum_wheel_velocity() const;
+
+    // Return the maximum wheel acceleration that was passed to the constructor
+    double maximum_wheel_acceleration() const;
+
+    // Return the distance between the wheels that was passed to the constructor.
+    double wheel_distance() const;
+
     // Return a reference to the internal vector holding the linear velocity values.
     const std::vector<double>& linear_steps() const;
 
@@ -117,6 +126,15 @@ private:
 
     // The simulation time step.
     double time_delta_;
+
+    // The maximum wheel velocity, in m/s.
+    double maximum_wheel_velocity_;
+
+    // The maximum wheel acceleration, in m/(s^2).
+    double maximum_wheel_acceleration_;
+
+    // The distance between the wheels, in meters.
+    double wheel_distance_;
 
     // Contains a number of linear velocity values (in m/s).
     std::vector<double> linear_steps_;

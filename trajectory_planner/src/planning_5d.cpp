@@ -262,6 +262,7 @@ std::vector<Segment> split_path(
     double map_resolution,
     const Costs& costs,
     const MotionModel& motion_model,
+    bool split_long_5d_segments,
     const three::Path3D& path)
 {
     std::vector<Segment> result;
@@ -376,6 +377,11 @@ std::vector<Segment> split_path(
             false);
 
         result.emplace_back(std::move(new_segment));
+    }
+
+    if (!split_long_5d_segments) {
+        log_callback("Splitting of long straight segments for 5D search is disabled.");
+        return result;
     }
 
     // The elements in 'result', but with another split-procedure applied that
@@ -914,6 +920,7 @@ SearchResult5D plan(
     HeuristicType heuristic_type,
     const Costs& costs,
     const MotionModel& motion_model,
+    bool split_long_5d_segments,
     const three::Path3D& path)
 {
     // The width, in pixels, of the maximum inflation around a cell in the 3D path.
@@ -959,6 +966,7 @@ SearchResult5D plan(
         map_resolution,
         costs,
         motion_model,
+        split_long_5d_segments,
         path);
     print_segments(log_callback, segments);
 

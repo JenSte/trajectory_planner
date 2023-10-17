@@ -1,0 +1,26 @@
+<launch>
+    <!--
+        This launch file starts the planner and also a script that does a forward
+        simulation of the planned path.
+    -->
+
+    <!--
+        A "static" setup of the planner plugin using fixed tf broadcasters
+        instead of a localization.
+    -->
+    <include
+        file="$(find trajectory_planner_tools)/launch/static.launch">
+        <arg name="map_name" value="office.yaml"/>
+        <arg name="base_x" value="10.0"/>
+        <arg name="base_y" value="1.8"/>
+        <arg name="base_theta" value="3.1415"/>
+    </include>
+
+    <node
+        pkg="trajectory_planner_tools"
+        type="forward_simulation.py"
+        name="forward_simulation"
+        output="screen">
+        <remap from="~path" to="/move_base/TrajectoryPlanner/augmented_path"/>
+    </node>
+</launch>

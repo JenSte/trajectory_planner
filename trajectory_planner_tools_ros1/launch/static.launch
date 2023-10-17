@@ -4,20 +4,48 @@
         to make it possible to see if the navigation plugin itself is working.
      -->
 
-    <include
-        file="$(find trajectory_planner_tools)/launch/navigation.launch"/>
+    <arg
+        name="map_name"
+        default="cave_2cm.yaml"
+        doc="The map to load."
+    />
 
+    <arg
+        name="base_x"
+        default="5.0"
+        doc="The X coordinate of the robot pose."
+    />
+
+    <arg
+        name="base_y"
+        default="5.0"
+        doc="The Y coordinate of the robot pose."
+    />
+
+    <arg
+        name="base_theta"
+        default="0.0"
+        doc="The orientation of the robot pose."
+    />
+
+    <include
+        file="$(find trajectory_planner_tools)/launch/navigation.launch">
+        <arg name="map_name" value="$(arg map_name)"/>
+    </include>
+
+    <!-- A static tf broadcaster instead of a proper localization. -->
     <node
         pkg="tf"
         type="static_transform_publisher"
         name="link_broadcaster_map_odom"
-        args="5 5 0 0 0 0 1 map odom 100"
+        args="$(arg base_x) $(arg base_y) 0.0 $(arg base_theta) 0.0 0.0 map odom 100"
     />
 
+    <!-- A static tf broadcaster instead of a "ROS driver" that publishes odom. -->
     <node
         pkg="tf"
         type="static_transform_publisher"
         name="link_broadcaster_odom_base_link"
-        args="1 0 0 0 0 0 1 odom base_link 100"
+        args="0 0 0 0 0 0 1 odom base_link 100"
     />
 </launch>
