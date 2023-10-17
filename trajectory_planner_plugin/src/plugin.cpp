@@ -274,6 +274,7 @@ convert::ROSPath Plugin::plan(
     }
 
     // Publish the 3D plan.
+    log_info("Publishing 3D plan...");
     publish_plan_3d(
         convert::plan_3d_to_path_msg(
             costmap_2d,
@@ -281,6 +282,7 @@ convert::ROSPath Plugin::plan(
             result));
 
     // Publish a map showing the heuristic used by the 3D planner.
+    log_info("Publishing 3D heuristic map...");
     publish_heuristic_3d(
         convert::heuristic_3d_to_occupancy_grid_msg(
             result.search_result_3d.heuristic,
@@ -292,15 +294,20 @@ convert::ROSPath Plugin::plan(
             costmap_2d->getOriginY()));
 
     // Publish a map showing the nodes opened by the 3D planner.
-    publish_opened_3d_nodes_map(
-        convert::opened_3d_nodes_to_occupancy_grid_msg(
-            result.search_result_3d.opened_nodes,
-            planner->original_occupancy_map().width(),
-            planner->original_occupancy_map().height(),
-            costmap_ros_->getGlobalFrameID(),
-            costmap_2d->getResolution(),
-            costmap_2d->getOriginX(),
-            costmap_2d->getOriginY()));
+    if (planning_parameters.extract_3d_opened_nodes) {
+        log_info("Publishing 3D opened nodes map...");
+        publish_opened_3d_nodes_map(
+            convert::opened_3d_nodes_to_occupancy_grid_msg(
+                result.search_result_3d.opened_nodes,
+                planner->original_occupancy_map().width(),
+                planner->original_occupancy_map().height(),
+                costmap_ros_->getGlobalFrameID(),
+                costmap_2d->getResolution(),
+                costmap_2d->getOriginX(),
+                costmap_2d->getOriginY()));
+    } else {
+        log_info("Not publishing 3D opened nodes map (disabled by user).");
+    }
 
     // Publish a map showing the search space used by the 5D planner.
     publish_search_space_5d_map(

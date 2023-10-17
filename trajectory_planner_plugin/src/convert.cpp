@@ -212,10 +212,16 @@ ROSOccupancyGrid heuristic_3d_to_occupancy_grid_msg(
                 // This cell is not part of the search space.
                 result.data.push_back(0);
             } else {
-                // Map the heuristic into the range from 0 to 98, which rviz
+                // Map the heuristic into the range from 1 to 98, which rviz
                 // draws from blue to red in "costmap" mode.
-                const uint8_t h = 1.0 + h / heuristic.maximum_value() * 97.0;
-                result.data.push_back(h);
+                const float blue = 1.0f;
+                const float red = 98.0f;
+
+                // Small heuristic value (close to goal): blue
+                // High heuristic value (far from goal): red
+                const float color = blue + (h / heuristic.maximum_value() * (red - blue));
+
+                result.data.push_back(static_cast<uint8_t>(color));
             }
         }
     }

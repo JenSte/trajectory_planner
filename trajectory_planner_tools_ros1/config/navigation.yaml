@@ -34,6 +34,7 @@ TrajectoryPlanner:
   inflation_radius: 2.5
   cache_directory: "/tmp"
   debug_directory: "/tmp"
+  extract_3d_opened_nodes: true
 
   # The coordinate of an "internal" point on the map, everything not connected
   # via free space is removed from the map (optional).

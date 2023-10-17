@@ -151,6 +151,7 @@ TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_par
     }
 
     result.extract_3d_opened_nodes = false;
+    nh_.getParam("extract_3d_opened_nodes", result.extract_3d_opened_nodes);
 
     return result;
 }
