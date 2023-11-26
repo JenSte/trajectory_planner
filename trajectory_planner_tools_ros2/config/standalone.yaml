@@ -8,8 +8,23 @@ planner_server:
     trajectory_planner:
       plugin: "trajectory_planner/TrajectoryPlanner"
 
+      # The way costs going away from static obstacles are calculated
+      # ("linear" or "exponential" fall off).
+      cost_map_3d_type: "exponential"
+
+      # "identical" for all 3D costs being identical to the inflated cost map
+      # (inflated according to 'cost_map_3d_type'), or "footprint" for using
+      # per-3D-orientation costs.
+      orientation_costs_3d_type: "identical"
+
+      # Like ROS' costmap_2d 'inscribed_radius', used to inflate the static obstacles
+      # according to 'cost_map_3d_type'. (But only used to calculate the cost values,
+      # collisions and with this the valid poses of the robot are calculated using
+      # the robot's real footprint.)
+      inscribed_radius: 0.3
+
       # The number of steps the whole circle (2 * pi) is divided by to create
-      # the three-dimensional cost maps.
+      # the maps used by the 5D planner.
       angle_granularity: 120
 
       # The distance up to which obstacles are inflated to calculate the costs,
@@ -26,6 +41,18 @@ planner_server:
       # the curvature.
       inflation_5d_lookahead: 0.5
 
+      # Whether or not to split long straight parts of the 3D path and process them
+      # separately by the 5D planner, potentially in multiple parallel threads for
+      # speed-up.
+      split_long_5d_segments: false
+
+      # Heuristic used for the 5D planner to make the search algorithm follow the
+      # inflated "tunnel" around the 3D path. "euclidean"/"manhattan" for euclidean
+      # or manhattan distances to the goal, or "depth" to use the number of grid cells
+      # inside the inflated tunnel, or "path" to use the distance of the closes 3D pose
+      # from the goal of which the tunnel was inflated from.
+      heuristic: "depth"
+
       # The directory to store costs to for a faster start-up of the planner with
       # the same map. Disable caching of costs by setting this to "".
       cache_directory: "/tmp"
@@ -34,17 +61,25 @@ planner_server:
       # this by setting this to "".
       debug_directory: "/tmp"
 
-      # The maximum linear velocity of the vehicle, in meter/second.
-      linear_velocity_maximum: 0.5
+      # The maximum velocity of a wheel of the vehicle, in m/s.
+      maximum_wheel_velocity: 1.0
 
-      # The maximum angular velocity of the vehicle, in radian/second.
-      angular_velocity_maximum: 0.5
+      # The maximum acceleration of a wheel of the vehicle, in m/(s^2).
+      maximum_wheel_acceleration: 1.0
 
-      # The time increment used when simulating the motion, in second.
-      simulation_time_delta: 0.1
+      # The distance between the two driving wheels of the vehicle, in m.
+      wheel_distance: 0.34
 
-      # The heuristic to use.
-      heuristic: "depth"
+      # The number of steps to divide the maximum linear velocity of the vehicle
+      # (calculated from the wheel parameters) into for the 5D search.
+      linear_velocity_steps: 5
+
+      # The number of steps to divide the maximum angular velocity of the vehicle
+      # (calculated from the wheel parameters) into for the 5D search.
+      angular_velocity_steps: 5
+
+      # Whether or not to publish a map showing all nodes "opened" by the 3D planner.
+      extract_3d_opened_nodes: true
 
 global_costmap:
   global_costmap:

@@ -65,6 +65,8 @@ void TrajectoryPlannerPlugin::activate()
     double inflation_radius;
     std::string cache_directory;
     std::string debug_directory;
+    trajectory_planner::three::CostMap3DType cost_map_3d_type;
+    trajectory_planner::three::OrientationCosts3DType orientation_costs_3d_type;
 
     node_->get_parameter(name_ + ".angle_granularity", angle_granularity);
     node_->get_parameter(name_ + ".inscribed_radius", inscribed_radius);
@@ -72,13 +74,37 @@ void TrajectoryPlannerPlugin::activate()
     node_->get_parameter(name_ + ".cache_directory", cache_directory);
     node_->get_parameter(name_ + ".debug_directory", debug_directory);
 
+    std::string str;
+    node_->get_parameter(name_ + ".cost_map_3d_type", str);
+    if (str == "linear") {
+        cost_map_3d_type = trajectory_planner::three::CostMap3DType::LINEAR;
+    } else if (str == "exponential") {
+        cost_map_3d_type = trajectory_planner::three::CostMap3DType::EXPONENTIAL;
+    } else {
+        cost_map_3d_type = trajectory_planner::three::CostMap3DType::EXPONENTIAL;
+        RCLCPP_WARN((*logger_), "Unable to parse cost_map_3d_type, using 'exponental'." );
+    }
+
+    node_->get_parameter(name_ + ".orientation_costs_3d_type", str);
+    if (str == "identical") {
+        orientation_costs_3d_type = trajectory_planner::three::OrientationCosts3DType::IDENTICAL;
+    } else if (str == "footprint") {
+        orientation_costs_3d_type = trajectory_planner::three::OrientationCosts3DType::FOOTPRINT;
+    } else {
+        orientation_costs_3d_type = trajectory_planner::three::OrientationCosts3DType::IDENTICAL;
+        RCLCPP_WARN((*logger_), "Unable to parse orientation_costs_3d_type, using 'identical'.");
+    }
+
     // (Re-)Start watching the costmap for changes and recreate the planner if needed.
     costmap_observer_.watch_costmap(
+        cost_map_3d_type,
+        orientation_costs_3d_type,
         angle_granularity,
         inscribed_radius,
         inflation_radius,
         cache_directory,
         debug_directory,
+        {},
         costmap_ros_);
 }
 
@@ -130,12 +156,14 @@ TrajectoryPlanner::PlanningParameters TrajectoryPlannerPlugin::read_planning_par
     result.angular_acceleration_maximum = 3.5;
 
     result.multi_threaded = true;
+    node_->get_parameter(name_ + ".split_long_5d_segments", result.split_long_5d_segments);
+    node_->get_parameter(name_ + ".extract_3d_opened_nodes", result.extract_3d_opened_nodes);
 
     node_->get_parameter(name_ + ".inflation_5d_radius", result.inflation_5d_radius);
     node_->get_parameter(name_ + ".inflation_5d_lookahead", result.inflation_5d_lookahead);
-    node_->get_parameter(name_ + ".linear_velocity_maximum", result.linear_velocity_maximum);
-    node_->get_parameter(name_ + ".angular_velocity_maximum", result.angular_velocity_maximum);
-    node_->get_parameter(name_ + ".simulation_time_delta", result.time_delta);
+    node_->get_parameter(name_ + ".maximum_wheel_velocity", result.maximum_wheel_velocity);
+    node_->get_parameter(name_ + ".maximum_wheel_acceleration", result.maximum_wheel_acceleration);
+    node_->get_parameter(name_ + ".wheel_distance", result.wheel_distance);
 
     int linear_velocity_steps;
     node_->get_parameter(name_ + ".linear_velocity_steps", linear_velocity_steps);
@@ -243,9 +271,18 @@ void TrajectoryPlannerPlugin::declare_parameters()
     rcl_interfaces::msg::ParameterDescriptor ro_descriptor;
     ro_descriptor.read_only = true;
 
+    ro_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".cost_map_3d_type", rclcpp::ParameterValue("linear"), ro_descriptor);
+
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".orientation_costs_3d_type", rclcpp::ParameterValue("identical"), ro_descriptor);
+
+    ro_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".angle_granularity", rclcpp::ParameterValue(128), ro_descriptor);
 
+    ro_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE;
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".inscribed_radius", rclcpp::ParameterValue(0.2), ro_descriptor);
 
@@ -267,6 +304,16 @@ void TrajectoryPlannerPlugin::declare_parameters()
     // add ranges and descriptions for each of the parameters.
 
     rcl_interfaces::msg::ParameterDescriptor descriptor;
+
+    descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
+    descriptor.description = "Whether or not to slit and process long 5D segments separately";
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".split_long_5d_segments", rclcpp::ParameterValue(false), descriptor);
+
+    descriptor.description = "Whether or not to publish a map showing all cells looked at by the 3D planner";
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".extract_3d_opened_nodes", rclcpp::ParameterValue(false), descriptor);
+
     descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE;
     descriptor.floating_point_range = {rcl_interfaces::msg::FloatingPointRange()};
 
@@ -284,26 +331,26 @@ void TrajectoryPlannerPlugin::declare_parameters()
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".inflation_5d_lookahead", rclcpp::ParameterValue(0.5), descriptor);
 
-    descriptor.description = "The maximum linear velocity of the vehicle, in meter/second";
+    descriptor.description = "The maximum velocity of a wheel of the vehicle, in meter/second";
     descriptor.floating_point_range.at(0).from_value = 0.02;
     descriptor.floating_point_range.at(0).to_value = 2.0;
     descriptor.floating_point_range.at(0).step = 0.02;
     nav2_util::declare_parameter_if_not_declared(
-        node_, name_ + ".linear_velocity_maximum", rclcpp::ParameterValue(0.5), descriptor);
+        node_, name_ + ".maximum_wheel_velocity", rclcpp::ParameterValue(0.5), descriptor);
 
-    descriptor.description = "The maximum angular velocity of the vehicle, in radian/second";
+    descriptor.description = "The maximum acceleration of a wheel of the vehicle, in meter/(second^2)";
     descriptor.floating_point_range.at(0).from_value = 0.02;
     descriptor.floating_point_range.at(0).to_value = 2.0;
     descriptor.floating_point_range.at(0).step = 0.02;
     nav2_util::declare_parameter_if_not_declared(
-        node_, name_ + ".angular_velocity_maximum", rclcpp::ParameterValue(0.5), descriptor);
+        node_, name_ + ".maximum_wheel_acceleration", rclcpp::ParameterValue(0.5), descriptor);
 
-    descriptor.description = "The time increment used when simulating the motion, in seconds";
-    descriptor.floating_point_range.at(0).from_value = 0.02;
-    descriptor.floating_point_range.at(0).to_value = 1.0;
-    descriptor.floating_point_range.at(0).step = 0.02;
+    descriptor.description = "The distance between the two driving wheels of the vehicle, in meter";
+    descriptor.floating_point_range.at(0).from_value = 0.1;
+    descriptor.floating_point_range.at(0).to_value = 2.0;
+    descriptor.floating_point_range.at(0).step = 0.01;
     nav2_util::declare_parameter_if_not_declared(
-        node_, name_ + ".simulation_time_delta", rclcpp::ParameterValue(0.1), descriptor);
+        node_, name_ + ".wheel_distance", rclcpp::ParameterValue(0.4), descriptor);
 
     descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
     descriptor.integer_range = {rcl_interfaces::msg::IntegerRange()};

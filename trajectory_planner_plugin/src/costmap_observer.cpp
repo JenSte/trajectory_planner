@@ -95,6 +95,18 @@ void CostmapObserver::watch_costmap(
         << inflation_radius << " m";
     log_info_(ss.str());
 
+    if (cost_map_3d_type == trajectory_planner::three::CostMap3DType::LINEAR) {
+        log_info_("cost_map_3d_type: linear");
+    } else {
+        log_info_("cost_map_3d_type: exponential");
+    }
+
+    if (orientation_costs_3d_type == trajectory_planner::three::OrientationCosts3DType::IDENTICAL) {
+        log_info_("orientation_costs_3d_type: identical");
+    } else {
+        log_info_("orientation_costs_3d_type: footprint");
+    }
+
     ss.str("");
     ss
         << "cache_directory: '"
