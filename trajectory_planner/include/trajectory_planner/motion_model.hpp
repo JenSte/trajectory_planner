@@ -3,6 +3,9 @@
 
 #include "trajectory_planner/types.hpp"
 
+#include <map>
+#include <set>
+
 namespace trajectory_planner
 {
 
