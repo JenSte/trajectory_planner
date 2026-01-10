@@ -4,6 +4,7 @@
 ROS_VERSION=noetic
 #ROS_VERSION=galactic
 #ROS_VERSION=humble
+#ROS_VERSION=jazzy
 
 # The tag of the image that is created by the build-script and
 # started by the run-script.

@@ -29,6 +29,8 @@ if [ "$ROS_VERSION" = "melodic" ] || [ "$ROS_VERSION" = "noetic" ]; then
         ros-${ROS_VERSION}-move-base
         ros-${ROS_VERSION}-nav-core
     "
+
+    python3 -m pip install transforms3d
 else
     # ROS2
 
@@ -36,11 +38,9 @@ else
 
     PACKAGES="
         python3-colcon-common-extensions
+        python3-transforms3d
         ros-${ROS_VERSION}-desktop
-        ros-${ROS_VERSION}-gazebo-dev
         ros-${ROS_VERSION}-gazebo-msgs
-        ros-${ROS_VERSION}-gazebo-plugins
-        ros-${ROS_VERSION}-gazebo-ros
         ros-${ROS_VERSION}-nav2-bringup
         ros-${ROS_VERSION}-nav2-core
         ros-${ROS_VERSION}-nav2-costmap-2d

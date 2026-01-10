@@ -17,6 +17,9 @@ else
     elif [ -f /opt/ros/galactic/setup.bash ]; then
         echo "sourcing ROS2 'galactic' installation"
         source /opt/ros/galactic/setup.bash
+    elif [ -f /opt/ros/jazzy/setup.bash ]; then
+        echo "sourcing ROS2 'jazzy' installation"
+        source /opt/ros/jazzy/setup.bash
     else
         echo "no ROS installation found"
     fi

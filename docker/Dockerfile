@@ -22,8 +22,6 @@ RUN \
         python3-pip \
         vim-tiny
 
-RUN python3 -m pip install transforms3d
-
 # This script installs ROS and the needed packages without
 # having to escape every command in the Dockerfile.
 COPY install_ros.sh .

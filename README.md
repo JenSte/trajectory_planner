@@ -15,7 +15,7 @@ smaller search space for the higher-dimensional search.
 
 - [x] Three-dimensional cost map
 - [x] Three-dimensional planner
-- [ ] Higher-dimensional planner
+- [X] Higher-dimensional planner
 
 # Usage
 
@@ -67,7 +67,7 @@ that has the freshly compiled workspace sourced:
 ```
 $ ./docker/exec-ros-image.sh
 sourcing workspace
-root@ros:/opt/ws# ros2 launch trajectory_planner standalone.py
+root@ros:/opt/ws# ros2 launch trajectory_planner_tools standalone.py
 ```
 The navigation stack will start up and is ready when the trajectory planner logs
 the message `[planner_server.trajectory_planner]: Updated planner is ready.`.
@@ -80,7 +80,7 @@ A script is included that triggers the planning of a path:
 ```
 $ ./docker/exec-ros-image.sh
 sourcing workspace
-root@ros:/opt/ws# ros2 run trajectory_planner client.py
+root@ros:/opt/ws# ros2 run trajectory_planner_tools client.py big
 [INFO] [] [compute_path_action_client]: Goal was accepted.
 [INFO] [] [compute_path_action_client]: Path: ...
 ```

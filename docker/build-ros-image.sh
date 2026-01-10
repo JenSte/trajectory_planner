@@ -12,8 +12,10 @@ if [ "$ROS_VERSION" = "melodic" ]; then
     BASE_IMAGE=ubuntu:bionic
 elif [ "$ROS_VERSION" = "noetic" ] || [ "$ROS_VERSION" = "galactic" ]; then
     BASE_IMAGE=ubuntu:focal
-else
+elif [ "$ROS_VERSION" = "humble" ]; then
     BASE_IMAGE=ubuntu:jammy
+else
+    BASE_IMAGE=ubuntu:noble
 fi
 
 if command -v podman &> /dev/null; then

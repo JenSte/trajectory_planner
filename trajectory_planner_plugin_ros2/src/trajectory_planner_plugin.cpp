@@ -126,7 +126,8 @@ void TrajectoryPlannerPlugin::deactivate()
 
 nav_msgs::msg::Path TrajectoryPlannerPlugin::createPlan(
     const geometry_msgs::msg::PoseStamped& start_msg,
-    const geometry_msgs::msg::PoseStamped& goal_msg)
+    const geometry_msgs::msg::PoseStamped& goal_msg,
+    std::function<bool()>)
 {
     return create_plan(start_msg, goal_msg);
 }

@@ -29,7 +29,8 @@ public:
 
     nav_msgs::msg::Path createPlan(
         const geometry_msgs::msg::PoseStamped& start_msg,
-        const geometry_msgs::msg::PoseStamped& goal_msg) override;
+        const geometry_msgs::msg::PoseStamped& goal_msg,
+        std::function<bool()> cancel_checker) override;
 
 protected:
 
