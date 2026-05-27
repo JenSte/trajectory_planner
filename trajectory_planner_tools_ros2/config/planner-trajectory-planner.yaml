@@ -1,0 +1,90 @@
+# /opt/ros/galactic/share/nav2_bringup/params/nav2_params.yaml
+# https://github.com/uml-robotics/turtlebot3_navigation/blob/main/config/controller.yaml
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 20.0
+    planner_plugins: ["trajectory_planner"]
+    trajectory_planner:
+      plugin: "trajectory_planner/TrajectoryPlanner"
+
+      # The way costs going away from static obstacles are calculated
+      # ("linear" or "exponential" fall off).
+      cost_map_3d_type: "exponential"
+
+      # "identical" for all 3D costs being identical to the inflated cost map
+      # (inflated according to 'cost_map_3d_type'), or "footprint" for using
+      # per-3D-orientation costs.
+      orientation_costs_3d_type: "identical"
+      #orientation_costs_3d_type: "footprint"
+
+      # Like ROS' costmap_2d 'inscribed_radius', used to inflate the static obstacles
+      # according to 'cost_map_3d_type'. (But only used to calculate the cost values,
+      # collisions and with this the valid poses of the robot are calculated using
+      # the robot's real footprint.)
+      inscribed_radius: 0.3
+
+      # The number of steps the whole circle (2 * pi) is divided by to create
+      # the maps used by the 5D planner.
+      angle_granularity: 26
+
+      # The distance up to which obstacles are inflated to calculate the costs,
+      # in meter.
+      inflation_radius: 2.5
+
+      # When inflating the 3D path to create the search space for the 5D planner,
+      # this is the maximum inflation radius (in meter), used when the 3D path is
+      # "very curvy".
+      inflation_5d_radius: 0.10
+
+      # When inflating the 3D path to create the search space for the 5D planner,
+      # this is the maximum distance (in meter) from each pose which is inspected to calculate
+      # the curvature.
+      inflation_5d_lookahead: 0.5
+
+      # Whether or not to split long straight parts of the 3D path and process them
+      # separately by the 5D planner, potentially in multiple parallel threads for
+      # speed-up.
+      split_long_5d_segments: true
+
+      # Heuristic used for the 5D planner to make the search algorithm follow the
+      # inflated "tunnel" around the 3D path. "euclidean"/"manhattan" for euclidean
+      # or manhattan distances to the goal, or "depth" to use the number of grid cells
+      # inside the inflated tunnel, or "path" to use the distance of the closes 3D pose
+      # from the goal of which the tunnel was inflated from.
+      heuristic: "depth"
+
+      # The directory to store costs to for a faster start-up of the planner with
+      # the same map. Disable caching of costs by setting this to "".
+      cache_directory: ""
+
+      # The directory to write debug images to when creating the cost maps. Disable
+      # this by setting this to "".
+      debug_directory: "/tmp"
+
+      # The maximum velocity of a wheel of the vehicle, in m/s.
+      maximum_wheel_velocity: 1.0
+
+      # The maximum acceleration of a wheel of the vehicle, in m/(s^2).
+      maximum_wheel_acceleration: 1.0
+
+      # The distance between the two driving wheels of the vehicle, in m.
+      wheel_distance: 0.34
+
+      # The number of steps to divide the maximum linear velocity of the vehicle
+      # (calculated from the wheel parameters) into for the 5D search.
+      linear_velocity_steps: 5
+
+      # The number of steps to divide the maximum angular velocity of the vehicle
+      # (calculated from the wheel parameters) into for the 5D search.
+      angular_velocity_steps: 5
+
+      # Whether or not to publish a map showing all nodes "opened" by the 3D planner.
+      extract_3d_opened_nodes: true
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      footprint_padding: 0.05
+      footprint: "[[-0.2, 0.2], [0.3, 0.2], [0.45, 0.05], [0.45, -0.05], [0.3, -0.2], [-0.2, -0.2]]"
+      #footprint: "[[-0.2, 0.2], [0.3, 0.2], [0.3, -0.2], [-0.2, -0.2]]"

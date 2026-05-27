@@ -1,0 +1,11 @@
+# https://github.com/uml-robotics/turtlebot3_navigation/blob/main/config/waypoint_follower.yaml
+
+waypoint_follower:
+  ros__parameters:
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: True
+      waypoint_pause_duration: 200
