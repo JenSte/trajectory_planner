@@ -48,17 +48,11 @@ def generate_launch_description():
         ],
     )
 
-    amcl_node = Node(
-        package='nav2_amcl',
-        executable='amcl',
-        name='amcl',
+    localization_node = Node(
+        package='trajectory_planner_tools',
+        executable='ground_truth_localization.py',
+        name='fake_localization',
         output='screen',
-        parameters=[
-            os.path.join(config_dir, "amcl.yaml"),
-            {
-                'use_sim_time': LaunchConfiguration('use_sim_time'),
-            },
-        ],
     )
 
     planner_server_node = Node(
@@ -113,7 +107,7 @@ def generate_launch_description():
         parameters=[
             os.path.join(config_dir, "bt_navigator.yaml"),
             {
-                'default_bt_xml_filename': os.path.join(config_dir, "behavior.xml"),
+                'default_nav_to_pose_bt_xml': os.path.join(config_dir, "behavior.xml"),
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
             }
         ],
@@ -139,7 +133,6 @@ def generate_launch_description():
                 'autostart': True,
                 'node_names': [
                     'map_server',
-                    'amcl',
                     'controller_server',
                     'planner_server',
                     'behavior_server',
@@ -156,7 +149,7 @@ def generate_launch_description():
             map_name_argument,
             planner_configuration_argument,
             map_server_node,
-            amcl_node,
+            localization_node,
             controller_server_node,
             planner_server_node,
             behavior_server_node,

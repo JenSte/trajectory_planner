@@ -9,6 +9,7 @@ install(PROGRAMS
     script/animate_path.py
     script/client.py
     script/forward_simulation.py
+    script/ground_truth_localization.py
     script/plot_augmented_path.py
     script/utils.py
     DESTINATION lib/${PROJECT_NAME}
