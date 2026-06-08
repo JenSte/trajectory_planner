@@ -1,9 +1,17 @@
 <root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
-     <PipelineSequence name="NavigateWithoutReplanning">
-        <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
-        <FollowPath path="{path}" controller_id="FollowPath"/>
-        <ClearEntireCostmap service_name="local_costmap/clear_entirely_local_costmap"/>
-     </PipelineSequence>
+    <Sequence name="NavigateWithoutReplanning">
+      <PlannerSelector
+        selected_planner="{selected_planner}"
+        default_planner="GridBased"
+        topic_name="planner_selector"/>
+      <ComputePathToPose
+        goal="{goal}"
+        path="{path}"
+        planner_id="{selected_planner}"/>
+      <FollowPath
+        path="{path}"
+        controller_id="FollowPath"/>
+    </Sequence>
   </BehaviorTree>
 </root>
