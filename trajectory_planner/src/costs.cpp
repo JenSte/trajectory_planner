@@ -36,23 +36,24 @@ Costs::CostType3D Costs::get_3d_cost(
     unsigned int y,
     unsigned int movement_index) const
 {
-    if (!(x < floorplan_width_)) {
-        std::ostringstream ss;
-        ss
-            << "Costs::get_3d_cost(): x value of " << x
-            << " is bigger than floorplan_width_ of " << floorplan_width_ << ".";
-        throw std::runtime_error(ss.str());
-    }
+    //if (!(x < floorplan_width_)) {
+    //    std::ostringstream ss;
+    //    ss
+    //        << "Costs::get_3d_cost(): x value of " << x
+    //        << " is bigger than floorplan_width_ of " << floorplan_width_ << ".";
+    //    throw std::runtime_error(ss.str());
+    //}
 
-    if (!(y < floorplan_height_)) {
-        std::ostringstream ss;
-        ss
-            << "Costs::get_3d_cost(): y value of " << y
-            << " is bigger than floorplan_height_ of " << floorplan_height_ << ".";
-        throw std::runtime_error(ss.str());
-    }
+    //if (!(y < floorplan_height_)) {
+    //    std::ostringstream ss;
+    //    ss
+    //        << "Costs::get_3d_cost(): y value of " << y
+    //        << " is bigger than floorplan_height_ of " << floorplan_height_ << ".";
+    //    throw std::runtime_error(ss.str());
+    //}
 
-    return costs_3d_.at(movement_index).at(x + floorplan_width_ * y);
+    //return costs_3d_.at(movement_index).at(x + floorplan_width_ * y);
+    return costs_3d_[movement_index][x + floorplan_width_ * y];
 }
 
 void Costs::set_3d_cost(

@@ -49,7 +49,8 @@ public:
     // Return the total cost to the pose, or infinity if the pose is not in the object.
     float get(const Pose3D& pose) const
     {
-        return total_costs_.at(pose.x + width_ * pose.y).at(pose.movement);
+        //return total_costs_.at(pose.x + width_ * pose.y).at(pose.movement);
+        return total_costs_[pose.x + width_ * pose.y][pose.movement];
     }
 
     // Count and return the number a 2D cell was looked at during the search.
@@ -109,53 +110,53 @@ public:
         const Pose3D& pose,
         const Pose3D& predecessor)
     {
-        if (!(pose.x < width_)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::set(): pose's x value of " << pose.x
-                << " is bigger than the map width of " << width_ << ".";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(pose.x < width_)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::set(): pose's x value of " << pose.x
+        //        << " is bigger than the map width of " << width_ << ".";
+        //    throw std::runtime_error(ss.str());
+        //}
 
-        if (!(pose.y < height_)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::set(): pose's y value of " << pose.y
-                << " is bigger than the map height of " << height_ << ".";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(pose.y < height_)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::set(): pose's y value of " << pose.y
+        //        << " is bigger than the map height of " << height_ << ".";
+        //    throw std::runtime_error(ss.str());
+        //}
 
-        if (!(pose.movement < movement_index_count)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::set(): pose's movement value "
-                << pose.movement << " is not valid.";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(pose.movement < movement_index_count)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::set(): pose's movement value "
+        //        << pose.movement << " is not valid.";
+        //    throw std::runtime_error(ss.str());
+        //}
 
-        if (!(predecessor.x < width_)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::set(): predecessor's x value of " << pose.x
-                << " is bigger than the map width of " << width_ << ".";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(predecessor.x < width_)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::set(): predecessor's x value of " << pose.x
+        //        << " is bigger than the map width of " << width_ << ".";
+        //    throw std::runtime_error(ss.str());
+        //}
 
-        if (!(predecessor.y < height_)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::set(): predecessor's y value of " << pose.y
-                << " is bigger than the map height of " << height_ << ".";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(predecessor.y < height_)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::set(): predecessor's y value of " << pose.y
+        //        << " is bigger than the map height of " << height_ << ".";
+        //    throw std::runtime_error(ss.str());
+        //}
 
-        if (!(predecessor.movement < movement_index_count)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::set(): predecessor's movement value "
-                << predecessor.movement << " is not valid.";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(predecessor.movement < movement_index_count)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::set(): predecessor's movement value "
+        //        << predecessor.movement << " is not valid.";
+        //    throw std::runtime_error(ss.str());
+        //}
 
         // Because the 3D planner can only "move" a very limited distance in
         // the search space in one step (+/- 2 for X/Y coordinates and +/- 1
@@ -172,7 +173,8 @@ public:
 
         uint8_t b = (dm << 6) | (dy << 3) | dx;
 
-        predecessors_.at(pose.x + width_ * pose.y).at(pose.movement) = b;
+        //predecessors_.at(pose.x + width_ * pose.y).at(pose.movement) = b;
+        predecessors_[pose.x + width_ * pose.y][pose.movement] = b;
     }
 
     // Get the predecessor of a pose.
@@ -203,7 +205,8 @@ public:
             throw std::runtime_error(ss.str());
         }
 
-        uint8_t b = predecessors_.at(pose.x + width_ * pose.y).at(pose.movement);
+        //uint8_t b = predecessors_.at(pose.x + width_ * pose.y).at(pose.movement);
+        uint8_t b = predecessors_[pose.x + width_ * pose.y][pose.movement];
 
         int dx = b & 0x07;
         int dy = (b >> 3) & 0x07;
@@ -218,29 +221,29 @@ public:
             pose.y - dy,
             (pose.movement - dm) % movement_index_count};
 
-        if (!(predecessor.x < width_)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::get(): predecessor's x value of " << pose.x
-                << " is bigger than the map width of " << width_ << ".";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(predecessor.x < width_)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::get(): predecessor's x value of " << pose.x
+        //        << " is bigger than the map width of " << width_ << ".";
+        //    throw std::runtime_error(ss.str());
+        //}
 
-        if (!(predecessor.y < height_)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::get(): predecessor's y value of " << pose.y
-                << " is bigger than the map height of " << height_ << ".";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(predecessor.y < height_)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::get(): predecessor's y value of " << pose.y
+        //        << " is bigger than the map height of " << height_ << ".";
+        //    throw std::runtime_error(ss.str());
+        //}
 
-        if (!(predecessor.movement < movement_index_count)) {
-            std::ostringstream ss;
-            ss
-                << "PredecessorsMap::get(): predecessor's movement value "
-                << predecessor.movement << " is not valid.";
-            throw std::runtime_error(ss.str());
-        }
+        //if (!(predecessor.movement < movement_index_count)) {
+        //    std::ostringstream ss;
+        //    ss
+        //        << "PredecessorsMap::get(): predecessor's movement value "
+        //        << predecessor.movement << " is not valid.";
+        //    throw std::runtime_error(ss.str());
+        //}
 
         return predecessor;
     }

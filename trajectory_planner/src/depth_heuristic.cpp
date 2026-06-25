@@ -338,23 +338,24 @@ float DepthHeuristic::get_value(
     unsigned int x,
     unsigned int y) const
 {
-    if (!(x < width_)) {
-        std::ostringstream ss;
-        ss
-            << "DepthHeuristic::get_value(): x value of " << x
-            << " is bigger than the map width of " << width_ << ".";
-        throw std::runtime_error(ss.str());
-    }
+    //if (!(x < width_)) {
+    //    std::ostringstream ss;
+    //    ss
+    //        << "DepthHeuristic::get_value(): x value of " << x
+    //        << " is bigger than the map width of " << width_ << ".";
+    //    throw std::runtime_error(ss.str());
+    //}
 
-    if (!(y < height_)) {
-        std::ostringstream ss;
-        ss
-            << "DepthHeuristic::get_value(): y value of " << y
-            << " is bigger than the map height of " << height_ << ".";
-        throw std::runtime_error(ss.str());
-    }
+    //if (!(y < height_)) {
+    //    std::ostringstream ss;
+    //    ss
+    //        << "DepthHeuristic::get_value(): y value of " << y
+    //        << " is bigger than the map height of " << height_ << ".";
+    //    throw std::runtime_error(ss.str());
+    //}
 
-    return values_.at(x + width_ * y);
+    //return values_.at(x + width_ * y);
+    return values_[x + width_ * y];
 }
 
 void DepthHeuristic::set_value(
