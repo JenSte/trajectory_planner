@@ -77,6 +77,14 @@ else
     if [ -d "$SCRIPT_PATH/tuw2_gazebo" ]; then
         V="$V --volume $SCRIPT_PATH/tuw2_gazebo:/opt/tuw2_gazebo"
     fi
+    # https://github.com/tuw-robotics/Stage.git
+    if [ -d "$SCRIPT_PATH/Stage" ]; then
+        V="$V --volume $SCRIPT_PATH/Stage:/opt/Stage"
+    fi
+    # https://github.com/tuw-robotics/stage_ros2.git
+    if [ -d "$SCRIPT_PATH/stage_ros2" ]; then
+        V="$V --volume $SCRIPT_PATH/stage_ros2:/opt/stage_ros2"
+    fi
 fi
 
 $DOCKER run \

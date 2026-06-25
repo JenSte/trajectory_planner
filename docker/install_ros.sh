@@ -38,6 +38,7 @@ else
 
     PACKAGES="
         python3-colcon-common-extensions
+        python3-rosdep
         python3-transforms3d
         ros-${ROS_VERSION}-desktop
         ros-${ROS_VERSION}-gazebo-msgs
@@ -47,6 +48,7 @@ else
         ros-${ROS_VERSION}-nav2-util
         ros-${ROS_VERSION}-tf-transformations
         ros-${ROS_VERSION}-xacro
+        ros-${ROS_VERSION}-ackermann-msgs
     "
 
     if [ "ROS_VERSION" = "galactic" ]; then
@@ -85,7 +87,8 @@ else
     echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc
 
     # Add some often used commands to the bash history.
-    echo "colcon build" >> ~/.bash_history
+    echo "colcon build --symlink-install"  >> ~/.bash_history
+    echo "colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release" >> ~/.bash_history
     echo "colcon build && ./build/trajectory_planner/trajectory_planner_test" >> ~/.bash_history
     echo "ros2 launch trajectory_planner_tools standalone.py" >> ~/.bash_history
     echo "nice -n 19 ros2 launch trajectory_planner_tools rviz.py" >> ~/.bash_history

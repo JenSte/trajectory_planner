@@ -18,6 +18,7 @@ RUN \
         htop \
         less \
         libfftw3-dev \
+        libfltk1.3-dev \
         libopencv-dev \
         python3-pip \
         vim-tiny
