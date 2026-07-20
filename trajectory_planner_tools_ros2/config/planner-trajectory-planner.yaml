@@ -3,8 +3,8 @@
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 20.0
-    planner_plugins: ["trajectory_planner"]
+    expected_planner_frequency: 1.0
+    planner_plugins: ["GridBased", "trajectory_planner"]
     trajectory_planner:
       plugin: "trajectory_planner/TrajectoryPlanner"
 
@@ -22,11 +22,11 @@ planner_server:
       # according to 'cost_map_3d_type'. (But only used to calculate the cost values,
       # collisions and with this the valid poses of the robot are calculated using
       # the robot's real footprint.)
-      inscribed_radius: 0.3
+      inscribed_radius: 0.7
 
       # The number of steps the whole circle (2 * pi) is divided by to create
       # the maps used by the 5D planner.
-      angle_granularity: 26
+      angle_granularity: 24
 
       # The distance up to which obstacles are inflated to calculate the costs,
       # in meter.
@@ -35,7 +35,7 @@ planner_server:
       # When inflating the 3D path to create the search space for the 5D planner,
       # this is the maximum inflation radius (in meter), used when the 3D path is
       # "very curvy".
-      inflation_5d_radius: 0.10
+      inflation_5d_radius: 0.30
 
       # When inflating the 3D path to create the search space for the 5D planner,
       # this is the maximum distance (in meter) from each pose which is inspected to calculate
@@ -45,7 +45,8 @@ planner_server:
       # Whether or not to split long straight parts of the 3D path and process them
       # separately by the 5D planner, potentially in multiple parallel threads for
       # speed-up.
-      split_long_5d_segments: true
+      #split_long_5d_segments: true
+      split_long_5d_segments: false
 
       # Heuristic used for the 5D planner to make the search algorithm follow the
       # inflated "tunnel" around the 3D path. "euclidean"/"manhattan" for euclidean
@@ -82,9 +83,15 @@ planner_server:
       # Whether or not to publish a map showing all nodes "opened" by the 3D planner.
       extract_3d_opened_nodes: true
 
+    GridBased:
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true
+
 global_costmap:
   global_costmap:
     ros__parameters:
+      use_sim_time: True
       footprint_padding: 0.05
       footprint: "[[-0.2, 0.2], [0.3, 0.2], [0.45, 0.05], [0.45, -0.05], [0.3, -0.2], [-0.2, -0.2]]"
-      #footprint: "[[-0.2, 0.2], [0.3, 0.2], [0.3, -0.2], [-0.2, -0.2]]"

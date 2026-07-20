@@ -17,7 +17,7 @@ def generate_launch_description():
     map_name_argument = DeclareLaunchArgument(
         "map_name",
         description="The map to load.",
-        default_value="cave_2cm.yaml",
+        default_value="slots.yaml",
     )
 
     planner_configuration_argument = DeclareLaunchArgument(

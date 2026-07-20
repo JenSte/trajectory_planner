@@ -1,0 +1,80 @@
+resolution 0.02
+interval_sim 100  
+
+define floorplan model
+(
+  color "gray30"
+  boundary 1
+
+  gui_nose 0
+  gui_grid 0
+
+  gui_outline 0
+  gripper_return 0
+  fiducial_return 0
+  laser_return 1
+)
+
+window
+(
+  size [ 635.000 666.000 ] # in pixels
+  scale 36.995   # pixels per meter
+  center [ -0.040  -0.274 ]
+  rotate [ 0  0 ]
+
+  show_data 1
+)
+
+floorplan
+( 
+  name "cave"
+  size [16.000 16.000 0.800]
+  pose [0 0 0 0]
+  bitmap "/opt/map/slots.png"
+  gui_move 0
+)
+
+define robot position
+(
+  # Outer size, polygon(s) defined below will be scaled to this.
+  size [0.65 0.4 1]
+
+  # Centre of rotation offset.
+  origin [0.125 0 0 0]
+
+  # Shape of the robot.
+  block
+  (
+    points 6
+    point[5] [0 0]
+    point[4] [0.5 0]
+    point[3] [0.65 0.15]
+    point[2] [0.65 0.25]
+    point[1] [0.5 0.4]
+    point[0] [0 0.4]
+    z [0 1]
+  )
+
+  localization "odom"
+
+  drive "diff"
+  # 4 DOF kinematics limits:
+  # [ xmin xmax ymin ymax zmin zmax amin amax ]        
+#  velocity_bounds     [-1   1   0 0 0 0 -5.9 5.9]          
+#  acceleration_bounds [-0.5 0.5 0 0 0 0 -5.9 5.9]
+
+  # With the accelleration limits the same as the real robot (5.9 rad/s),
+  # the simulated robot turns very slow, so it's assumed that these values
+  # are not in rad/s, but something else. Unfortunately documentation on
+  # this is not available.
+  velocity_bounds     [-1   1   0 0 0 0 -59 59]          
+  acceleration_bounds [-0.5 0.5 0 0 0 0 -59 59]
+)
+
+robot
+(
+  name "robot_0"
+  color "green" 
+  #pose [ -7 -7 0 45 ] 
+  pose [ -5.5 -0.5 0 350 ] 
+)
