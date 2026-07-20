@@ -576,6 +576,11 @@ Costs inflate_path(
     const unsigned int inflation_min = coordinates_map.begin()->first;
     const unsigned int inflation_max = coordinates_map.rbegin()->first;
 
+    const unsigned int inflation_end_1 = std::min(inflation_min + 2, inflation_max);
+    const unsigned int inflation_end_2 = std::min(inflation_min + 1, inflation_max);
+
+    const size_t path_length = path.size();
+
     std::vector<Pose2D> subset;
     for (const three::Pose3D& pose: path) {
         size_t index = &pose - &(*path.begin());
@@ -588,6 +593,13 @@ Costs inflate_path(
             inflation_min + (inflation_max - inflation_min) * curvature;
         inflation = std::max(inflation_min, inflation);
         inflation = std::min(inflation_max, inflation);
+
+        if ((index < 2) || (index >= path_length - 2)) {
+            inflation = std::max(inflation, inflation_end_1);
+        } else if ((index < 4) || (index >= path_length - 4)) {
+            inflation = std::max(inflation, inflation_end_2);
+        }
+
         const CircleCoordinates& coords = coordinates_map.at(inflation);
 
         const int x = pose.x;
